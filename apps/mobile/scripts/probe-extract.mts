@@ -24,6 +24,9 @@ const TARGETS: { label: string; url: string }[] = [
   { label: 'GitHub', url: 'https://github.com/facebook/react' },
   { label: '维基', url: 'https://zh.wikipedia.org/wiki/%E7%9D%A1%E7%9C%A0' },
   { label: 'B站视频', url: 'https://www.bilibili.com/video/BV1GJ411x7h7' },
+  { label: 'GitHub PR', url: 'https://github.com/react/react/pull/38088' },
+  { label: 'X 帖子', url: 'https://x.com/jack/status/20' },
+  { label: 'Reddit', url: 'https://old.reddit.com/r/programming/' },
   { label: '阮一峰', url: 'https://www.ruanyifeng.com/blog/2024/01/weekly-issue-287.html' },
 ]
 

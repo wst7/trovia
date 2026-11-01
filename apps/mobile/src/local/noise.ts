@@ -12,7 +12,7 @@
  * 一旦遇到像正文的行就停。宁可留一点噪声，也不能把正文删掉。
  */
 
-const BOILERPLATE = /(发布于|发表于|编辑于|举报|阅读原文|特别声明|免责声明|本文参与|本文版权|版权属于|禁止转载|责任编辑|来源[:：]|作者[:：]|侵权|联系删除|扫码|关注公众号|分享自|同步曝光|APP 内打开|打开 App|前往查看|专栏|收录于|本文作者|阅读原文|分享到|相关阅读|推荐阅读)/
+const BOILERPLATE = /(发布于|发表于|编辑于|举报|阅读原文|特别声明|免责声明|本文参与|本文版权|版权属于|禁止转载|责任编辑|来源[:：]|作者[:：]|侵权|联系删除|扫码|关注公众号|分享自|同步曝光|APP 内打开|打开 App|前往查看|专栏|收录于|本文作者|阅读原文|分享到|相关阅读|推荐阅读|登录打开应用|在应用中查看|使用应用查看|Open in app|Copy link|Copy Markdown|Sign in to comment|Already have an account|participants?\b|Labels\b|发帖\b)/
 
 /** 没有标点、又很短的行：栏目名、作者署名、标签。 */
 function looksLikeLabel(line: string): boolean {
@@ -61,6 +61,29 @@ function isShellLine(line: string, title: string | null, side: 'head' | 'tail'):
   // 小标题（如「前言」）虽然短，但它是正文结构，不能当标签剥掉。
   if (!isHeading && looksLikeLabel(bare)) return true
   return false
+}
+
+/**
+ * 「打开 App 才看得到」的提示语。
+ * X、知乎、小红书这类页面会把整段文案挤成一行，按行清理无效，只能在文本层反复抹掉。
+ */
+const APP_PROMPT = /(登录打开应用|在应用中查看此帖子|使用应用查看所有评论并发现更多帖子|打开 X\b|Open in app|发帖\s*)/g
+
+/** GitHub / 论坛这类页面，正文里混着操作按钮的文案（整段挤成一行，按行清理无效）。 */
+const UI_LABEL = /(Copy link|Copy Markdown|Sign in to comment|Already have an account\?|join this conversation on GitHub|\b\d+ participants?\b|\bLabels\b|\bCLA\b|\bSigned\b)/g
+
+export function scrubAppPrompts(markdown: string): string {
+  // 这些提示语常常被包在「唤起 App」的链接里（登录[打开应用](…launch_app…)），
+  // 先把链接壳去掉，再按文字清理。
+  const unwrapped = markdown.replace(
+    /\[([^\]]*)\]\([^)]*(?:launch_app|app_store|open\.x|intent|openapp)[^)]*\)/gi,
+    '$1',
+  )
+  return unwrapped.replace(UI_LABEL, ' ')
+    .replace(APP_PROMPT, ' ')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
 }
 
 export function trimMarkdownEdges(markdown: string, title: string | null): string {

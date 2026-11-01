@@ -1,7 +1,7 @@
 import { load } from 'cheerio/slim'
 import type { AnyNode, Element } from 'domhandler'
 
-import { trimMarkdownEdges } from './noise'
+import { scrubAppPrompts, trimMarkdownEdges } from './noise'
 import { publishedDateOf } from './published'
 import { hostOf, oneLine } from './util'
 
@@ -474,6 +474,15 @@ const CONTENT_SELECTORS = [
   '[class*="entry_content"]',
   '[class*="markdown-body"]',
   '[class*="rich_media_content"]',
+  // 各家自成一派的正文容器：博客园、SegmentFault、澎湃、果壳、腾讯云
+  '#cnblogs_post_body',
+  '.postBody',
+  '#post_body',
+  '.blogpost-body',
+  '.article-detail',
+  '.detail-body',
+  '.news_content',
+  '.post_area',
   '#content',
   '#article',
   '#main-content',
@@ -542,6 +551,19 @@ function pickBody($: CheerioDoc): { node: AnyNode; wechat: boolean } {
     })
   }
   if (best && bestLength >= 200) return { node: best, wechat: false }
+
+  // 站点用自定义 class 时选择器全军覆没：退一步按「非链接文字量」扫所有块级容器，
+  // 取最大的那个，再由 trimMarkdownEdges 把两头的外壳剥掉。
+  let fallback: AnyNode | null = null
+  let fallbackLength = 0
+  $('div, section, article, td').each((_, element) => {
+    const length = proseLength($, element)
+    if (length > fallbackLength) {
+      fallbackLength = length
+      fallback = element
+    }
+  })
+  if (fallback && fallbackLength >= 300) return { node: fallback, wechat: false }
 
   return { node: $('body').first()[0] ?? $.root()[0], wechat: false }
 }
@@ -693,6 +715,14 @@ export function extractFromHtml(html: string, url: string): ExtractedArticle {
   if (plainText.length < 80 && description && description.length >= 60) {
     markdown = description
     plainText = description
+  }
+
+  // 放在最后一步：中途的「描述兜底」可能把整段 meta 文本塞进 markdown，
+  // 那些文本里也带着「登录打开应用」这类提示语。
+  const cleaned = scrubAppPrompts(markdown)
+  if (cleaned !== markdown) {
+    markdown = cleaned
+    plainText = toPlainText(markdown)
   }
 
   const blocked = looksBlocked(html, plainText)
