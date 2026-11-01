@@ -247,7 +247,11 @@ h2 {
 .shot img {
   display: block;
   width: 100%;
-  max-width: 390px;
+  max-width: 360px;
+  /* 手机截图是全屏长图：限高 + 顶部对齐，避免首屏被一张图拉长。 */
+  max-height: 620px;
+  object-fit: cover;
+  object-position: top;
   height: auto;
   margin: 0 auto;
   border: 1px solid var(--line-strong);
