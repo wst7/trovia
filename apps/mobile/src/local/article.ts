@@ -20,6 +20,8 @@ export interface ExtractedArticle {
   language: string | null
   markdown: string
   plainText: string
+  /** 正文里出现过的图片（绝对地址，已去重、去图标）。图多字少时正文可能就是这些图。 */
+  images: string[]
   /** 页面只是脚本外壳（内容靠 JS 渲染，或只是打开另一个 App 的桥），正文抓不到。 */
   scriptOnly: boolean
   /** 页面要求验证 / 登录，正文拿不到。 */
@@ -523,6 +525,11 @@ function looksBlocked(html: string, plainText: string): boolean {
   if (plainText.length >= 200) return false
   if (/环境异常/.test(html) && /验证/.test(html)) return true
   if (/请在微信客户端打开|访问过于频繁|完成验证后即可继续访问/.test(html)) return true
+  // Cloudflare / Akamai / 各家 WAF 的拦截页：正文永远拿不到，别把它当成"脚本外壳"。
+  if (/__waf_verification_challenge|cf-browser-verification|Just a moment\.\.\.|Attention Required!|Checking your browser before accessing/i.test(html)) {
+    return true
+  }
+  if (/<title[^>]*>\s*(?:403|404|验证|安全验证|Access Denied)/i.test(html)) return true
   return false
 }
 
@@ -535,11 +542,49 @@ function looksAppOnly(url: string, plainText: string): boolean {
   return /^(?:feishu\.cn|larksuite\.com)$/i.test(host) && /\/client\//i.test(url)
 }
 
+/** 头像、图标、二维码、占位像素：它们在正文容器里，但不是内容。 */
+const IMAGE_SKIP = /(?:avatar|icon|logo|emoji|spacer|blank|pixel|tracker|qrcode|qr_code|badge|\/1x1|blank\.gif)/i
+
+/**
+ * 正文里的图片。公众号和小红书这类内容常常「正文就是几张长图」，
+ * 抽不到文字时，图片地址本身就是唯一的内容线索（交给 OCR 补文字）。
+ */
+function collectImages($: CheerioDoc, node: AnyNode, baseUrl: string): string[] {
+  const out: string[] = []
+  const seen = new Set<string>()
+  $(node)
+    .find('img')
+    .each((_, element) => {
+      const attrs = (element as Element).attribs ?? {}
+      const raw =
+        attrs['data-src'] ??
+        attrs['data-original'] ??
+        attrs['data-actualsrc'] ??
+        attrs['data-lazy-src'] ??
+        attrs['src'] ??
+        ''
+      if (!raw || raw.startsWith('data:')) return
+      if (IMAGE_SKIP.test(raw) || IMAGE_SKIP.test(attrs['class'] ?? '')) return
+      const width = Number(attrs['width'] ?? 0)
+      const height = Number(attrs['height'] ?? 0)
+      if ((width > 0 && width <= 64) || (height > 0 && height <= 64)) return
+      let absolute: string
+      try {
+        absolute = new URL(raw, baseUrl).toString()
+      } catch {
+        return
+      }
+      if (!/^https?:/i.test(absolute) || seen.has(absolute)) return
+      seen.add(absolute)
+      out.push(absolute)
+    })
+  return out.slice(0, 24)
+}
+
 export function extractFromHtml(html: string, url: string): ExtractedArticle {
   const meta = metaMap(html)
   const embedded = embeddedArticleData(html)
   const $ = load(html)
-
   const domText = (selector: string) => oneLine($(selector).first().text(), 220) || null
 
   const rawTitle =
@@ -571,6 +616,7 @@ export function extractFromHtml(html: string, url: string): ExtractedArticle {
     .trim()
 
   const picked = pickBody($)
+  const images = collectImages($, picked.node, url)
   stripNoise($, picked.node, picked.wechat)
   let markdown = tidyMarkdown(renderMarkdown(picked.node), picked.wechat)
   let plainText = toPlainText(markdown)
@@ -608,6 +654,8 @@ export function extractFromHtml(html: string, url: string): ExtractedArticle {
     plainText = description
   }
 
+  const blocked = looksBlocked(html, plainText)
+
   return {
     url,
     title,
@@ -617,8 +665,9 @@ export function extractFromHtml(html: string, url: string): ExtractedArticle {
     language: language ? language.slice(0, 16) : null,
     markdown,
     plainText,
-    scriptOnly: looksScriptOnly(html, plainText),
-    blocked: looksBlocked(html, plainText),
+    images,
+    scriptOnly: !blocked && looksScriptOnly(html, plainText),
+    blocked,
     appOnly: looksAppOnly(url, plainText),
   }
 }
@@ -631,9 +680,12 @@ export async function fetchArticle(url: string): Promise<ExtractedArticle> {
     response = await fetch(url, {
       signal: controller.signal,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; Xunji/0.1; local-first)',
-        Accept: 'text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.8',
+        // 用一个真实的移动 Chrome UA：自称 bot 的 UA 会被一大半站点直接 403。
+        'User-Agent':
+          'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
         'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+        'Cache-Control': 'no-cache',
       },
     })
   } finally {
@@ -655,6 +707,7 @@ export async function fetchArticle(url: string): Promise<ExtractedArticle> {
       language: null,
       markdown: text,
       plainText: text,
+      images: [],
       scriptOnly: false,
       blocked: false,
       appOnly: false,

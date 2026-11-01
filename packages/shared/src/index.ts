@@ -59,6 +59,8 @@ export interface DocumentDetail extends DocumentSummary {
   language: string | null
   content_markdown: string | null
   plain_text: string | null
+  /** 正文里的图片地址（本机解析时抓取；后端解析的条目可能没有这个字段）。 */
+  images?: string[]
   metadata: Record<string, unknown>
   last_parsed_at: string | null
   parse_stage: ParseStage | null

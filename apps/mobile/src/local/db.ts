@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS documents (
   language          TEXT,
   content_markdown  TEXT,
   plain_text        TEXT,
+  images            TEXT NOT NULL DEFAULT '[]',
   search_text       TEXT NOT NULL DEFAULT '',
   parse_status      TEXT NOT NULL DEFAULT 'pending',
   parse_stage       TEXT,
@@ -60,6 +61,12 @@ CREATE TABLE IF NOT EXISTS settings (
   value TEXT NOT NULL
 );
 `)
+
+  // 轻量迁移：老库没有 images 列时补上（SQLite 没有 ADD COLUMN IF NOT EXISTS）。
+  const columns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(documents)')
+  if (!columns.some((column) => column.name === 'images')) {
+    await db.runAsync("ALTER TABLE documents ADD COLUMN images TEXT NOT NULL DEFAULT '[]'")
+  }
 
   // 上次进程在抓取/解析中途被杀掉时，这些行会一直停在非终态。
   // 本进程还没有开始处理任何条目，启动时把它们放回队列最安全。

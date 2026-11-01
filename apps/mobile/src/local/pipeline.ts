@@ -1,6 +1,7 @@
 import { fetchArticle } from './article'
 import { emitChange } from './bus'
 import { summarizeWithLlm } from './llm'
+import { isOcrAvailable, ocrImages } from './ocr'
 import * as repo from './repo'
 import { oneLine } from './util'
 
@@ -54,6 +55,23 @@ async function processOne(id: string, url: string): Promise<void> {
 
   // 网页没给标题时，沿用分享文字/剪贴板里带过来的标题，别把用户已经看到的信息丢掉。
   if (!article.title) article.title = await repo.getSeededTitle(id)
+
+  // 页面里只要有图，就把图里的字读出来——长文里的截屏、思维导图同样是内容，
+  // 搜索时不该因为「正文已经够长」而漏掉它们。
+  if (isOcrAvailable() && article.images.length > 0) {
+    await repo.setStatus(id, 'analyzing', 'summarize')
+    emitChange()
+    const texts = await ocrImages(article.images, url)
+    if (texts.length > 0) {
+      const recognized = texts.join('\n\n')
+      article.markdown = [article.markdown, '## 图片文字', recognized]
+        .filter((part) => part && part.trim())
+        .join('\n\n')
+      article.plainText = [article.plainText, recognized]
+        .filter((part) => part && part.trim())
+        .join('\n\n')
+    }
+  }
 
   // 和原来的后端语义一致：正文太短只算部分成功，元信息照常保留。
   if (article.plainText.length < 120) {

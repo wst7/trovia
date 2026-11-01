@@ -79,18 +79,27 @@ const config: ExpoConfig = {
         androidIntentFilters: ['text/*'],
       },
     ],
-    ...(isProduction
-      ? []
-      : [
-          [
-            'expo-build-properties',
-            {
-              android: {
-                usesCleartextTraffic: true,
-              },
-            },
-          ] as [string, Record<string, unknown>],
-        ]),
+    // 原生构建参数统一在这里配置（android/ 是 prebuild 产物，不提交）。
+    [
+      'expo-build-properties',
+      {
+        android: {
+          // 只有开发构建允许明文 HTTP：App 会直接抓网页。
+          usesCleartextTraffic: !isProduction,
+          // release 开 R8；ML Kit 的初始化走反射，必须显式保活，否则 OCR 会在
+          // InputImage 构造时抛 NPE（java.lang.Object.getClass() on a null object reference）。
+          enableMinifyInReleaseBuilds: true,
+          enableShrinkResourcesInReleaseBuilds: true,
+          extraProguardRules: [
+            '-keep class com.google.mlkit.** { *; }',
+            '-keep class com.google.android.gms.internal.mlkit_vision_text** { *; }',
+            '-keep class com.google.android.gms.internal.mlkit_vision_common** { *; }',
+            '-dontwarn com.google.mlkit.**',
+            '-dontwarn com.google.android.gms.internal.mlkit_vision_text**',
+          ].join('\n'),
+        },
+      },
+    ] as [string, Record<string, unknown>],
   ],
 }
 

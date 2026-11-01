@@ -29,6 +29,7 @@ interface DocumentRow {
   language: string | null
   content_markdown: string | null
   plain_text: string | null
+  images: string | null
   search_text: string
   parse_status: string
   parse_stage: string | null
@@ -67,6 +68,7 @@ function toDetail(row: DocumentRow): DocumentDetail {
     language: row.language,
     content_markdown: row.content_markdown,
     plain_text: row.plain_text,
+    images: parseJsonArray(row.images ?? '[]'),
     metadata: parseJsonObject(row.metadata),
     last_parsed_at: row.last_parsed_at,
     parse_stage: row.parse_stage as ParseStage | null,
@@ -251,7 +253,7 @@ export async function saveParsed(
     `UPDATE documents SET
        title = ?, site_name = ?, author = ?, description = ?, language = ?,
        summary_short = ?, summary_long = ?, keywords = ?,
-       content_markdown = ?, plain_text = ?, search_text = ?,
+       content_markdown = ?, plain_text = ?, images = ?, search_text = ?,
        parse_status = 'completed', parse_stage = NULL, parse_error_code = NULL,
        last_parsed_at = ?, updated_at = ?
      WHERE id = ?`,
@@ -265,6 +267,7 @@ export async function saveParsed(
     JSON.stringify(keywords),
     article.markdown,
     article.plainText,
+    JSON.stringify(article.images),
     searchTextOf({
       title: article.title,
       siteName: article.siteName,
@@ -293,7 +296,7 @@ export async function savePartial(id: string, article: ExtractedArticle): Promis
   await db.runAsync(
     `UPDATE documents SET
        title = COALESCE(?, title), site_name = ?, author = ?, description = ?, language = ?,
-       summary_short = ?, plain_text = ?, content_markdown = ?, search_text = ?,
+       summary_short = ?, plain_text = ?, content_markdown = ?, images = ?, search_text = ?,
        parse_status = 'partial', parse_stage = NULL, parse_error_code = ?,
        last_parsed_at = ?, updated_at = ?
      WHERE id = ?`,
@@ -305,6 +308,7 @@ export async function savePartial(id: string, article: ExtractedArticle): Promis
     summary,
     article.plainText,
     article.markdown,
+    JSON.stringify(article.images),
     searchTextOf({
       title: article.title,
       siteName: article.siteName,
