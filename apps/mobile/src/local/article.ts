@@ -1,6 +1,7 @@
 import { load } from 'cheerio/slim'
 import type { AnyNode, Element } from 'domhandler'
 
+import { publishedDateOf } from './published'
 import { hostOf, oneLine } from './util'
 
 /**
@@ -16,6 +17,8 @@ export interface ExtractedArticle {
   title: string | null
   siteName: string | null
   author: string | null
+  /** 原文发表日期（YYYY-MM-DD）。抓不到就是 null —— 不用收藏时间冒充。 */
+  publishedAt: string | null
   description: string | null
   language: string | null
   markdown: string
@@ -606,6 +609,7 @@ export function extractFromHtml(html: string, url: string): ExtractedArticle {
     ?? embedded.author
     ?? domText('#js_name')
   const language = firstMatch(html, /<html\b[^>]*\blang\s*=\s*["']([^"']+)["']/i)
+  const publishedAt = publishedDateOf($, meta, html)
 
   // noscript 里的内容在解析后可能被当成普通节点，也可能是一整段原始 HTML 文本；
   // 先原样留一份，再清理正文，避免清理时把它一起删掉。
@@ -661,6 +665,7 @@ export function extractFromHtml(html: string, url: string): ExtractedArticle {
     title,
     siteName: siteName ? oneLine(siteName, 80) : null,
     author: author ? oneLine(author, 80) : null,
+    publishedAt,
     description: description ? oneLine(description, 300) : null,
     language: language ? language.slice(0, 16) : null,
     markdown,
@@ -703,6 +708,7 @@ export async function fetchArticle(url: string): Promise<ExtractedArticle> {
       title: hostOf(url),
       siteName: hostOf(url),
       author: null,
+      publishedAt: null,
       description: text ? oneLine(text, 300) : null,
       language: null,
       markdown: text,
