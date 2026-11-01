@@ -1,6 +1,7 @@
 import { load } from 'cheerio/slim'
 import type { AnyNode, Element } from 'domhandler'
 
+import { trimMarkdownEdges } from './noise'
 import { publishedDateOf } from './published'
 import { hostOf, oneLine } from './util'
 
@@ -658,7 +659,7 @@ export function extractFromHtml(html: string, url: string): ExtractedArticle {
   const picked = pickBody($)
   const images = collectImages($, picked.node, url)
   stripNoise($, picked.node, picked.wechat)
-  let markdown = tidyMarkdown(renderMarkdown(picked.node), picked.wechat)
+  let markdown = trimMarkdownEdges(tidyMarkdown(renderMarkdown(picked.node), picked.wechat), title)
   let plainText = toPlainText(markdown)
 
   // 页面外壳没渲染出正文时，按“已有信息量”从大到小再试三轮。
