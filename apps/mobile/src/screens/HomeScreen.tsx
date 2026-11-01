@@ -187,7 +187,7 @@ export function HomeScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View className="h-14 justify-center">
-            <Text className="text-heading font-semibold text-ink">寻迹</Text>
+            <Text className="text-body-sm font-medium text-muted">寻迹</Text>
           </View>
 
           {inResults ? (
@@ -227,14 +227,14 @@ export function HomeScreen() {
                 <View className="mt-2">
                   {results
                     .filter((item) => item.match_kind !== 'semantic')
-                    .map((item) => (
+                    .map((item, index) => (
                       <View key={item.document_id}>
+                        {index > 0 ? <Divider /> : null}
                         <ResultRow
                           item={item}
                           onPress={() => router.push(`/documents/${item.document_id}`)}
                           onTerminal={handleTerminal}
                         />
-                        <Divider />
                       </View>
                     ))}
                   {results.some((item) => item.match_kind === 'semantic') ? (
@@ -244,14 +244,14 @@ export function HomeScreen() {
                       </Text>
                       {results
                         .filter((item) => item.match_kind === 'semantic')
-                        .map((item) => (
+                        .map((item, index) => (
                           <View key={item.document_id}>
+                            {index > 0 ? <Divider /> : null}
                             <ResultRow
                               item={item}
                               onPress={() => router.push(`/documents/${item.document_id}`)}
                               onTerminal={handleTerminal}
                             />
-                            <Divider />
                           </View>
                         ))}
                     </View>
@@ -261,8 +261,8 @@ export function HomeScreen() {
             </>
           ) : (
             <>
-              <View className="mt-2">
-                <Text className="text-display font-semibold text-ink">想找点什么？</Text>
+              <View className="mt-4">
+                <Text className="text-heading font-semibold text-ink">想找点什么？</Text>
               </View>
 
               <View className="mt-6">{composer}</View>
@@ -270,19 +270,17 @@ export function HomeScreen() {
               {recent.length > 0 ? (
                 <View className="mt-10">
                   <View className="flex-row items-center justify-between">
-                    <Text className="text-[11px] font-semibold tracking-[1px] text-faint">
-                      最近收藏
-                    </Text>
+                    <Text className="text-body font-semibold text-ink">最近收藏</Text>
                   </View>
                   <View className="mt-1">
-                    {recent.map((item) => (
+                    {recent.map((item, index) => (
                       <View key={item.id}>
+                        {index > 0 ? <Divider /> : null}
                         <RecentRow
                           item={item}
                           onPress={() => router.push(`/documents/${item.id}`)}
                           onTerminal={handleTerminal}
                         />
-                        <Divider />
                       </View>
                     ))}
                   </View>

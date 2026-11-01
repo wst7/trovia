@@ -22,6 +22,9 @@ export function StatusMark({
   withLabel?: boolean
   className?: string
 }) {
+  // 已完成不需要标记：一行末尾孤零零一个灰点，读者还得猜它是什么意思。
+  if (status === 'completed' && withLabel) return null
+
   const inFlight = IN_FLIGHT.includes(status)
   const partial = status === 'partial'
   const failed = status === 'failed'
@@ -36,11 +39,11 @@ export function StatusMark({
 
   return (
     <View className={cx('flex-row items-center gap-2', className)}>
-      <View className={cx('h-2 w-2 rounded-full', dot)} />
+      <View className={cx('h-1.5 w-1.5 rounded-full', dot)} />
       {withLabel && inFlight ? (
         <Text className="text-caption text-muted">整理中</Text>
       ) : withLabel && (partial || failed) ? (
-        <Text className={cx('text-caption', failed ? 'text-danger' : 'text-warn')} numberOfLines={1}>
+        <Text className={cx('text-[11px]', failed ? 'text-danger/85' : 'text-warn/85')} numberOfLines={1}>
           {statusText(status, errorCode)}
         </Text>
       ) : null}

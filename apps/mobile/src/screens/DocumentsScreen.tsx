@@ -124,7 +124,7 @@ export function DocumentsScreen() {
         ListHeaderComponent={
           <View>
             <View className="mt-4 flex-row items-baseline gap-2">
-              <Text className="text-display font-semibold text-ink">
+              <Text className="text-heading font-semibold text-ink">
                 {loading ? '—' : total}
               </Text>
               <Text className="text-body-sm text-muted">{unit}</Text>

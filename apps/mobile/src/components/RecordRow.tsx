@@ -1,16 +1,44 @@
 import { Pressable, Text, View } from 'react-native'
 import type { DocumentSummary, ParseStatus, SearchResult } from '@xunji/shared'
-import { formatRelativeDate, sourceLabel, SOURCE_TYPE_LABELS } from '@xunji/shared'
+import { domainOf, formatRelativeDate } from '@xunji/shared'
 
 import { LiveStatusMark } from './LiveStatusMark'
 
+/**
+ * 没有标题的收藏怎么显示才不别扭：
+ * 标题位置放路径（r/programming），来源位置放域名（old.reddit.com）。
+ * 这样「标题 + 来源」的结构和别的行一致，也不会把同一个域名说两遍。
+ */
+function urlTitleAndHost(url: string): { title: string; host: string } {
+  try {
+    const parsed = new URL(url)
+    const host = parsed.host.replace(/^www\./, '')
+    const path = parsed.pathname.replace(/^\/+|\/+$/g, '')
+    return { title: path || host, host }
+  } catch {
+    return { title: url, host: '' }
+  }
+}
+
+function titleOf(item: DocumentSummary | SearchResult): string {
+  const title = item.title?.trim()
+  if (!title || title === item.url) return urlTitleAndHost(item.url).title
+  return title
+}
+
 function metaOf(item: DocumentSummary | SearchResult): string {
   const date = formatRelativeDate(item.saved_at)
-  // 标题本身就是链接（没有抓到标题）时，元信息再写一遍站名等于把同一件事说两遍。
+  // 标题本身就是链接时，再写站名等于把同一件事说两遍；
+  // 但只剩一个日期又会让这一行缺一条腿，所以统一叫「链接」。
   const titleIsUrl = !item.title || item.title.trim() === item.url
-  if (titleIsUrl) return date
-  const site = sourceLabel(item.url, item.site_name, SOURCE_TYPE_LABELS[item.source_type])
-  return `${site} · ${date}`
+  // 标题位置已经是域名时，再写一遍没有意义，只留时间。
+  if (titleIsUrl) {
+    const { title, host } = urlTitleAndHost(item.url)
+    return host && title !== host ? `${host} · ${date}` : date
+  }
+  // 站点名和域名经常是同一件事（「x.com · X (formerly Twitter)」），统一只写域名。
+  const host = domainOf(item.url)
+  return host ? `${host} · ${date}` : date
 }
 
 /**
@@ -35,8 +63,8 @@ export function RecentRow({
     >
       {({ pressed }) => (
         <View style={{ opacity: pressed ? 0.55 : 1 }}>
-          <Text className="text-body font-medium text-ink" numberOfLines={1}>
-            {item.title || item.url}
+          <Text className="text-body font-medium text-ink" numberOfLines={2}>
+            {titleOf(item)}
           </Text>
           <View className="mt-1 flex-row items-center gap-2">
             <Text className="flex-shrink text-caption text-muted" numberOfLines={1}>
