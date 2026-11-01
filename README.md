@@ -1,4 +1,4 @@
-# 寻迹 · Xunji
+# Trovia · 寻迹
 
 **你不需要记住收藏了什么，只需要记住你想找什么。**
 
@@ -30,8 +30,8 @@
 ## 开发
 
 ```bash
-npm install && npm run dev:mobile      # 手机 App（Expo）
-docker compose up --build              # 网页版 + API + Worker（自托管）
+npm install && npm run dev:mobile   # 手机 App（Expo）
+docker compose up --build       # 网页版 + API + Worker（自托管）
 ```
 
 产品边界见 [`docs/PRODUCT.md`](docs/PRODUCT.md)，接口与数据库约定见 [`docs/ENGINEERING.md`](docs/ENGINEERING.md)。

@@ -38,7 +38,7 @@ export function HomeScreen() {
   const router = useRouter()
   const { toast } = useToast()
   const revision = useLocalRevision()
-  // 深链直接搜索：xunji:///?q=… 由分享扩展、快捷指令或浏览器扩展调用。
+  // 深链直接搜索：trovia:///?q=… 由分享扩展、快捷指令或浏览器扩展调用。
   const routeParams = useLocalSearchParams<{ q?: string }>()
   const insets = useSafeAreaInsets()
   const p = usePalette()
@@ -187,7 +187,7 @@ export function HomeScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View className="h-14 justify-center">
-            <Text className="text-body-sm font-medium text-muted">寻迹</Text>
+            <Text className="text-body-sm font-medium text-muted">Trovia</Text>
           </View>
 
           {inResults ? (
@@ -288,7 +288,7 @@ export function HomeScreen() {
               ) : (
                 <View className="mt-10">
                   <Text className="text-body-sm text-muted">
-                    还没有收藏。把链接粘到上面，寻迹替你读完再存好。
+                    还没有收藏。把链接粘到上面，Trovia 替你读完再存好。
                   </Text>
                 </View>
               )}

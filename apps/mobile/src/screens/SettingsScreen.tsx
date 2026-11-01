@@ -19,7 +19,7 @@ import type { DocumentStats } from '../local/repo'
 import { useLocalRevision } from '../local/useLocalRevision'
 import { useToast } from '../providers/ToastProvider'
 
-const APP_NAME = '寻迹'
+const APP_NAME = 'Trovia'
 
 type IconName = ComponentProps<typeof Ionicons>['name']
 

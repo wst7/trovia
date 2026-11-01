@@ -169,7 +169,7 @@ export function DocumentsScreen() {
               <Text className="mt-1 text-body-sm text-muted">
                 {keyword
                   ? '换一个关键词，或者清除筛选。'
-                  : '回到首页粘贴第一个链接，寻迹会自动整理。'}
+                  : '回到首页粘贴第一个链接，Trovia 会自动整理。'}
               </Text>
               <View className="mt-4 self-start">
                 <TextButton

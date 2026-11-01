@@ -18,10 +18,10 @@ const LIGHT_SURFACE = '#F3EDE0'
 const DARK_SURFACE = '#1C2422'
 
 const config: ExpoConfig = {
-  name: '寻迹',
-  slug: 'xunji',
+  name: 'Trovia',
+  slug: 'trovia',
   version: appVersion,
-  scheme: 'xunji',
+  scheme: 'trovia',
   platforms: ['ios', 'android'],
   orientation: 'portrait',
   icon: './assets/icon.png',
@@ -32,7 +32,7 @@ const config: ExpoConfig = {
     bundleIdentifier: 'com.xunji.app',
     buildNumber: String(versionCode),
     infoPlist: {
-      NSLocalNetworkUsageDescription: '寻迹会直接读取你保存的链接，也可能连接你自己配置的大模型服务。',
+      NSLocalNetworkUsageDescription: 'Trovia 会直接读取你保存的链接，也可能连接你自己配置的大模型服务。',
       ...(isProduction
         ? {}
         : {
