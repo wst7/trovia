@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useFocusEffect, useRouter } from 'expo-router'
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { ActivityIndicator, KeyboardAvoidingView, ScrollView, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { DocumentSummary, ParseStatus, SearchResult } from '@xunji/shared'
@@ -38,6 +38,8 @@ export function HomeScreen() {
   const router = useRouter()
   const { toast } = useToast()
   const revision = useLocalRevision()
+  // 深链直接搜索：xunji:///?q=… 由分享扩展、快捷指令或浏览器扩展调用。
+  const routeParams = useLocalSearchParams<{ q?: string }>()
   const insets = useSafeAreaInsets()
   const p = usePalette()
 
@@ -92,6 +94,17 @@ export function HomeScreen() {
       cancelled = true
     }
   }, [revision, lastQuery])
+
+  useEffect(() => {
+    const seeded = typeof routeParams.q === 'string' ? routeParams.q.trim() : ''
+    if (!seeded) return
+    setQuery(seeded)
+    setLastQuery(seeded)
+    void repo.searchDocuments(seeded).then((outcome) => {
+      setResults(outcome.results)
+      setInterpretation(outcome.interpretation)
+    })
+  }, [routeParams.q])
 
   async function runSearch() {
     const q = query.trim()
@@ -212,16 +225,37 @@ export function HomeScreen() {
                 </View>
               ) : results ? (
                 <View className="mt-2">
-                  {results.map((item) => (
-                    <View key={item.document_id}>
-                      <ResultRow
-                        item={item}
-                        onPress={() => router.push(`/documents/${item.document_id}`)}
-                        onTerminal={handleTerminal}
-                      />
-                      <Divider />
+                  {results
+                    .filter((item) => item.match_kind !== 'semantic')
+                    .map((item) => (
+                      <View key={item.document_id}>
+                        <ResultRow
+                          item={item}
+                          onPress={() => router.push(`/documents/${item.document_id}`)}
+                          onTerminal={handleTerminal}
+                        />
+                        <Divider />
+                      </View>
+                    ))}
+                  {results.some((item) => item.match_kind === 'semantic') ? (
+                    <View className="mt-5">
+                      <Text className="text-caption text-faint">
+                        意思相近，没有完全对上的词
+                      </Text>
+                      {results
+                        .filter((item) => item.match_kind === 'semantic')
+                        .map((item) => (
+                          <View key={item.document_id}>
+                            <ResultRow
+                              item={item}
+                              onPress={() => router.push(`/documents/${item.document_id}`)}
+                              onTerminal={handleTerminal}
+                            />
+                            <Divider />
+                          </View>
+                        ))}
                     </View>
-                  ))}
+                  ) : null}
                 </View>
               ) : null}
             </>

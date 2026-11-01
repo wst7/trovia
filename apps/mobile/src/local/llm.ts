@@ -12,6 +12,9 @@ export interface LlmConfig {
   model: string
   /** 用模型理解「找找昨天的」这类搜索意图，默认开启。 */
   intent: boolean
+  /** 向量模型：字面匹配找不到时用语义兜底；留空则关闭语义检索。 */
+  embedModel: string
+  semantic: boolean
 }
 
 export interface LlmState extends LlmConfig {
@@ -23,6 +26,8 @@ export const DEFAULT_LLM: LlmConfig = {
   baseUrl: 'https://api.openai.com/v1',
   model: 'gpt-4o-mini',
   intent: true,
+  embedModel: 'text-embedding-3-small',
+  semantic: true,
 }
 
 const CONFIG_KEY = 'xunji.llm.v1'
@@ -44,6 +49,8 @@ export async function loadLlmState(): Promise<LlmState> {
     baseUrl: typeof parsed.baseUrl === 'string' && parsed.baseUrl ? parsed.baseUrl : DEFAULT_LLM.baseUrl,
     model: typeof parsed.model === 'string' && parsed.model ? parsed.model : DEFAULT_LLM.model,
     intent: parsed.intent !== false,
+    embedModel: typeof parsed.embedModel === 'string' ? parsed.embedModel : DEFAULT_LLM.embedModel,
+    semantic: parsed.semantic !== false,
     hasKey: Boolean(key),
   }
 }
@@ -54,6 +61,8 @@ export async function saveLlmState(config: LlmConfig, apiKey?: string): Promise<
     baseUrl: config.baseUrl.trim().replace(/\/+$/, ''),
     model: config.model.trim(),
     intent: config.intent !== false,
+    embedModel: config.embedModel.trim(),
+    semantic: config.semantic !== false,
   }
   await AsyncStorage.setItem(CONFIG_KEY, JSON.stringify(next))
   if (apiKey !== undefined) {

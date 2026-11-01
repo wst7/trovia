@@ -128,6 +128,8 @@ export interface SearchResult {
   score: number
   match_reason: string
   matched_excerpt: string | null
+  /** 命中方式：字面匹配，或只找到意思相近的内容。 */
+  match_kind?: 'literal' | 'semantic'
   saved_at: string
   parse_status: ParseStatus
 }

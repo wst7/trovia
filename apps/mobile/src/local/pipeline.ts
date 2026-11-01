@@ -1,4 +1,5 @@
 import { fetchArticle } from './article'
+import { buildVectors } from './embed'
 import { emitChange } from './bus'
 import { summarizeWithLlm } from './llm'
 import { isOcrAvailable, ocrImages } from './ocr'
@@ -35,6 +36,8 @@ export async function processPendingQueue(): Promise<void> {
   } finally {
     running = false
     emitChange()
+    // 语义索引在解析之后慢慢补，失败不打扰用户，下次再试。
+    void buildVectors(6).catch(() => undefined)
   }
 }
 

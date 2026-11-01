@@ -3,9 +3,10 @@ import { useFocusEffect, useRouter } from 'expo-router'
 import { KeyboardAvoidingView, Platform, ScrollView, Switch, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import { buildVectors, loadEmbedConfig, vectorStats } from '../local/embed'
 import { DEFAULT_LLM, loadLlmState, saveLlmState, testLlmConnection } from '../local/llm'
 import { useToast } from '../providers/ToastProvider'
-import { Button, IconButton } from '../ui/Button'
+import { Button, IconButton, TextButton } from '../ui/Button'
 import { Screen } from '../ui/Screen'
 import { TextField } from '../ui/TextField'
 import { GUTTER } from '../ui/Screen'
@@ -26,6 +27,10 @@ export function LlmSettingsScreen() {
   const [baseUrl, setBaseUrl] = useState(DEFAULT_LLM.baseUrl)
   const [model, setModel] = useState(DEFAULT_LLM.model)
   const [intent, setIntent] = useState(DEFAULT_LLM.intent)
+  const [embedModel, setEmbedModel] = useState(DEFAULT_LLM.embedModel)
+  const [semantic, setSemantic] = useState(DEFAULT_LLM.semantic)
+  const [indexed, setIndexed] = useState<{ indexed: number; total: number } | null>(null)
+  const [building, setBuilding] = useState(false)
   const [apiKey, setApiKey] = useState('')
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
@@ -42,16 +47,41 @@ export function LlmSettingsScreen() {
       setBaseUrl(llm.baseUrl)
       setModel(llm.model)
       setIntent(llm.intent)
+      setEmbedModel(llm.embedModel)
+      setSemantic(llm.semantic)
       setHasKey(llm.hasKey)
     } catch {
       // 读不到就保持上一次的值，不打断用户。
     }
   }, [])
 
+  const reloadIndex = useCallback(async () => {
+    const config = await loadEmbedConfig()
+    if (!config) {
+      setIndexed(null)
+      return
+    }
+    setIndexed(await vectorStats(config.model))
+  }, [])
+
+  async function handleBuildIndex() {
+    if (building) return
+    setBuilding(true)
+    try {
+      const added = await buildVectors(40)
+      await reloadIndex()
+      toast(added > 0 ? `已为 ${added} 篇建立语义索引。` : '没有需要补建的条目。', { type: 'success' })
+    } catch {
+      toast('建立索引失败，请检查模型是否支持 embeddings。', { type: 'error' })
+    } finally {
+      setBuilding(false)
+    }
+  }
+
   useFocusEffect(
     useCallback(() => {
-      void reload()
-    }, [reload]),
+      void reload().then(reloadIndex)
+    }, [reload, reloadIndex]),
   )
 
   async function handleSave() {
@@ -73,9 +103,10 @@ export function LlmSettingsScreen() {
 
     setSaving(true)
     try {
-      await saveLlmState({ enabled, baseUrl, model, intent }, apiKey.trim() ? apiKey : undefined)
+      await saveLlmState({ enabled, baseUrl, model, intent, embedModel, semantic }, apiKey.trim() ? apiKey : undefined)
       setApiKey('')
       await reload()
+      await reloadIndex()
       toast(enabled ? '已保存，新收藏会用这个模型整理。' : '已保存，将使用本地抽取式摘要。', {
         type: 'success',
       })
@@ -99,7 +130,7 @@ export function LlmSettingsScreen() {
 
     setTesting(true)
     try {
-      const reply = await testLlmConnection({ enabled: true, baseUrl, model, intent }, apiKey)
+      const reply = await testLlmConnection({ enabled: true, baseUrl, model, intent, embedModel, semantic }, apiKey)
       toast(`连接成功，模型回复：${reply}`, { type: 'success' })
     } catch (error) {
       const message = error instanceof Error ? error.message : '连接失败'
@@ -162,6 +193,23 @@ export function LlmSettingsScreen() {
             />
           </View>
 
+          <View className="mt-4 flex-row items-center gap-3">
+            <View className="flex-1">
+              <Text className="text-body-sm text-ink">语义补充检索</Text>
+              <Text className="mt-1 text-caption text-muted">
+                字面没找到时，用向量找意思相近的内容，单独列在下面，不参与主排序。
+              </Text>
+            </View>
+            <Switch
+              value={semantic}
+              onValueChange={setSemantic}
+              trackColor={{ false: p.line, true: p.accent }}
+              thumbColor={p.surface}
+              ios_backgroundColor={p.line}
+              accessibilityLabel="使用语义补充检索"
+            />
+          </View>
+
           <View className={enabled ? 'mt-6 gap-5' : 'mt-6 gap-5 opacity-45'}>
             <TextField
               label="服务地址"
@@ -183,6 +231,16 @@ export function LlmSettingsScreen() {
               accessibilityLabel="模型名称"
             />
             <TextField
+              label="向量模型"
+              value={embedModel}
+              onChangeText={setEmbedModel}
+              placeholder={DEFAULT_LLM.embedModel}
+              autoCapitalize="none"
+              autoCorrect={false}
+              hint="用于语义检索的 embeddings 模型；服务不支持 embeddings 时留空即可。"
+              accessibilityLabel="向量模型"
+            />
+            <TextField
               label="API Key"
               value={apiKey}
               onChangeText={setApiKey}
@@ -195,7 +253,14 @@ export function LlmSettingsScreen() {
             />
           </View>
 
-          <View className="mt-6 flex-row gap-2">
+          <View className="mt-6 flex-row items-center justify-between">
+            <Text className="text-body-sm text-muted">
+              {indexed === null ? '语义索引：—' : `语义索引：${indexed.indexed} / ${indexed.total} 篇`}
+            </Text>
+            <TextButton label="补建索引" onPress={() => void handleBuildIndex()} tone="muted" />
+          </View>
+
+          <View className="mt-4 flex-row gap-2">
             <Button
               label={saving ? '保存中…' : '保存设置'}
               onPress={() => void handleSave()}

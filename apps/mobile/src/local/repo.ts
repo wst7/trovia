@@ -10,6 +10,7 @@ import type {
 
 import type { ExtractedArticle } from './article'
 import { getDb } from './db'
+import { SEMANTIC_MIN_SCORE, cosine, embedTexts, loadEmbedConfig, loadVectors } from './embed'
 import type { Completer } from './intent'
 import { resolveIntent } from './intent'
 import { chat, loadLlmKey, loadLlmState } from './llm'
@@ -416,6 +417,18 @@ export async function documentStats(): Promise<DocumentStats> {
 /** 叙述性的口头语，匹配前先去掉，避免「我记得那篇……」污染关键词。 */
 const FILLER = /(我记得|记得|好像|大概|可能是|应该是|之前|以前|看过|看到过|收藏过|收藏了|帮我找|找一下|找找|那篇|这篇|一篇|一个|那个|这个|关于|讲的|说的|也就是|内容|文章|视频|链接)/g
 
+/**
+ * 高频虚词/泛词：它们在几乎每篇文章里都出现，命中它们等于没命中，
+ * 只会把「字面结果」灌满，还挡住语义兜底。中文二元组匹配尤其需要这张表。
+ */
+const STOP_TERMS = new Set([
+  '怎么', '什么', '如何', '为什', '么会', '可以', '需要', '自己', '我们', '他们', '你们',
+  '这个', '那个', '一个', '一些', '这些', '那些', '就是', '还是', '但是', '因为', '所以',
+  '如果', '已经', '现在', '时候', '时间', '问题', '东西', '事情', '觉得', '认为', '没有',
+  '不是', '真的', '非常', '比较', '一直', '这样', '那样', '很多', '如何', '这些', '关于',
+  '的时', '时候', '有的', '时候', '一种', '是否', '以及', '或者', '然后', '而且', '并且',
+])
+
 export function queryTerms(query: string): string[] {
   const cleaned = query
     .toLowerCase()
@@ -435,7 +448,8 @@ export function queryTerms(query: string): string[] {
       if (run.length <= 6) terms.add(run)
     }
   }
-  return [...terms].slice(0, 24)
+  // 去掉泛词与单字：单字（的/了/是）在中文里几乎必然命中，只会制造噪声。
+  return [...terms].filter((term) => !STOP_TERMS.has(term) && term.length >= 2).slice(0, 24)
 }
 
 function excerptAround(text: string, terms: string[]): string | null {
@@ -493,6 +507,65 @@ async function intentCompleter(): Promise<Completer | null> {
     return (messages, maxTokens) => chat(state, key, messages, maxTokens, 6_000)
   } catch {
     return null
+  }
+}
+
+/** 字面结果少于这个数，才去算向量：够用的查询不额外付一次模型调用。 */
+const LITERAL_ENOUGH = 3
+const SEMANTIC_LIMIT = 5
+
+/**
+ * 语义兜底：只补字面没找到的部分，且必须过相似度门槛。
+ * 任何一步失败都返回空数组——搜索不能因为模型不可用而变差。
+ */
+async function semanticMatches(text: string, exclude: Set<string>, limit: number): Promise<SearchResult[]> {
+  if (!text.trim() || exclude.size >= 500) return []
+  try {
+    const config = await loadEmbedConfig()
+    if (!config) return []
+    const vectors = await loadVectors(config.model)
+    if (vectors.length === 0) return []
+
+    const [queryVec] = await embedTexts([text], config)
+    const ranked = vectors
+      .filter((row) => !exclude.has(row.id))
+      .map((row) => ({ id: row.id, score: cosine(queryVec, row.vec) }))
+      .filter((row) => row.score >= SEMANTIC_MIN_SCORE)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+    if (ranked.length === 0) return []
+
+    const db = await getDb()
+    const placeholders = ranked.map(() => '?').join(',')
+    const rows = await db.getAllAsync<DocumentRow>(
+      `SELECT * FROM documents WHERE deleted_at IS NULL AND id IN (${placeholders})`,
+      ...ranked.map((row) => row.id),
+    )
+    const byId = new Map(rows.map((row) => [row.id, row]))
+
+    return ranked.flatMap(({ id, score }) => {
+      const row = byId.get(id)
+      if (!row) return []
+      return [
+        {
+          document_id: row.id,
+          title: row.title,
+          url: row.url,
+          source_type: row.source_type as SourceType,
+          site_name: row.site_name,
+          summary: row.summary_short ?? row.summary_long,
+          score: Math.min(1, Math.round(score * 100) / 100),
+          // 原因只写事实：这是语义相近，不是「命中了某个词」。
+          match_reason: '内容与这句话的意思相近',
+          matched_excerpt: null,
+          saved_at: row.saved_at,
+          parse_status: row.parse_status as ParseStatus,
+          match_kind: 'semantic' as const,
+        },
+      ]
+    })
+  } catch {
+    return []
   }
 }
 
@@ -586,7 +659,14 @@ export async function searchDocuments(query: string, limit = 20): Promise<Search
     parse_status: row.parse_status as ParseStatus,
   }))
 
-  return { results, interpretation: parsed.summary }
+  // 字面不够好才补语义；时间条件是硬过滤，语义只在同一天里找没有意义。
+  let extra: SearchResult[] = []
+  if (!dateOnly && results.length < LITERAL_ENOUGH) {
+    const shown = new Set(results.map((item) => item.document_id))
+    extra = await semanticMatches(parsed.text || query, shown, SEMANTIC_LIMIT)
+  }
+
+  return { results: [...results, ...extra], interpretation: parsed.summary }
 }
 
 function bigrams(text: string): Set<string> {

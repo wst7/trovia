@@ -56,6 +56,15 @@ CREATE INDEX IF NOT EXISTS documents_saved_at_idx
 CREATE UNIQUE INDEX IF NOT EXISTS documents_url_active_idx
   ON documents (url) WHERE deleted_at IS NULL;
 
+-- 语义检索用的向量：一篇一行，模型名与维度一起存，换模型后旧向量自动失效。
+CREATE TABLE IF NOT EXISTS doc_vectors (
+  document_id  TEXT PRIMARY KEY NOT NULL,
+  model        TEXT NOT NULL,
+  dim          INTEGER NOT NULL,
+  vec          BLOB NOT NULL,
+  updated_at   TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS settings (
   key   TEXT PRIMARY KEY NOT NULL,
   value TEXT NOT NULL
