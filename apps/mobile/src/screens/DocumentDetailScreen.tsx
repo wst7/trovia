@@ -50,6 +50,8 @@ export function DocumentDetailScreen() {
   const [deleting, setDeleting] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   // 看图：整篇图片一起传，左右能翻。
+  // 底部悬浮按钮挡不挡正文，取决于它的真实高度，所以量一次再决定留白。
+  const [barHeight, setBarHeight] = useState(0)
   const [viewer, setViewer] = useState<{ open: boolean; index: number; images: string[] }>({
     open: false,
     index: 0,
@@ -186,7 +188,11 @@ export function DocumentDetailScreen() {
       {header}
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: GUTTER, paddingBottom: insets.bottom + 88 }}
+        contentContainerStyle={{
+          paddingHorizontal: GUTTER,
+          // 读到最后一屏时最后一行不能被悬浮按钮压住。
+          paddingBottom: (barHeight || 88) + 20,
+        }}
         showsVerticalScrollIndicator={false}
       >
         {doc.title && doc.title.trim() !== doc.url ? (
@@ -326,6 +332,7 @@ export function DocumentDetailScreen() {
       <View
         className="absolute inset-x-0 bottom-0 border-t border-line bg-canvas px-4 pt-3"
         style={{ paddingBottom: insets.bottom + 12 }}
+        onLayout={(event) => setBarHeight(event.nativeEvent.layout.height)}
       >
         <Button
           label="打开原文"
