@@ -9,9 +9,12 @@
   ],
   "overrides": {
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "lightningcss": "1.29.2"
   },
   "devDependencies": {
+    "lightningcss": "1.29.2",
+    "patch-package": "^8.0.1",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
@@ -27,6 +30,7 @@
     "api:typecheck": "npm run typecheck -w @xunji/api",
     "build": "npm run build -w @xunji/web && npm run build -w @xunji/landing",
     "preview": "npm run preview -w @xunji/web",
-    "preview:landing": "npm run preview -w @xunji/landing"
+    "preview:landing": "npm run preview -w @xunji/landing",
+    "postinstall": "patch-package"
   }
 }

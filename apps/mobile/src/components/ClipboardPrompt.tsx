@@ -9,7 +9,7 @@ import { processPendingQueue } from '../local/pipeline'
 import * as repo from '../local/repo'
 import { titleHintFrom } from '../local/util'
 import { useToast } from '../providers/ToastProvider'
-import { ConfirmDialog } from './ui/ConfirmDialog'
+import { ConfirmDialog } from '../ui/ConfirmDialog'
 
 /** 上次已经问过的链接：同一个链接不重复弹，换了一条再问。 */
 const LAST_OFFERED_KEY = 'xunji.clipboard.v1'

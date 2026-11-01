@@ -1,10 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Ionicons } from '@expo/vector-icons'
 import { Animated, Pressable, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-
-import { makeStyles, useTheme, withAlpha } from '../theme'
 
 type ToastType = 'info' | 'success' | 'warning' | 'error'
 
@@ -32,24 +29,15 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null)
 
-const ICON: Record<ToastType, 'checkmark-circle' | 'information-circle' | 'warning' | 'alert-circle'> = {
-  info: 'information-circle',
-  success: 'checkmark-circle',
-  warning: 'warning',
-  error: 'alert-circle',
-}
-
 /**
- * MD3 snackbar：inverseSurface 底色浮在导航栏之上，保持最多 3 条。
- * 语义靠图标形状区分，颜色统一用 inversePrimary，深浅两套主题都够清楚。
+ * 提示条：一条墨色反底，浮在导航栏之上，最多留 3 条。
+ * 不区分图标、不区分底色——文字说什么就是什么，状态已经写在那句话里。
  */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([])
   const nextId = useRef(1)
   const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>())
   const insets = useSafeAreaInsets()
-  const theme = useTheme()
-  const styles = useStyles()
 
   const dismiss = useCallback((id: number) => {
     const timer = timers.current.get(id)
@@ -89,13 +77,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <View
         pointerEvents="box-none"
-        style={[
-          styles.host,
-          {
-            paddingBottom:
-              insets.bottom + theme.layout.navBarHeight + theme.spacing.lg,
-          },
-        ]}
+        className="absolute inset-x-4 gap-2"
+        style={{ bottom: insets.bottom + 72 }}
       >
         {items.map((item) => (
           <Snackbar key={item.id} item={item} onDismiss={() => dismiss(item.id)} />
@@ -106,64 +89,55 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 }
 
 function Snackbar({ item, onDismiss }: { item: ToastItem; onDismiss: () => void }) {
-  const theme = useTheme()
-  const styles = useStyles()
   const enter = useRef(new Animated.Value(0)).current
+  const action = item.action
 
   useEffect(() => {
-    Animated.spring(enter, {
+    Animated.timing(enter, {
       toValue: 1,
+      duration: 160,
       useNativeDriver: true,
-      ...theme.motion.spring.expressive,
     }).start()
-  }, [enter, theme.motion.spring.expressive])
+  }, [enter])
 
   return (
     <Animated.View
       accessibilityLiveRegion="polite"
-      style={[
-        styles.snackbar,
-        {
-          opacity: enter,
-          transform: [
-            {
-              translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }),
-            },
-          ],
-        },
-      ]}
+      className="flex-row items-start gap-3 rounded-sm bg-ink px-4 py-3"
+      style={{
+        opacity: enter,
+        transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }],
+      }}
     >
-      <Ionicons
-        name={ICON[item.type]}
-        size={20}
-        color={theme.colors.inversePrimary}
-        style={styles.icon}
-      />
-      <View style={styles.body}>
-        <Text style={styles.message}>{item.message}</Text>
-        {item.action && (
+      <View className="flex-1">
+        <Text className="text-body-sm text-canvas">{item.message}</Text>
+        {action ? (
           <Pressable
             onPress={() => {
-              item.action?.onPress()
+              action.onPress()
               onDismiss()
             }}
             accessibilityRole="button"
-            android_ripple={{ color: withAlpha(theme.colors.inversePrimary, 0.16) }}
-            style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]}
+            hitSlop={8}
+            className="mt-1 self-start"
           >
-            <Text style={styles.action}>{item.action.label}</Text>
-            <Ionicons name="chevron-forward" size={14} color={theme.colors.inversePrimary} />
+            {({ pressed }) => (
+              <Text
+                className="text-label text-canvas underline"
+                style={{ opacity: pressed ? 0.6 : 1 }}
+              >
+                {action.label}
+              </Text>
+            )}
           </Pressable>
-        )}
+        ) : null}
       </View>
-      <Pressable
-        onPress={onDismiss}
-        accessibilityRole="button"
-        accessibilityLabel="关闭提示"
-        hitSlop={10}
-        style={({ pressed }) => [styles.close, pressed && styles.pressed]}
-      >
-        <Ionicons name="close" size={18} color={theme.colors.inverseOnSurface} />
+      <Pressable onPress={onDismiss} accessibilityRole="button" accessibilityLabel="关闭提示" hitSlop={10}>
+        {({ pressed }) => (
+          <Text className="text-label text-canvas" style={{ opacity: pressed ? 0.5 : 0.45 }}>
+            ✕
+          </Text>
+        )}
       </Pressable>
     </Animated.View>
   )
@@ -174,55 +148,3 @@ export function useToast(): ToastContextValue {
   if (!value) throw new Error('useToast must be used within ToastProvider')
   return value
 }
-
-const useStyles = makeStyles((theme) => ({
-  host: {
-    position: 'absolute',
-    left: theme.spacing.lg,
-    right: theme.spacing.lg,
-    bottom: 0,
-    gap: theme.spacing.sm,
-  },
-  snackbar: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: theme.spacing.md,
-    backgroundColor: theme.colors.inverseSurface,
-    borderRadius: theme.shape.xs,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md + 2,
-    ...theme.elevation.level3,
-  },
-  icon: {
-    marginTop: 1,
-  },
-  body: {
-    flex: 1,
-    gap: theme.spacing.xs,
-  },
-  message: {
-    ...theme.type.bodyMedium,
-    color: theme.colors.inverseOnSurface,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 2,
-    minHeight: 32,
-  },
-  action: {
-    ...theme.type.labelLarge,
-    fontWeight: '600',
-    color: theme.colors.inversePrimary,
-  },
-  close: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pressed: {
-    opacity: 0.55,
-  },
-}))

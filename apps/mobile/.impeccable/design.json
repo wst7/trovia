@@ -1,238 +1,285 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-30T09:22:55Z",
-  "title": "Design System: 寻迹 Mobile",
+  "generatedAt": "2026-11-01T04:53:09Z",
+  "title": "寻迹 Mobile",
   "extensions": {
     "colorMeta": {
-      "primary": {
-        "role": "primary",
-        "displayName": "朱红 Vermilion",
-        "canonical": "#b53823",
-        "note": "世界种子 #c2402c 压到 #b53823 作 light primary，保证朱红文字过 4.5:1；dark primary 为 #ff8f73。",
-        "dark": "#ff8f73",
-        "tonalRamp": ["#400200", "#670600", "#8c1809", "#ad311f", "#f2624b", "#ffb4a6", "#ffdad4", "#fffbff"]
-      },
-      "secondary": {
-        "role": "secondary",
-        "displayName": "邮戳紫 Ink Violet",
-        "canonical": "#625a78",
-        "note": "种子 #2e2742（墨色本体）同色相；tonal 按钮/tab 胶囊/空状态来源。",
-        "dark": "#ccc1e4",
-        "tonalRamp": ["#1e1731", "#332c48", "#4a425f", "#625a78", "#958cac", "#ccc1e4", "#e8ddff", "#fffbff"]
-      },
-      "tertiary": {
-        "role": "tertiary",
-        "displayName": "集邮绿 Album Green",
-        "canonical": "#446559",
-        "note": "种子 #35564a；第二容器色，不与朱红抢焦点。",
-        "dark": "#aacebf",
-        "tonalRamp": ["#002117", "#15362b", "#2c4d41", "#446559", "#75988a", "#aacebf", "#c6ebdb", "#f3fff8"]
-      },
       "canvas": {
-        "role": "neutral",
-        "displayName": "胶面纸 Paper（dark：深绿集邮册布 Cloth）",
-        "canonical": "#f3ede0",
-        "dark": "#1c2422",
-        "tonalRamp": ["#1d1c14", "#333028", "#49473d", "#615e54", "#959085", "#cbc6ba", "#e8e2d5", "#fffbff"]
+        "role": "canvas",
+        "displayName": "纸白 Paper",
+        "canonical": "#fbfaf7",
+        "dark": "#121211",
+        "note": "页面底与导航栏底。"
       },
-      "card": {
-        "role": "neutral",
-        "displayName": "票面 Card",
-        "canonical": "#fffdf7",
-        "dark": "#242927",
-        "note": "light= surfaceContainerLowest，被钉死在暖色 #fffdf7（HCT tone 99 求解器偏蓝显脏）；dark 翻转为 surfaceContainerLow，保证卡片永远浮在 canvas 之上。"
+      "surface": {
+        "role": "surface",
+        "displayName": "抬起的表面 Surface",
+        "canonical": "#ffffff",
+        "dark": "#1b1b19",
+        "note": "输入框、对话框；暗色下比 canvas 亮一档。"
       },
-      "field": {
-        "role": "neutral",
-        "displayName": "票口 Field",
-        "canonical": "#e7e2d9",
-        "dark": "#3c413f",
-        "note": "surfaceContainerHighest；票面输入槽底色。"
+      "sunken": {
+        "role": "sunken",
+        "displayName": "下沉表面 Sunken",
+        "canonical": "#f4f3ef",
+        "dark": "#0c0c0b",
+        "note": "摘要块、代码块；比 canvas 暗一档。"
       },
-      "text": {
-        "role": "neutral",
-        "displayName": "邮戳紫黑墨 Ink",
-        "canonical": "#2e2742",
-        "dark": "#eae5d6",
-        "tonalRamp": ["#1e1731", "#332c48", "#4a425f", "#625a78", "#958cac", "#ccc1e4", "#e8ddff", "#fffbff"]
+      "line": {
+        "role": "line",
+        "displayName": "发丝线 Hairline",
+        "canonical": "#e8e6e1",
+        "dark": "#2b2b28",
+        "note": "1dp 分隔与静息描边。层次只靠它和留白。"
       },
-      "divider": {
-        "role": "neutral",
-        "displayName": "发丝 Divider",
-        "canonical": "#cbc6bd",
-        "dark": "#434846",
-        "note": "outlineVariant；1dp 分段线，也是邮票齿孔边的颜色来源之一。"
+      "line-strong": {
+        "role": "line-strong",
+        "displayName": "可交互描边 Strong line",
+        "canonical": "#d6d3cc",
+        "dark": "#3b3b37",
+        "note": "次级按钮描边、输入框聚焦描边。"
       },
-      "error": {
-        "role": "status",
+      "ink": {
+        "role": "ink",
+        "displayName": "墨 Ink",
+        "canonical": "#1a1917",
+        "dark": "#edeae4",
+        "note": "主文字，也是提示条的反底。"
+      },
+      "muted": {
+        "role": "muted",
+        "displayName": "淡墨 Muted",
+        "canonical": "#6e6c67",
+        "dark": "#9b9891",
+        "note": "次要文字、摘要、说明。"
+      },
+      "faint": {
+        "role": "faint",
+        "displayName": "极淡墨 Faint",
+        "canonical": "#a3a099",
+        "dark": "#6b6862",
+        "note": "栏目名、占位符、已完成状态点。"
+      },
+      "accent": {
+        "role": "accent",
+        "displayName": "朱红 Vermilion",
+        "canonical": "#b23a26",
+        "dark": "#e4715b",
+        "note": "全站唯一强调色，一屏只出现一次。"
+      },
+      "accent-quiet": {
+        "role": "accent-quiet",
+        "displayName": "朱红淡底 Vermilion quiet",
+        "canonical": "#f7eae6",
+        "dark": "#2e1d18",
+        "note": "留给未来的选中态，当前几乎不用。"
+      },
+      "danger": {
+        "role": "danger",
         "displayName": "错误 Error",
-        "canonical": "#ba1a1a",
-        "dark": "#ffb4ab"
+        "canonical": "#b3352b",
+        "dark": "#e4685c",
+        "note": "删除、失败。"
       },
-      "warning": {
-        "role": "status",
+      "warn": {
+        "role": "warn",
         "displayName": "警告 Warning",
-        "canonical": "#9b4500",
-        "dark": "#ffb68e",
-        "note": "partial 的划销线用此色。"
+        "canonical": "#8a5a20",
+        "dark": "#d9a15b",
+        "note": "部分成功。"
       },
-      "success": {
-        "role": "status",
+      "ok": {
+        "role": "ok",
         "displayName": "成功 Success",
-        "canonical": "#006d30",
-        "dark": "#79db8d"
+        "canonical": "#2f6b47",
+        "dark": "#6fbe8e",
+        "note": "成功语义，仅文字场合。"
       }
     },
-    "sourceStampTints": {
-      "note": "六组票面 tint（src/design/tints.ts），站点稳定哈希选一组，同站同票；light 取 tone 90/10、dark 取 35/90，两模式均过 4.5:1。",
-      "light": [
-        { "name": "vermilion", "bg": "#ffdad4", "fg": "#400200" },
-        { "name": "album-green", "bg": "#c6ebdb", "fg": "#002117" },
-        { "name": "ink-violet", "bg": "#e8ddff", "fg": "#1e1731" },
-        { "name": "ochre", "bg": "#ffdf97", "fg": "#251a00" },
-        { "name": "wine", "bg": "#ffd9e3", "fg": "#3a071e" },
-        { "name": "postal-blue", "bg": "#c6e7ff", "fg": "#001e2d" }
-      ],
-      "dark": [
-        { "name": "vermilion", "bg": "#9d2514", "fg": "#ffdad4" },
-        { "name": "album-green", "bg": "#38594d", "fg": "#c6ebdb" },
-        { "name": "ink-violet", "bg": "#564e6b", "fg": "#e8ddff" },
-        { "name": "ochre", "bg": "#684f00", "fg": "#ffdf97" },
-        { "name": "wine", "bg": "#7e3e55", "fg": "#ffd9e3" },
-        { "name": "postal-blue", "bg": "#175877", "fg": "#c6e7ff" }
-      ]
-    },
     "typographyMeta": {
-      "display": { "displayName": "Display", "purpose": "超大字位（空状态等）；36/44, 400, −0.4px。" },
-      "headline": { "displayName": "Headline", "purpose": "首页英雄句「今天想找点什么？」；32/40, 700, −0.4px。" },
-      "title": { "displayName": "Title", "purpose": "票面标题与栏头（「提问」「收藏」）；16/24, 600, −0.15px。" },
-      "body": { "displayName": "Body", "purpose": "输入内容与正文；16/24, 400, 0。" },
-      "label": { "displayName": "Label", "purpose": "按钮/tab/chip 标签；全员 +0.5px 字距（注记标签 1px）——销戳与单据的嗓音。" },
-      "mono": { "displayName": "Mono", "purpose": "销戳日期专用；iOS Menlo / Android monospace，账簿式对齐。" }
+      "display": {
+        "size": "28px",
+        "lineHeight": "36px",
+        "weight": 600,
+        "letterSpacing": "-0.5px",
+        "usage": "首页问句、收藏页计数。"
+      },
+      "title": {
+        "size": "20px",
+        "lineHeight": "28px",
+        "weight": 600,
+        "letterSpacing": "-0.2px",
+        "usage": "页面标题、详情标题。"
+      },
+      "heading": {
+        "size": "16px",
+        "lineHeight": "24px",
+        "weight": 600,
+        "letterSpacing": "-0.1px",
+        "usage": "品牌名、小节标题、结果行标题。"
+      },
+      "body": {
+        "size": "16px",
+        "lineHeight": "25px",
+        "weight": 400,
+        "letterSpacing": "0",
+        "usage": "正文、输入内容、摘要首句。"
+      },
+      "body-sm": {
+        "size": "14px",
+        "lineHeight": "22px",
+        "weight": 400,
+        "letterSpacing": "0",
+        "usage": "说明、摘要、辅助文字。"
+      },
+      "caption": {
+        "size": "12px",
+        "lineHeight": "18px",
+        "weight": 400,
+        "letterSpacing": "0",
+        "usage": "出处 · 时间、提示、脚注。"
+      },
+      "label": {
+        "size": "13px",
+        "lineHeight": "18px",
+        "weight": 500,
+        "letterSpacing": "+0.3px",
+        "usage": "按钮、动作、底部标签。"
+      },
+      "mono": {
+        "size": "12px",
+        "lineHeight": "18px",
+        "weight": 400,
+        "letterSpacing": "0",
+        "usage": "代码块与数字。"
+      }
     },
-    "shadows": [
-      { "name": "level1", "value": "0 1px 3px rgba(0,0,0,0.07)", "valueDark": "0 1px 3px rgba(0,0,0,0.30)", "purpose": "票面卡片、AskCard、SaveField——列表每张票的默认分离。" },
-      { "name": "level2", "value": "0 2px 8px rgba(0,0,0,0.10)", "valueDark": "0 2px 8px rgba(0,0,0,0.38)", "purpose": "需要再抬一级的表面。" },
-      { "name": "level3", "value": "0 6px 16px rgba(0,0,0,0.12)", "valueDark": "0 6px 16px rgba(0,0,0,0.42)", "purpose": "ConfirmDialog、Toast 等浮层。" }
-    ],
+    "shadows": [],
     "motion": [
-      { "name": "duration-short", "value": "150ms", "purpose": "最短状态过渡。" },
-      { "name": "duration-medium", "value": "250ms", "purpose": "常规状态过渡。" },
-      { "name": "duration-long", "value": "400ms", "purpose": "较长过渡。" },
-      { "name": "spring-expressive", "value": "damping 14 · stiffness 190 · mass 0.8", "purpose": "签名动作专用：保存成功瞬间销戳弹压上票面。" },
-      { "name": "spring-standard", "value": "damping 20 · stiffness 230 · mass 0.9", "purpose": "默认弹性。" },
-      { "name": "spring-snappy", "value": "damping 26 · stiffness 320 · mass 0.8", "purpose": "快速回弹。" },
-      { "name": "stamp-landing", "value": "scale 1.5→1, rotate −24deg→−8deg, opacity 0→1 via spring-expressive", "purpose": "签名动作：邮戳从高处弹压到票面右上角后作为收据留场；系统开启「移除动画」时直接落位。" }
+      {
+        "name": "toast",
+        "duration": "160ms",
+        "note": "提示条淡入并上移 12dp。"
+      },
+      {
+        "name": "dialog",
+        "duration": "140ms",
+        "note": "确认框淡入，不做缩放弹跳。"
+      }
     ],
     "layout": [
-      { "name": "gutter", "value": "16px" },
-      { "name": "nav-bar-height", "value": "80px" },
-      { "name": "nav-bar-clearance", "value": "96px" },
-      { "name": "app-bar-small", "value": "64px" },
-      { "name": "app-bar-large", "value": "152px" },
-      { "name": "min-touch", "value": "48px" },
-      { "name": "max-content-width", "value": "720px" }
-    ]
+      {
+        "name": "grid",
+        "value": "8dp 网格 / 4dp 半步"
+      },
+      {
+        "name": "gutter",
+        "value": "16dp"
+      },
+      {
+        "name": "tabBar",
+        "value": "56dp + 安全区"
+      },
+      {
+        "name": "titleRow",
+        "value": "56dp"
+      },
+      {
+        "name": "minTouch",
+        "value": "44dp（图标按钮 48dp）"
+      },
+      {
+        "name": "viewport",
+        "value": "390×844 单栏"
+      },
+      {
+        "name": "maxComposerHeight",
+        "value": "132dp"
+      }
+    ],
+    "implementation": {
+      "styling": "NativeWind 4 (Tailwind 3.4) + react-native-css-interop",
+      "tokens": "apps/mobile/global.css (:root / prefers-color-scheme dark)",
+      "imperativeColors": "apps/mobile/src/ui/palette.ts",
+      "note": "CSS 变量与 palette.ts 是同一份颜色的两种写法，必须同步修改。"
+    }
   },
   "components": [
     {
-      "name": "Postmark 销戳",
+      "name": "Composer 输入框",
       "kind": "custom",
-      "refersTo": "postmark",
-      "description": "签名组件：正圆双环，形状编码状态——实圈＝完成、虚圈＝整理中、划销＝部分（warning）/失败（error）。静态票面上整体盖歪 −8°。",
-      "html": "<div class=\"ds-postmark-row\"><div class=\"ds-postmark-slot\"><div class=\"ds-postmark\" role=\"img\" aria-label=\"邮戳 2026.03.14，已完成\"><div class=\"ds-postmark-inner\"><span class=\"ds-postmark-year\">2026</span><span class=\"ds-postmark-date\">03.14</span></div></div><span class=\"ds-postmark-cap\">completed 实圈</span></div><div class=\"ds-postmark-slot\"><div class=\"ds-postmark ds-postmark--dashed\" role=\"img\" aria-label=\"邮戳 2026.03.14，整理中\"><div class=\"ds-postmark-inner\"><span class=\"ds-postmark-year\">2026</span><span class=\"ds-postmark-date\">03.14</span></div></div><span class=\"ds-postmark-cap\">processing 虚圈</span></div><div class=\"ds-postmark-slot\"><div class=\"ds-postmark\" role=\"img\" aria-label=\"邮戳 2026.03.14，部分完成\"><div class=\"ds-postmark-inner\"><span class=\"ds-postmark-year\">2026</span><span class=\"ds-postmark-date\">03.14</span></div><span class=\"ds-postmark-strike\"></span></div><span class=\"ds-postmark-cap\">partial 划销</span></div><div class=\"ds-postmark-slot\"><div class=\"ds-postmark\" role=\"img\" aria-label=\"邮戳 2026.03.14，失败\"><div class=\"ds-postmark-inner\"><span class=\"ds-postmark-year\">2026</span><span class=\"ds-postmark-date\">03.14</span></div><span class=\"ds-postmark-strike ds-postmark-strike--failed\"></span></div><span class=\"ds-postmark-cap\">failed 划销</span></div></div>",
-      "css": ".ds-postmark-row{display:flex;gap:24px;align-items:flex-start}.ds-postmark-slot{display:flex;flex-direction:column;align-items:center;gap:8px;transform:rotate(-8deg)}.ds-postmark-cap{font:500 11px/16px -apple-system,'SF Pro Text','Roboto',sans-serif;letter-spacing:.5px;color:#55524b;transform:rotate(8deg)}.ds-postmark{position:relative;width:56px;height:56px;border-radius:999px;border:1.25px solid #2e2742;display:flex;align-items:center;justify-content:center;background:transparent}.ds-postmark--dashed{border-style:dashed}.ds-postmark-inner{position:absolute;inset:5px;border-radius:999px;border:1px solid rgba(46,39,66,.45);display:flex;flex-direction:column;align-items:center;justify-content:center}.ds-postmark-year{font:500 8px/10px -apple-system,'SF Pro Text','Roboto',sans-serif;letter-spacing:.8px;color:rgba(46,39,66,.7)}.ds-postmark-date{font:700 11px/14px 'SF Mono',Menlo,'Roboto Mono',monospace;color:#2e2742}.ds-postmark-strike{position:absolute;left:-3px;right:-3px;top:27px;height:1.5px;border-radius:1px;background:#9b4500;transform:rotate(-14deg)}.ds-postmark-strike--failed{background:#ba1a1a}"
+      "description": "首页唯一的输入面：看得出是链接就保存，看不出就按一句话检索；框下 caption 随状态变化。",
+      "html": "<div class=\"ds-composer\"><div class=\"ds-composer-input\">描述你记得的一句话，或粘贴一个链接</div><div class=\"ds-composer-foot\"><span>按这句描述找回</span><span class=\"ds-composer-submit\">↑</span></div></div>"
     },
     {
-      "name": "SourceStamp 来源邮票",
+      "name": "Button 按钮",
+      "kind": "button",
+      "description": "primary 朱红（一屏一个）、secondary 描边、quiet 纯文字；48dp 高、8dp 圆角。",
+      "html": "<div class=\"ds-buttons\"><span class=\"ds-btn ds-btn-primary\">打开原文</span><span class=\"ds-btn ds-btn-secondary\">测试连接</span><span class=\"ds-btn ds-btn-quiet\">加载更多</span></div>"
+    },
+    {
+      "name": "RecentRow 列表行",
+      "kind": "row",
+      "description": "标题 1 行 + 元信息 1 行 + 状态点；最小 60dp，行间 1px 发丝线。没有卡片底、没有箭头。",
+      "html": "<div class=\"ds-row\"><div class=\"ds-row-title\">那篇讲睡眠不足与焦虑的文章</div><div class=\"ds-row-meta\">mp.weixin.qq.com · 3 天前</div></div>"
+    },
+    {
+      "name": "ResultRow 结果行",
+      "kind": "row",
+      "description": "标题 2 行 + 元信息 + 摘要 2 行 + 真实命中的「为什么找到它」+ 斜体摘录。",
+      "html": "<div class=\"ds-row\"><div class=\"ds-row-title\">睡眠不足为什么会让焦虑加重</div><div class=\"ds-row-meta\">mp.weixin.qq.com · 2 个月前</div><div class=\"ds-row-body\">文章从杏仁核与前额叶的相互抑制讲起……</div><div class=\"ds-row-reason\">标题命中「睡眠不足」「焦虑」</div></div>"
+    },
+    {
+      "name": "StatusMark 状态点",
       "kind": "custom",
-      "refersTo": "source-stamp",
-      "description": "站点哈希选 tint（同站同票），首字压中央，四周点状边打齿孔——齿孔色 = 票所贴的底纸色（结果票上是 card #fffdf7）。40dp 常规、44dp 最强命中。",
-      "html": "<div class=\"ds-stamp-row\"><div class=\"ds-stamp ds-stamp--vermilion\" aria-hidden=\"true\">微</div><div class=\"ds-stamp ds-stamp--green\" aria-hidden=\"true\">G</div><div class=\"ds-stamp ds-stamp--violet\" aria-hidden=\"true\">知</div><div class=\"ds-stamp ds-stamp--ochre\" aria-hidden=\"true\">M</div><div class=\"ds-stamp ds-stamp--wine\" aria-hidden=\"true\">播</div><div class=\"ds-stamp ds-stamp--blue\" aria-hidden=\"true\">H</div><div class=\"ds-stamp ds-stamp--vermilion ds-stamp--strong\" aria-hidden=\"true\">微</div></div>",
-      "css": ".ds-stamp-row{display:flex;gap:16px;align-items:center}.ds-stamp{width:40px;height:40px;border-radius:4px;border:3px dotted #fffdf7;display:flex;align-items:center;justify-content:center;font:600 16px/19px -apple-system,'SF Pro Text','Roboto',sans-serif}.ds-stamp--strong{width:44px;height:44px;font-size:18px;line-height:21px}.ds-stamp--vermilion{background:#ffdad4;color:#400200}.ds-stamp--green{background:#c6ebdb;color:#002117}.ds-stamp--violet{background:#e8ddff;color:#1e1731}.ds-stamp--ochre{background:#ffdf97;color:#251a00}.ds-stamp--wine{background:#ffd9e3;color:#3a071e}.ds-stamp--blue{background:#c6e7ff;color:#001e2d}"
+      "description": "8dp 圆点：空心＝整理中（附文字）、实心 faint＝已完成（无文字）、实心 warn＝部分、实心 danger＝失败。",
+      "html": "<div class=\"ds-status-row\"><span class=\"ds-dot ds-dot-hollow\"></span><span class=\"ds-status-label\">整理中</span><span class=\"ds-dot ds-dot-done\"></span><span class=\"ds-dot ds-dot-warn\"></span></div>"
     },
     {
-      "name": "Ticket Card 结果票",
-      "kind": "card",
-      "refersTo": "card-ticket",
-      "description": "搜索结果票：来源邮票居左，标题/元信息/摘要，发丝分段线之下是「为什么找到它」注记段，销戳坐注记行右端、盖歪 −8°。按压整卡变哑光。最强命中＝票与戳各加大一号，不用数字角标。",
-      "html": "<button class=\"ds-ticket\"><div class=\"ds-ticket-row\"><div class=\"ds-stamp ds-stamp--green\" aria-hidden=\"true\">G</div><div class=\"ds-ticket-body\"><div class=\"ds-ticket-title\">Designing Data-Intensive Applications 读书笔记</div><div class=\"ds-ticket-meta\">GitHub · 3 天前</div><div class=\"ds-ticket-summary\">分布式一致性、复制与分区的取舍，以及流批一体……</div></div></div><div class=\"ds-ticket-segment\"></div><div class=\"ds-ticket-note-row\"><div class=\"ds-ticket-note\"><div class=\"ds-ticket-note-head\"><svg width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"#b53823\" aria-hidden=\"true\"><path d=\"M12 2l1.9 5.7L19.6 9l-4.4 3.8L16.3 19 12 15.6 7.7 19l1.1-6.2L4.4 9l5.7-1.3L12 2z\"/></svg><span class=\"ds-ticket-note-label\">为什么找到它</span></div><div class=\"ds-ticket-note-text\">命中正文：「一致性模型的取舍」与查询描述最相近</div><div class=\"ds-ticket-excerpt\">“选择一致性模型时，需要在容错与复杂度之间权衡……”</div></div><div class=\"ds-ticket-postmark\"><div class=\"ds-postmark\" aria-hidden=\"true\"><div class=\"ds-postmark-inner\"><span class=\"ds-postmark-year\">2026</span><span class=\"ds-postmark-date\">10.27</span></div></div></div></div></button>",
-      "css": ".ds-ticket{display:block;width:100%;text-align:left;background:#fffdf7;border:none;border-radius:12px;padding:16px 16px 12px;box-shadow:0 1px 3px rgba(0,0,0,.07);font-family:-apple-system,'SF Pro Text','Roboto',sans-serif;cursor:pointer;transition:background .15s}.ds-ticket:hover{background:#fbf6ed}.ds-ticket:focus-visible{outline:2px solid #b53823;outline-offset:2px}.ds-ticket:active{background:#fbf6ed}.ds-ticket-row{display:flex;gap:12px;align-items:flex-start}.ds-ticket-body{flex:1;min-width:0}.ds-ticket-title{font:600 16px/24px -apple-system,'SF Pro Text','Roboto',sans-serif;letter-spacing:-.15px;color:#2e2742;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.ds-ticket-meta{font:400 12px/16px -apple-system,'SF Pro Text','Roboto',sans-serif;color:#55524b;margin-top:2px}.ds-ticket-summary{font:400 14px/20px -apple-system,'SF Pro Text','Roboto',sans-serif;color:#55524b;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.ds-ticket-segment{height:1px;background:#cbc6bd;margin:12px 0}.ds-ticket-note-row{display:flex;gap:12px;align-items:flex-end}.ds-ticket-note{flex:1;min-width:0}.ds-ticket-note-head{display:flex;gap:5px;align-items:center}.ds-ticket-note-label{font:700 11px/16px -apple-system,'SF Pro Text','Roboto',sans-serif;letter-spacing:1px;color:#b53823}.ds-ticket-note-text{font:400 14px/20px -apple-system,'SF Pro Text','Roboto',sans-serif;color:#2e2742;margin-top:4px}.ds-ticket-excerpt{font:italic 400 12px/16px -apple-system,'SF Pro Text','Roboto',sans-serif;color:#55524b;margin-top:4px}.ds-ticket .ds-stamp{width:40px;height:40px;border-radius:4px;border:3px dotted #fffdf7;display:flex;align-items:center;justify-content:center;font:600 16px/19px -apple-system,'SF Pro Text','Roboto',sans-serif;flex-shrink:0}.ds-ticket .ds-stamp--green{background:#c6ebdb;color:#002117}.ds-ticket-postmark{flex-shrink:0;margin-bottom:-4px;transform:rotate(-8deg)}.ds-ticket .ds-postmark{position:relative;width:56px;height:56px;border-radius:999px;border:1.25px solid #2e2742;display:flex;align-items:center;justify-content:center;background:transparent}.ds-ticket .ds-postmark-inner{position:absolute;inset:5px;border-radius:999px;border:1px solid rgba(46,39,66,.45);display:flex;flex-direction:column;align-items:center;justify-content:center}.ds-ticket .ds-postmark-year{font:500 8px/10px -apple-system,'SF Pro Text','Roboto',sans-serif;letter-spacing:.8px;color:rgba(46,39,66,.7)}.ds-ticket .ds-postmark-date{font:700 11px/14px 'SF Mono',Menlo,'Roboto Mono',monospace;color:#2e2742}"
-    },
-    {
-      "name": "Search Capsule 找回胶囊",
+      "name": "TextField 设置项",
       "kind": "input",
-      "refersTo": "input-search",
-      "description": "MD3 搜索胶囊：56dp 全圆角、surfaceContainerHigh 底，聚焦 1.5dp 描朱红；尾部 40dp 朱红圆形提交，未就绪时熄灭。",
-      "html": "<div class=\"ds-search\" role=\"search\"><svg class=\"ds-search-icon\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#55524b\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"M20 20l-3.5-3.5\"/></svg><input class=\"ds-search-input\" type=\"text\" placeholder=\"描述你记得的内容\" aria-label=\"搜索你收藏过的内容\"/><button class=\"ds-search-submit\" aria-label=\"找回\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14M13 6l6 6-6 6\"/></svg></button></div>",
-      "css": ".ds-search{display:flex;align-items:center;gap:12px;min-height:56px;border-radius:999px;border:1.5px solid transparent;background:#ede8de;padding-left:16px;padding-right:4px;transition:border-color .15s}.ds-search:hover{border-color:rgba(130,126,119,.5)}.ds-search:focus-within{border-color:#b53823}.ds-search-icon{flex-shrink:0;transition:stroke .15s}.ds-search:focus-within .ds-search-icon{stroke:#b53823}.ds-search-input{flex:1;min-width:0;border:none;background:transparent;outline:none;font:400 16px/24px -apple-system,'SF Pro Text','Roboto',sans-serif;color:#2e2742;padding:8px 0}.ds-search-input::placeholder{color:#55524b}.ds-search-submit{width:48px;height:48px;border:none;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:999px}.ds-search-submit svg{width:40px;height:40px;padding:10px;box-sizing:border-box;background:#b53823;border-radius:999px;transition:transform .15s,opacity .15s}.ds-search-submit:hover svg{opacity:.86}.ds-search-submit:active svg{transform:scale(.94)}.ds-search-submit:focus-visible{outline:2px solid #b53823;outline-offset:0}"
+      "description": "11px 栏目名在上，输入框只有一条下划线，聚焦变朱红。",
+      "html": "<div class=\"ds-field\"><div class=\"ds-field-label\">服务地址</div><div class=\"ds-field-input\">https://api.openai.com/v1</div></div>"
     },
     {
-      "name": "Ticket Save Field 收藏票口",
-      "kind": "input",
-      "refersTo": "input-save",
-      "description": "首页收藏面：头行 softicon + 栏头，发丝分段线之下是只圆上角的票口输入槽（field 底），底部 2dp 指示条聚焦变朱红；朱红圆形提交在识别出 URL 前熄灭。",
-      "html": "<div class=\"ds-save\"><div class=\"ds-save-head\"><div class=\"ds-save-softicon\" aria-hidden=\"true\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"#400200\" aria-hidden=\"true\"><path d=\"M11 5h2v14h-2z M5 11h14v2H5z\"/></svg></div><div class=\"ds-save-headtext\"><div class=\"ds-save-title\">收藏</div><div class=\"ds-save-sub\">粘贴链接，自动抓取正文</div></div></div><div class=\"ds-save-segment\"></div><div class=\"ds-save-field\"><input class=\"ds-save-input\" type=\"text\" placeholder=\"https://mp.weixin.qq.com/s/…\" aria-label=\"粘贴要保存的链接或分享文字\"/><button class=\"ds-save-submit\" aria-label=\"保存链接\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5M6 11l6-6 6 6\"/></svg></button><span class=\"ds-save-indicator\"></span></div></div>",
-      "css": ".ds-save{background:#fffdf7;border-radius:12px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,.07);font-family:-apple-system,'SF Pro Text','Roboto',sans-serif}.ds-save-head{display:flex;gap:12px;align-items:center}.ds-save-headtext{flex:1}.ds-save-softicon{width:40px;height:40px;border-radius:999px;background:#ffdad4;display:flex;align-items:center;justify-content:center;flex-shrink:0}.ds-save-title{font:600 16px/24px -apple-system,'SF Pro Text','Roboto',sans-serif;letter-spacing:-.15px;color:#2e2742}.ds-save-sub{font:400 12px/16px -apple-system,'SF Pro Text','Roboto',sans-serif;color:#55524b;margin-top:1px}.ds-save-segment{height:1px;background:#cbc6bd;margin:12px 0}.ds-save-field{position:relative;display:flex;align-items:center;gap:8px;min-height:56px;border-radius:8px 8px 0 0;background:#e7e2d9;padding-left:12px;padding-right:4px;overflow:hidden}.ds-save-input{flex:1;min-width:0;border:none;background:transparent;outline:none;height:44px;font:400 16px/24px -apple-system,'SF Pro Text','Roboto',sans-serif;color:#2e2742}.ds-save-input::placeholder{color:#55524b}.ds-save-submit{width:48px;height:48px;border:none;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:999px}.ds-save-submit svg{width:40px;height:40px;padding:10px;box-sizing:border-box;background:#b53823;border-radius:999px;transition:transform .15s,opacity .15s}.ds-save-submit:hover svg{opacity:.86}.ds-save-submit:active svg{transform:scale(.94)}.ds-save-submit:focus-visible{outline:2px solid #b53823;outline-offset:0}.ds-save-indicator{position:absolute;left:0;right:0;bottom:0;height:2px;background:transparent;transition:background .15s}.ds-save-field:focus-within .ds-save-indicator{background:#b53823}"
-    },
-    {
-      "name": "Button Filled 朱红寄出钮",
-      "kind": "button",
-      "refersTo": "button-primary",
-      "description": "胶囊寄出按钮：primary 底 + onPrimary 字，48dp 高（small 40dp），按压 0.86、禁用 0.38。",
-      "html": "<div class=\"ds-btn-row\"><button class=\"ds-btn ds-btn--primary\">保存链接</button><button class=\"ds-btn ds-btn--primary\" disabled>保存中…</button></div>",
-      "css": ".ds-btn-row{display:flex;gap:16px}.ds-btn{min-height:48px;border-radius:999px;border:1px solid transparent;padding:0 24px;font:600 14px/20px -apple-system,'SF Pro Text','Roboto',sans-serif;letter-spacing:.5px;cursor:pointer;transition:opacity .15s,transform .15s}.ds-btn--primary{background:#b53823;color:#ffffff}.ds-btn--primary:hover{opacity:.86}.ds-btn--primary:active{transform:scale(.97)}.ds-btn--primary:focus-visible{outline:2px solid #2e2742;outline-offset:2px}.ds-btn--primary:disabled{opacity:.38;cursor:default}"
-    },
-    {
-      "name": "Button Tonal 次要强调钮",
-      "kind": "button",
-      "refersTo": "button-tonal",
-      "description": "tonal 按钮：secondaryContainer 底 + onSecondaryContainer 字；outlined（1dp outline 描边）与 ghost 的文字同为 primary 色。",
-      "html": "<div class=\"ds-btn-row\"><button class=\"ds-btn ds-btn--tonal\">开始收藏</button><button class=\"ds-btn ds-btn--secondary\">重新解析</button><button class=\"ds-btn ds-btn--ghost\">查看原文</button></div>",
-      "css": ".ds-btn-row{display:flex;gap:16px;align-items:center}.ds-btn{min-height:48px;border-radius:999px;border:1px solid transparent;padding:0 24px;font:600 14px/20px -apple-system,'SF Pro Text','Roboto',sans-serif;letter-spacing:.5px;cursor:pointer;background:transparent;transition:opacity .15s,transform .15s}.ds-btn--tonal{background:#e8ddff;color:#1e1731}.ds-btn--secondary{border-color:#827e77;color:#b53823}.ds-btn--ghost{color:#b53823}.ds-btn:hover{opacity:.86}.ds-btn:active{transform:scale(.97)}.ds-btn:focus-visible{outline:2px solid #b53823;outline-offset:2px}"
-    },
-    {
-      "name": "NavigationBar 底部导航",
+      "name": "TabBar 底部导航",
       "kind": "nav",
-      "refersTo": "nav-item-active",
-      "description": "通栏 80dp、surfaceContainer 底；选中项 64×32 全圆角 secondaryContainer 胶囊 + 实心图标 + 加粗标签。",
-      "html": "<nav class=\"ds-nav\" aria-label=\"主导航\"><button class=\"ds-nav-item ds-nav-item--active\" aria-current=\"page\"><span class=\"ds-nav-pill\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"#1e1731\" aria-hidden=\"true\"><path d=\"M12 3l9 7v11h-6v-7H9v7H3V10l9-7z\"/></svg></span><span class=\"ds-nav-label\">首页</span></button><button class=\"ds-nav-item\"><span class=\"ds-nav-pill\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#55524b\" stroke-width=\"2\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M6 3h12v18l-6-4-6 4V3z\"/></svg></span><span class=\"ds-nav-label\">收藏</span></button><button class=\"ds-nav-item\"><span class=\"ds-nav-pill\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#55524b\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21c0-4 3.6-6 8-6s8 2 8 6\"/></svg></span><span class=\"ds-nav-label\">我的</span></button></nav>",
-      "css": ".ds-nav{display:flex;align-items:center;height:80px;background:#f4efe5;padding:0 8px}.ds-nav-item{flex:1;height:100%;border:none;background:transparent;display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:12px;cursor:pointer;border-radius:8px;transition:opacity .15s}.ds-nav-item:hover{opacity:.7}.ds-nav-item:focus-visible{outline:2px solid #b53823;outline-offset:-2px}.ds-nav-pill{width:64px;height:32px;border-radius:999px;display:flex;align-items:center;justify-content:center;transition:background .15s}.ds-nav-item--active .ds-nav-pill{background:#e8ddff}.ds-nav-label{font:500 12px/16px -apple-system,'SF Pro Text','Roboto',sans-serif;letter-spacing:.5px;color:#55524b}.ds-nav-item--active .ds-nav-label{color:#2e2742;font-weight:600}"
+      "description": "通栏、canvas 底、顶部 1px 发丝线；选中 ink，未选 faint；无胶囊无指示条。",
+      "html": "<div class=\"ds-tabs\"><span class=\"ds-tab ds-tab-on\">首页</span><span class=\"ds-tab\">收藏</span><span class=\"ds-tab\">我的</span></div>"
+    },
+    {
+      "name": "Toast 提示条",
+      "kind": "overlay",
+      "description": "ink 反底、canvas 文字、8dp 圆角，浮在导航栏上方；动作为带下划线的文字。",
+      "html": "<div class=\"ds-toast\">已保存，正在本机整理内容……</div>"
     }
   ],
   "narrative": {
-    "northStar": "集邮册与销戳（The Stamp Album & Postmark）",
-    "overview": "每篇收藏是一枚被销戳的邮票——保存的那天，邮戳就盖在它身上，找回就是从集邮册里认出那枚戳。整套系统拒绝「稍后读」类应用的品类默认：白底圆角卡片流 + 中性强调色，把收藏当成无差别的行。这里是胶面纸底、深色下是深绿集邮册布面；朱红只在寄出动作上点亮；每一枚票都有出处（来源邮票）、有日期（等宽账簿数字）、有经手痕迹（销戳的形状就是处理状态）。产品真相约束着视觉：保存成本接近于零，所以收藏面只有一个输入框；优先找回而不是管理，所以首页先是搜索胶囊，然后才是贴票。\n\n视觉密度是「一页正在用的册页」——发丝分段线代替边框和阴影堆叠，票面之间靠色调层次拉开，戳、票、注记各占其位。状态永远先用形状编码（实圈、虚圈、划销），颜色只是确认。系统是单栏移动布局（390×844 基准），不为平板做双栏；Material 3 管结构、导航与交互，世界只出四样：字、色、密度、一个签名动作（保存瞬间邮戳弹压上票面）。",
+    "northStar": "一张纸上的一件事",
+    "overview": "这一版把上一版的集邮册世界收起来了：齿孔、销戳、盖章动画退场，只留下纸、字和一个动作。首页从两张并列的输入卡收成一个输入框——看得出是链接就保存，看不出就按一句话检索。层次靠 1px 发丝线和 16dp 留白，不靠阴影；颜色只有两档中性色加一个朱红，朱红一屏只出现一次。",
     "keyCharacteristics": [
-      "形状即状态：实圈＝完成、虚圈＝整理中、划销＝部分/失败；先看形，再看色。",
-      "齿孔是票与卡的分界：点状边打穿、露出底纸（brand mark、来源邮票、空状态）。",
-      "销戳永远盖歪（−8°），日期用等宽数字、账簿式对齐。",
-      "朱红稀用：只在寄出按钮、注记图标与聚焦描边上点亮。",
-      "8dp 网格 + 4dp 半步；发丝分段线（1dp）代替卡片描边。"
+      "一个屏幕只有一个强调色位置。",
+      "层次只用发丝线和留白，没有阴影与渐变。",
+      "一个输入框承担「保存」与「找回」两件事。",
+      "状态先用形状编码，已完成的条目不写状态文字。",
+      "列表行就是内容本身：没有卡片底、没有缩略图、没有箭头。"
     ],
     "rules": [
-      { "name": "The Paired-Tones Rule", "body": "每个色都与它的 on-/container 角色成对存在；改一个 tone 必须重新生成整对（src/design/colorSchemes.ts 明令禁止手改单色），否则对比度契约破裂。", "section": "colors" },
-      { "name": "The Vermilion Restraint Rule", "body": "朱红是全 app 唯一强调色，且必须稀用：寄出按钮、聚焦描边、注记标签三类之外不出现大面积朱红。它的稀缺就是它的语义——「这里要寄出/这里是找到你的证据」。", "section": "colors" },
-      { "name": "The Cancellation-Slip Label Rule", "body": "所有 label 保持 +0.5px（注记标签 1px）字距、500+ 字重——像销戳与注销单据上的印刷字；正文永不加字距。", "section": "typography" },
-      { "name": "The Tabular-Date Rule", "body": "日期与数字走等宽（Menlo/monospace）且账簿式对齐：销戳里的年份小号 +0.8px 字距在上，月日在下加粗（11px/700 @ size 56）。", "section": "typography" },
-      { "name": "The Flat-By-Default Rule", "body": "静止表面是平的：卡片只带 level1，靠色调而非阴影分层；更重的阴影只留给真正的浮层（对话框、Toast）。", "section": "elevation" },
-      { "name": "The Unperforated Launcher Rule", "body": "齿孔只活在应用内（品牌标、来源邮票、空状态）与 Android splash（真打穿 44 孔）。启动器/iOS 图标刻意无齿孔——各家 launcher 遮罩（圆/方/水滴）与 iOS squircle 会把贴边孔洞切碎；图标保留朱红圆角方块 + 白书签。这是记录在案的刻意偏差，不是遗漏。", "section": "shapes" }
+      "The One-Accent Rule：一屏只能有一个朱红动作。",
+      "The No-Decoration Rule：不做齿孔、印章、贴纸这类图形隐喻。",
+      "The Paired-Sync Rule：global.css 与 palette.ts 必须同步。",
+      "The Shape-First Rule：没有形状差异就不算状态。"
     ],
     "dos": [
-      "Do 用形状表达状态：实圈＝完成、虚圈＝整理中、划销＝部分/失败（partial 用 warning 色划销、failed 用 error 色）。",
-      "Do 保持 8dp 节奏（4dp 半步）、gutter 16dp、触区 ≥48dp、内容最大宽 720dp。",
-      "Do 让朱红稀缺：寄出按钮、聚焦描边、注记标签三类之外不铺朱红。",
-      "Do 给每张票留戳位：结果票注记行右侧、保存票右上角（标题行让位 64dp），静态戳一律 −8°、日期等宽。",
-      "Do 齿孔用 2.5–3dp 点状边、边色 = 它所贴的底纸色（票上是 card、空状态是 canvas）。",
-      "Do 卡片静止时只带 level1 阴影，层次靠 surface-container 色调拉开。"
+      "用留白和字重做层次，用发丝线分组。",
+      "首页保持「问句 + 输入框 + 最近四条」的三段式。",
+      "原生 prop 需要颜色字符串时从 usePalette() 取。"
     ],
     "donts": [
-      "Don't 用颜色单独表达状态——没有形状差异就不算状态；也不要给最强命中加数字角标（票与戳各加大一号即可）。",
-      "Don't 给启动器 / iOS 应用图标打齿孔——平台遮罩会把贴边孔洞切碎（The Unperforated Launcher Rule）。",
-      "Don't 手改单个色调或拆散 on-/container 配对——重新生成整对（The Paired-Tones Rule）。",
-      "Don't 给输入框做整框变红的错误态，也不要在正文/标题上加字距。",
-      "Don't 引入组件库、Tailwind 或字体包——Material 3 语义 + 手写视图 + 系统字族；Markdown 永不进 WebView/原始 HTML。",
-      "Don't 给注记编造匹配理由——「为什么找到它」只能由真实命中证据拼出。"
+      "不要加阴影、渐变、印章与倾斜文字。",
+      "不要在首页重新放两个输入框。",
+      "不要给列表加卡片底、缩略图、箭头。",
+      "不要手写 StyleSheet：样式一律走 className。"
     ]
   }
 }

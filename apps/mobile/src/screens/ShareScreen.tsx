@@ -4,13 +4,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { errorMessage, isValidHttpUrl } from '@xunji/shared'
 
-import { EmptyState } from '../components/ui/EmptyState'
-import { Screen } from '../components/ui/Screen'
-import { TopAppBar } from '../components/ui/TopAppBar'
 import { processPendingQueue } from '../local/pipeline'
 import * as repo from '../local/repo'
 import { useToast } from '../providers/ToastProvider'
-import { makeStyles, useTheme } from '../theme'
+import { Button } from '../ui/Button'
+import { Screen } from '../ui/Screen'
+import { usePalette } from '../ui/palette'
 
 /** 分享进入后的保存结果页：保存到本机一次，然后跳到详情。 */
 export function ShareScreen() {
@@ -21,8 +20,7 @@ export function ShareScreen() {
   const url = rawUrl && isValidHttpUrl(rawUrl) ? rawUrl : null
   const { toast } = useToast()
   const insets = useSafeAreaInsets()
-  const theme = useTheme()
-  const styles = useStyles()
+  const p = usePalette()
 
   const started = useRef<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -54,50 +52,33 @@ export function ShareScreen() {
 
   return (
     <Screen>
-      <TopAppBar
-        title="保存分享"
-        centerTitle
-        onBack={() => router.replace('/')}
-        backIcon="close"
-        backLabel="返回首页"
-      />
-      <View style={[styles.content, { paddingBottom: insets.bottom }]}>
+      <View className="flex-1 px-4" style={{ paddingBottom: insets.bottom }}>
+        <View className="h-14" />
         {!url ? (
-          <EmptyState
-            title="没有可保存的链接。"
-            body="这次分享里没有找到网页地址。可以回到首页，手动粘贴链接或分享文字。"
-            action={{ label: '回到首页', onPress: () => router.replace('/') }}
-          />
+          <View className="mt-6">
+            <Text className="text-title font-semibold text-ink">没有可保存的链接。</Text>
+            <Text className="mt-2 text-body-sm text-muted">
+              这次分享里没有找到网页地址。回到首页，可以手动粘贴链接或分享文字。
+            </Text>
+            <View className="mt-6 self-start">
+              <Button label="回到首页" onPress={() => router.replace('/')} size="sm" />
+            </View>
+          </View>
         ) : error ? (
-          <EmptyState
-            title="保存没有完成。"
-            body={error}
-            action={{ label: '回到首页', onPress: () => router.replace('/') }}
-          />
+          <View className="mt-6">
+            <Text className="text-title font-semibold text-ink">保存没有完成。</Text>
+            <Text className="mt-2 text-body-sm text-muted">{error}</Text>
+            <View className="mt-6 self-start">
+              <Button label="回到首页" onPress={() => router.replace('/')} size="sm" />
+            </View>
+          </View>
         ) : (
-          <View style={styles.loading}>
-            <ActivityIndicator color={theme.colors.primary} />
-            <Text style={styles.loadingText}>正在保存到本机……</Text>
+          <View className="mt-6 flex-row items-center gap-3">
+            <ActivityIndicator size="small" color={p.muted} />
+            <Text className="text-body-sm text-muted">正在保存到本机……</Text>
           </View>
         )}
       </View>
     </Screen>
   )
 }
-
-const useStyles = makeStyles((theme) => ({
-  content: {
-    flex: 1,
-    paddingHorizontal: theme.layout.gutter,
-    paddingTop: theme.spacing.xl,
-  },
-  loading: {
-    alignItems: 'center',
-    gap: theme.spacing.md,
-    paddingVertical: theme.spacing.xxl + theme.spacing.sm,
-  },
-  loadingText: {
-    ...theme.type.bodyMedium,
-    color: theme.colors.textMuted,
-  },
-}))

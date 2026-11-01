@@ -1,20 +1,14 @@
 import type { ReactNode } from 'react'
 import { Linking, Text, View } from 'react-native'
 
-import { makeStyles } from '../theme'
-import type { AppTheme } from '../theme'
-
 /**
  * 受限 Markdown 渲染器：标题、段落、列表、引用、代码块、行内代码/粗体/斜体、
  * http(s) 链接。文本始终作为 Text 子节点输出，不解析原始 HTML，也不使用 WebView。
- * 样式由主题生成，渲染函数显式接收，切换明暗时随之更新。
  */
 
 const INLINE_PATTERN = /(`[^`]+`|\*\*[^*]+?\*\*|\*[^*]+?\*|\[[^\]]+\]\([^)\s]+\))/g
 
-type MdStyles = ReturnType<typeof markdownStyles>
-
-function renderInline(text: string, keyPrefix: string, styles: MdStyles): ReactNode[] {
+function renderInline(text: string, keyPrefix: string): ReactNode[] {
   const nodes: ReactNode[] = []
   const parts = text.split(INLINE_PATTERN)
 
@@ -24,7 +18,7 @@ function renderInline(text: string, keyPrefix: string, styles: MdStyles): ReactN
 
     if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
       nodes.push(
-        <Text key={key} style={styles.inlineCode}>
+        <Text key={key} className="text-body-sm text-ink">
           {part.slice(1, -1)}
         </Text>,
       )
@@ -32,16 +26,16 @@ function renderInline(text: string, keyPrefix: string, styles: MdStyles): ReactN
     }
     if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
       nodes.push(
-        <Text key={key} style={styles.bold}>
-          {renderInline(part.slice(2, -2), key, styles)}
+        <Text key={key} className="font-semibold text-ink">
+          {renderInline(part.slice(2, -2), key)}
         </Text>,
       )
       return
     }
     if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
       nodes.push(
-        <Text key={key} style={styles.italic}>
-          {renderInline(part.slice(1, -1), key, styles)}
+        <Text key={key} className="italic">
+          {renderInline(part.slice(1, -1), key)}
         </Text>,
       )
       return
@@ -52,7 +46,7 @@ function renderInline(text: string, keyPrefix: string, styles: MdStyles): ReactN
       nodes.push(
         <Text
           key={key}
-          style={styles.link}
+          className="text-accent underline"
           accessibilityRole="link"
           onPress={() => {
             void Linking.openURL(linkMatch[2]).catch(() => undefined)
@@ -70,20 +64,22 @@ function renderInline(text: string, keyPrefix: string, styles: MdStyles): ReactN
   return nodes
 }
 
-interface Block {
-  key: string
-  node: ReactNode
-}
-
 export function Markdown({ source }: { source: string }) {
-  const styles = useStyles()
-  const blocks = renderBlocks(source, styles)
-  return <View>{blocks.map((block) => block.node)}</View>
+  return <View>{renderBlocks(source)}</View>
 }
 
-function renderBlocks(source: string, styles: MdStyles): Block[] {
+const HEADING_CLASS = [
+  'mt-6 mb-3 text-title font-semibold text-ink',
+  'mt-6 mb-3 text-title font-semibold text-ink',
+  'mt-6 mb-2 text-heading font-semibold text-ink',
+  'mt-5 mb-2 text-heading font-semibold text-ink',
+  'mt-4 mb-2 text-body font-semibold text-ink',
+  'mt-4 mb-2 text-body-sm font-semibold text-ink',
+]
+
+function renderBlocks(source: string): ReactNode[] {
   const lines = source.split(/\r?\n/)
-  const blocks: Block[] = []
+  const blocks: ReactNode[] = []
   const state = {
     paragraph: [] as string[],
     listItems: [] as string[],
@@ -102,14 +98,11 @@ function renderBlocks(source: string, styles: MdStyles): Block[] {
   const flushParagraph = () => {
     if (state.paragraph.length === 0) return
     const key = nextKey('p')
-    blocks.push({
-      key,
-      node: (
-        <Text key={key} style={styles.paragraph}>
-          {renderInline(state.paragraph.join(' '), key, styles)}
-        </Text>
-      ),
-    })
+    blocks.push(
+      <Text key={key} className="mb-4 text-body text-ink" style={{ lineHeight: 27 }}>
+        {renderInline(state.paragraph.join(' '), key)}
+      </Text>,
+    )
     state.paragraph = []
   }
 
@@ -117,14 +110,20 @@ function renderBlocks(source: string, styles: MdStyles): Block[] {
     if (state.listItems.length === 0) return
     const key = nextKey('list')
     const items = state.listItems.map((item, i) => (
-      <View key={`${key}-${i}`} style={styles.listRow}>
-        <Text style={[styles.listMarker, state.ordered && styles.listMarkerOrdered]}>
+      <View key={`${key}-${i}`} className="mb-1.5 flex-row gap-2">
+        <Text className={state.ordered ? 'w-6 text-body-sm text-muted' : 'w-3 text-body text-faint'}>
           {state.ordered ? `${i + 1}.` : '·'}
         </Text>
-        <Text style={styles.listText}>{renderInline(item, `${key}-${i}`, styles)}</Text>
+        <Text className="flex-1 text-body text-ink" style={{ lineHeight: 26 }}>
+          {renderInline(item, `${key}-${i}`)}
+        </Text>
       </View>
     ))
-    blocks.push({ key, node: <View key={key} style={styles.list}>{items}</View> })
+    blocks.push(
+      <View key={key} className="mb-4">
+        {items}
+      </View>,
+    )
     state.listItems = []
   }
 
@@ -137,16 +136,13 @@ function renderBlocks(source: string, styles: MdStyles): Block[] {
     if (line.trim().startsWith('```')) {
       if (state.inFence) {
         const key = nextKey('code')
-        blocks.push({
-          key,
-          node: (
-            <View key={key} style={styles.codeBlock}>
-              <Text style={styles.codeText} selectable>
-                {state.fenceBuffer.join('\n')}
-              </Text>
-            </View>
-          ),
-        })
+        blocks.push(
+          <View key={key} className="mb-4 rounded-sm bg-sunken p-3">
+            <Text className="text-mono text-ink" selectable>
+              {state.fenceBuffer.join('\n')}
+            </Text>
+          </View>,
+        )
         state.fenceBuffer = []
         state.inFence = false
       } else {
@@ -170,24 +166,13 @@ function renderBlocks(source: string, styles: MdStyles): Block[] {
     const heading = /^(#{1,6})\s+(.*)$/.exec(trimmed)
     if (heading) {
       flushAll()
-      const level = heading[1].length as 1 | 2 | 3 | 4 | 5 | 6
+      const level = heading[1].length
       const key = nextKey('h')
-      const headingStyle = [
-        styles.h1,
-        styles.h2,
-        styles.h3,
-        styles.h4,
-        styles.h5,
-        styles.h6,
-      ][level - 1]
-      blocks.push({
-        key,
-        node: (
-          <Text key={key} style={[styles.heading, headingStyle]}>
-            {renderInline(heading[2], key, styles)}
-          </Text>
-        ),
-      })
+      blocks.push(
+        <Text key={key} className={HEADING_CLASS[level - 1]}>
+          {renderInline(heading[2], key)}
+        </Text>,
+      )
       continue
     }
 
@@ -195,14 +180,11 @@ function renderBlocks(source: string, styles: MdStyles): Block[] {
     if (quote) {
       flushAll()
       const key = nextKey('q')
-      blocks.push({
-        key,
-        node: (
-          <View key={key} style={styles.quote}>
-            <Text style={styles.quoteText}>{renderInline(quote[1], key, styles)}</Text>
-          </View>
-        ),
-      })
+      blocks.push(
+        <View key={key} className="mb-4 border-l-2 border-line-strong pl-3">
+          <Text className="text-body-sm text-muted">{renderInline(quote[1], key)}</Text>
+        </View>,
+      )
       continue
     }
 
@@ -230,109 +212,15 @@ function renderBlocks(source: string, styles: MdStyles): Block[] {
 
   if (state.inFence && state.fenceBuffer.length > 0) {
     const key = nextKey('code')
-    blocks.push({
-      key,
-      node: (
-        <View key={key} style={styles.codeBlock}>
-          <Text style={styles.codeText} selectable>
-            {state.fenceBuffer.join('\n')}
-          </Text>
-        </View>
-      ),
-    })
+    blocks.push(
+      <View key={key} className="mb-4 rounded-sm bg-sunken p-3">
+        <Text className="text-mono text-ink" selectable>
+          {state.fenceBuffer.join('\n')}
+        </Text>
+      </View>,
+    )
   }
   flushAll()
 
   return blocks
 }
-
-function markdownStyles(theme: AppTheme) {
-  const heading = {
-    ...theme.type.titleMedium,
-    color: theme.colors.text,
-    marginTop: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-  }
-  return {
-    paragraph: {
-      ...theme.type.bodyLarge,
-      lineHeight: 27,
-      color: theme.colors.text,
-      marginBottom: theme.spacing.lg,
-    },
-    heading,
-    h1: { ...theme.type.headlineMedium },
-    h2: { ...theme.type.headlineSmall },
-    h3: { ...theme.type.titleLarge },
-    h4: { ...theme.type.titleMedium },
-    h5: { ...theme.type.titleSmall },
-    h6: { ...theme.type.labelLarge },
-    listRow: {
-      flexDirection: 'row' as const,
-      gap: theme.spacing.sm,
-      marginBottom: 6,
-    },
-    list: {
-      marginBottom: theme.spacing.md,
-    },
-    listMarker: {
-      ...theme.type.bodyLarge,
-      lineHeight: 26,
-      width: 14,
-      color: theme.colors.primary,
-    },
-    listMarkerOrdered: {
-      width: 24,
-      color: theme.colors.textMuted,
-      ...theme.type.bodyMedium,
-    },
-    listText: {
-      ...theme.type.bodyLarge,
-      lineHeight: 26,
-      flex: 1,
-      color: theme.colors.text,
-    },
-    quote: {
-      borderLeftWidth: 3,
-      borderLeftColor: theme.colors.outlineVariant,
-      paddingLeft: theme.spacing.md,
-      marginBottom: theme.spacing.lg,
-    },
-    quoteText: {
-      ...theme.type.bodyMedium,
-      lineHeight: 24,
-      color: theme.colors.textMuted,
-    },
-    codeBlock: {
-      backgroundColor: theme.colors.surfaceContainerHighest,
-      borderRadius: theme.shape.sm,
-      padding: theme.spacing.md,
-      marginBottom: theme.spacing.lg,
-    },
-    codeText: {
-      fontFamily: theme.fonts.mono,
-      color: theme.colors.text,
-      fontSize: 12.5,
-      lineHeight: 19,
-    },
-    inlineCode: {
-      fontFamily: theme.fonts.mono,
-      fontSize: 14,
-      color: theme.colors.text,
-      backgroundColor: theme.colors.surfaceContainerHighest,
-    },
-    bold: {
-      fontWeight: '600' as const,
-      color: theme.colors.text,
-    },
-    italic: {
-      fontStyle: 'italic' as const,
-    },
-    link: {
-      color: theme.colors.primary,
-      textDecorationLine: 'underline' as const,
-    },
-  }
-}
-
-const useStyles = makeStyles(markdownStyles)

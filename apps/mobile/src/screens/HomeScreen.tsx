@@ -1,36 +1,24 @@
-import { Ionicons } from '@expo/vector-icons'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  ActivityIndicator,
-  Keyboard,
-  KeyboardAvoidingView,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native'
+import { useCallback, useEffect, useState } from 'react'
 import { useFocusEffect, useRouter } from 'expo-router'
+import { ActivityIndicator, KeyboardAvoidingView, ScrollView, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import type { ScrollViewInstance } from 'react-native'
-import type { ParseStatus, SearchResult } from '@xunji/shared'
+import type { DocumentSummary, ParseStatus, SearchResult } from '@xunji/shared'
 import { errorMessage, STATUS_TEXT } from '@xunji/shared'
 
-import { AppTabBar } from '../components/AppTabBar'
-import { AskCard } from '../components/AskCard'
-import { SearchResultCard } from '../components/DocumentCard'
-import { SaveField } from '../components/SaveField'
-import type { SaveResult } from '../components/SaveField'
-import { SearchField } from '../components/SearchField'
-import { EmptyState } from '../components/ui/EmptyState'
-import { Notice } from '../components/ui/Notice'
-import { Screen } from '../components/ui/Screen'
+import { AppTabBar, TAB_BAR_HEIGHT } from '../components/AppTabBar'
+import { Composer } from '../components/Composer'
+import type { SaveResult } from '../components/Composer'
+import { RecentRow, ResultRow } from '../components/RecordRow'
 import { processPendingQueue } from '../local/pipeline'
 import * as repo from '../local/repo'
 import { useLocalRevision } from '../local/useLocalRevision'
 import { useToast } from '../providers/ToastProvider'
-import { makeStyles, useTheme } from '../theme'
+import { TextButton } from '../ui/Button'
+import { Divider } from '../ui/Divider'
+import { GUTTER, Screen } from '../ui/Screen'
+import { usePalette } from '../ui/palette'
 
-const APP_NAME = '寻迹'
+const RECENT_LIMIT = 4
 
 function terminalToastContent(status: ParseStatus): {
   message: string
@@ -46,68 +34,23 @@ function terminalToastContent(status: ParseStatus): {
   }
 }
 
-/** Small top app bar：品牌标 + 标题，右侧是「仅本机」assist chip。 */
-function BrandBar() {
-  const theme = useTheme()
-  const styles = useStyles()
-
-  return (
-    <View style={styles.brandbar}>
-      <View style={styles.brand}>
-        <View style={styles.mark}>
-          <Ionicons name="bookmark" size={16} color={theme.colors.onPrimary} />
-        </View>
-        <Text style={styles.brandname}>{APP_NAME}</Text>
-      </View>
-      <View style={styles.localchip}>
-        <Ionicons name="shield-checkmark-outline" size={14} color={theme.colors.primary} />
-        <Text style={styles.localchipText}>仅本机</Text>
-      </View>
-    </View>
-  )
-}
-
 export function HomeScreen() {
   const router = useRouter()
   const { toast } = useToast()
   const revision = useLocalRevision()
   const insets = useSafeAreaInsets()
-  const theme = useTheme()
-  const styles = useStyles()
+  const p = usePalette()
 
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[] | null>(null)
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
   const [lastQuery, setLastQuery] = useState('')
+  const [recent, setRecent] = useState<DocumentSummary[]>([])
+  const [writing, setWriting] = useState(false)
 
   const inResults = lastQuery.length > 0
-  const bottomPad = insets.bottom + theme.layout.navBarHeight + theme.spacing.lg
-
-  const homeScroll = useRef<ScrollViewInstance>(null)
-  const keyboardWait = useRef<{ remove: () => void } | null>(null)
-
-  // 收藏框贴着屏幕底部，键盘弹起后要把它滚进可视区，否则会被键盘挡住。
-  const revealSaveField = useCallback(() => {
-    const reveal = () => homeScroll.current?.scrollToEnd({ animated: true })
-    if (Keyboard.isVisible()) {
-      requestAnimationFrame(reveal)
-      return
-    }
-    keyboardWait.current?.remove()
-    keyboardWait.current = Keyboard.addListener('keyboardDidShow', () => {
-      keyboardWait.current?.remove()
-      keyboardWait.current = null
-      reveal()
-    })
-  }, [])
-
-  useEffect(
-    () => () => {
-      keyboardWait.current?.remove()
-    },
-    [],
-  )
+  const bottomPad = insets.bottom + TAB_BAR_HEIGHT + 24
 
   // 首页聚焦时把积压的本机任务推进一轮（保存、分享、重试都走这里）。
   useFocusEffect(
@@ -115,6 +58,21 @@ export function HomeScreen() {
       void processPendingQueue()
     }, []),
   )
+
+  // 最近收藏：只在首页空态出现，四条，够「想起来」即可。
+  useEffect(() => {
+    if (inResults) return
+    let cancelled = false
+    void repo
+      .listDocuments({ page: 1, pageSize: RECENT_LIMIT, keyword: '' })
+      .then((res) => {
+        if (!cancelled) setRecent(res.items)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [revision, inResults])
 
   // 本地数据变化（例如刚保存的那篇解析完成）时，刷新当前搜索结果。
   useEffect(() => {
@@ -131,8 +89,8 @@ export function HomeScreen() {
     }
   }, [revision, lastQuery])
 
-  async function runSearch(raw: string) {
-    const q = raw.trim()
+  async function runSearch() {
+    const q = query.trim()
     if (!q || searching) return
     setSearching(true)
     setSearchError(null)
@@ -155,6 +113,7 @@ export function HomeScreen() {
   }
 
   async function handleSave(url: string, titleHint: string | null): Promise<SaveResult | null> {
+    setWriting(true)
     try {
       const res = await repo.createDocument(url, titleHint)
       if (res.duplicate) {
@@ -165,6 +124,7 @@ export function HomeScreen() {
           },
         })
       } else {
+        setQuery('')
         toast('已保存，正在本机整理内容……', { type: 'success' })
         void processPendingQueue()
       }
@@ -176,6 +136,8 @@ export function HomeScreen() {
         toast(errorMessage(e, '保存失败，请稍后重试。'), { type: 'error' })
       }
       return null
+    } finally {
+      setWriting(false)
     }
   }
 
@@ -184,233 +146,110 @@ export function HomeScreen() {
     toast(content.message, { type: content.type })
   }
 
+  const composer = (
+    <Composer
+      value={query}
+      onChangeText={setQuery}
+      onSearch={() => void runSearch()}
+      onSave={handleSave}
+      searching={searching || writing}
+    />
+  )
+
   return (
     <Screen>
-      <KeyboardAvoidingView style={styles.flex} behavior="padding">
-        {inResults ? (
-          <ScrollView
-            style={styles.flex}
-            contentContainerStyle={[styles.resultsContent, { paddingBottom: bottomPad }]}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-            showsVerticalScrollIndicator={false}
-          >
-            <BrandBar />
+      <KeyboardAvoidingView className="flex-1" behavior="padding">
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ paddingHorizontal: GUTTER, paddingBottom: bottomPad }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+        >
+          <View className="h-14 justify-center">
+            <Text className="text-heading font-semibold text-ink">寻迹</Text>
+          </View>
 
-            <View style={styles.searchhead}>
-              <SearchField
-                value={query}
-                onChangeText={setQuery}
-                onSubmit={() => void runSearch(query)}
-                loading={searching}
-              />
-            </View>
-
-            <View style={styles.resulthead}>
-              <Text style={styles.resultcount}>
-                找到{' '}
-                <Text style={styles.resultcountStrong}>
-                  {searching ? '…' : results === null ? '—' : results.length}
-                </Text>{' '}
-                条相关
-              </Text>
-              <Pressable
-                onPress={clearSearch}
-                accessibilityRole="button"
-                accessibilityLabel="清除搜索，回到首页"
-                hitSlop={8}
-                style={({ pressed }) => [styles.textButton, pressed && styles.pressed]}
-              >
-                <Text style={styles.viewall}>清除</Text>
-              </Pressable>
-            </View>
-
-            {searchError && (
-              <View style={styles.notice}>
-                <Notice text={searchError} tone="error" />
+          {inResults ? (
+            <>
+              <View className="mt-1 flex-row items-center justify-between">
+                <Text className="text-body-sm text-muted">
+                  {searching ? '正在找回…' : `找到 ${results?.length ?? 0} 条`}
+                </Text>
+                <TextButton label="清除" onPress={clearSearch} tone="muted" />
               </View>
-            )}
+              <View className="mt-1">{composer}</View>
 
-            {searching && results === null ? (
-              <View style={styles.loadingRow}>
-                <ActivityIndicator size="small" color={theme.colors.primary} />
-                <Text style={styles.loadingText}>正在找回……</Text>
+              {searchError ? (
+                <Text className="mt-4 text-body-sm text-danger">{searchError}</Text>
+              ) : null}
+
+              {searching && results === null ? (
+                <View className="mt-10 items-center">
+                  <ActivityIndicator size="small" color={p.muted} />
+                </View>
+              ) : results !== null && results.length === 0 ? (
+                <View className="mt-10">
+                  <Text className="text-body text-ink">没有足够相关的内容。</Text>
+                  <Text className="mt-1 text-body-sm text-muted">
+                    换一种描述，或者把原链接粘到上面保存下来。
+                  </Text>
+                </View>
+              ) : results ? (
+                <View className="mt-2">
+                  {results.map((item) => (
+                    <View key={item.document_id}>
+                      <ResultRow
+                        item={item}
+                        onPress={() => router.push(`/documents/${item.document_id}`)}
+                        onTerminal={handleTerminal}
+                      />
+                      <Divider />
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <View className="mt-2">
+                <Text className="text-display font-semibold text-ink">想找点什么？</Text>
               </View>
-            ) : results === null ? null : results.length === 0 ? (
-              searchError ? null : (
-                <EmptyState
-                  icon="search-outline"
-                  title="没有足够相关的内容。"
-                  body="换一种描述，或者先保存那篇内容。"
-                />
-              )
-            ) : (
-              <View style={styles.cards}>
-                {results.map((item, index) => (
-                  <SearchResultCard
-                    key={item.document_id}
-                    item={item}
-                    strongest={index === 0}
-                    onPress={() => router.push(`/documents/${item.document_id}`)}
-                    onTerminal={handleTerminal}
-                  />
-                ))}
-              </View>
-            )}
-          </ScrollView>
-        ) : (
-          <ScrollView
-            ref={homeScroll}
-            style={styles.flex}
-            contentContainerStyle={[styles.homeContent, { paddingBottom: bottomPad }]}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-            showsVerticalScrollIndicator={false}
-          >
-            <BrandBar />
 
-            <View style={styles.hero}>
-              <Text style={styles.heroTitle}>
-                今天想<Text style={styles.heroEm}>找</Text>点什么？
-              </Text>
-              <Text style={styles.heroLede}>用你记得的那句话，找回存过的内容。</Text>
-            </View>
+              <View className="mt-6">{composer}</View>
 
-            <View style={styles.actions}>
-              <AskCard
-                value={query}
-                onChangeText={setQuery}
-                onSubmit={() => void runSearch(query)}
-                loading={searching}
-              />
-              <SaveField onSave={handleSave} onFocus={revealSaveField} />
-            </View>
-          </ScrollView>
-        )}
+              {recent.length > 0 ? (
+                <View className="mt-10">
+                  <View className="flex-row items-center justify-between">
+                    <Text className="text-[11px] font-semibold tracking-[1px] text-faint">
+                      最近收藏
+                    </Text>
+                  </View>
+                  <View className="mt-1">
+                    {recent.map((item) => (
+                      <View key={item.id}>
+                        <RecentRow
+                          item={item}
+                          onPress={() => router.push(`/documents/${item.id}`)}
+                          onTerminal={handleTerminal}
+                        />
+                        <Divider />
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ) : (
+                <View className="mt-10">
+                  <Text className="text-body-sm text-muted">
+                    还没有收藏。把链接粘到上面，寻迹替你读完再存好。
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+        </ScrollView>
       </KeyboardAvoidingView>
       <AppTabBar active="home" />
     </Screen>
   )
 }
-
-const useStyles = makeStyles((theme) => ({
-  flex: {
-    flex: 1,
-  },
-  homeContent: {
-    flexGrow: 1,
-    paddingHorizontal: theme.layout.gutter,
-  },
-  resultsContent: {
-    flexGrow: 1,
-    paddingHorizontal: theme.layout.gutter,
-  },
-  brandbar: {
-    minHeight: theme.layout.appBarSmall,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: theme.spacing.md,
-  },
-  brand: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
-  mark: {
-    width: 34,
-    height: 34,
-    borderRadius: 4,
-    backgroundColor: theme.colors.primary,
-    // 齿孔：点状边露出底纸 canvas，与来源邮票同一语言。
-    borderWidth: 2.5,
-    borderStyle: 'dotted',
-    borderColor: theme.colors.canvas,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  brandname: {
-    ...theme.type.titleLarge,
-    color: theme.colors.text,
-  },
-  localchip: {
-    height: 32,
-    paddingHorizontal: theme.spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-    borderRadius: theme.shape.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.outlineVariant,
-  },
-  localchipText: {
-    ...theme.type.labelMedium,
-    color: theme.colors.textMuted,
-  },
-  hero: {
-    marginTop: theme.spacing.xl,
-    gap: theme.spacing.sm,
-  },
-  heroTitle: {
-    ...theme.type.headlineLarge,
-    color: theme.colors.text,
-  },
-  heroEm: {
-    color: theme.colors.primary,
-  },
-  heroLede: {
-    ...theme.type.bodyLarge,
-    color: theme.colors.textMuted,
-  },
-  actions: {
-    marginTop: theme.spacing.xl,
-    gap: theme.spacing.md,
-  },
-  searchhead: {
-    marginTop: theme.spacing.lg,
-  },
-  resulthead: {
-    marginTop: theme.spacing.xl,
-    marginBottom: theme.spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  resultcount: {
-    ...theme.type.bodyMedium,
-    color: theme.colors.textMuted,
-  },
-  resultcountStrong: {
-    ...theme.type.titleMedium,
-    color: theme.colors.text,
-  },
-  textButton: {
-    minHeight: 32,
-    justifyContent: 'center',
-    paddingHorizontal: theme.spacing.sm,
-  },
-  viewall: {
-    ...theme.type.labelLarge,
-    fontWeight: '600',
-    color: theme.colors.primary,
-  },
-  notice: {
-    marginBottom: theme.spacing.md,
-  },
-  cards: {
-    gap: theme.spacing.md,
-  },
-  loadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    paddingVertical: theme.spacing.xxl,
-  },
-  loadingText: {
-    ...theme.type.bodySmall,
-    color: theme.colors.textMuted,
-  },
-  pressed: {
-    opacity: 0.55,
-  },
-}))

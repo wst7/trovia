@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router'
 import { Pressable, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import { makeStyles, useTheme, withAlpha } from '../theme'
+import { usePalette } from '../ui/palette'
 
 export type TabKey = 'home' | 'documents' | 'settings'
 
@@ -18,32 +18,25 @@ const TABS: {
   activeIcon: IconName
 }[] = [
   { key: 'home', label: '首页', href: '/', icon: 'home-outline', activeIcon: 'home' },
-  {
-    key: 'documents',
-    label: '收藏',
-    href: '/documents',
-    icon: 'bookmarks-outline',
-    activeIcon: 'bookmarks',
-  },
+  { key: 'documents', label: '收藏', href: '/documents', icon: 'albums-outline', activeIcon: 'albums' },
   { key: 'settings', label: '我的', href: '/settings', icon: 'person-outline', activeIcon: 'person' },
 ]
 
 /**
- * MD3 NavigationBar：通栏贴在底部、surfaceContainer 底色，
- * 选中项是 64×32 的 secondaryContainer 胶囊 + 实心图标。
+ * 底部导航：一条发丝线 + 三组图标与字。
+ * 没有胶囊底色、没有指示器——选中只表现为「墨色 vs 极淡墨」。
  */
 export function AppTabBar({ active }: { active: TabKey }) {
   const router = useRouter()
   const insets = useSafeAreaInsets()
-  const theme = useTheme()
-  const styles = useStyles()
+  const p = usePalette()
 
   return (
     <View
-      pointerEvents="box-none"
-      style={[styles.wrap, { paddingBottom: insets.bottom }]}
+      className="absolute inset-x-0 bottom-0 border-t border-line bg-canvas"
+      style={{ paddingBottom: insets.bottom }}
     >
-      <View style={styles.bar}>
+      <View className="h-14 flex-row">
         {TABS.map((tab) => {
           const selected = tab.key === active
           return (
@@ -55,17 +48,26 @@ export function AppTabBar({ active }: { active: TabKey }) {
               accessibilityRole="tab"
               accessibilityLabel={tab.label}
               accessibilityState={{ selected }}
-              android_ripple={{ color: withAlpha(theme.colors.primary, 0.12) }}
-              style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
+              className="flex-1 items-center justify-center gap-1"
             >
-              <View style={[styles.iconPill, selected && styles.iconPillActive]}>
-                <Ionicons
-                  name={selected ? tab.activeIcon : tab.icon}
-                  size={24}
-                  color={selected ? theme.colors.onSecondaryContainer : theme.colors.onSurfaceVariant}
-                />
-              </View>
-              <Text style={[styles.label, selected && styles.labelActive]}>{tab.label}</Text>
+              {({ pressed }) => (
+                <View className="items-center gap-1" style={{ opacity: pressed ? 0.5 : 1 }}>
+                  <Ionicons
+                    name={selected ? tab.activeIcon : tab.icon}
+                    size={21}
+                    color={selected ? p.ink : p.faint}
+                  />
+                  <Text
+                    className={
+                      selected
+                        ? 'text-[10px] font-medium tracking-[0.2px] text-ink'
+                        : 'text-[10px] tracking-[0.2px] text-faint'
+                    }
+                  >
+                    {tab.label}
+                  </Text>
+                </View>
+              )}
             </Pressable>
           )
         })}
@@ -74,48 +76,5 @@ export function AppTabBar({ active }: { active: TabKey }) {
   )
 }
 
-const useStyles = makeStyles((theme) => ({
-  wrap: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 10,
-    backgroundColor: theme.colors.surfaceContainer,
-  },
-  bar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: theme.layout.navBarHeight,
-    paddingHorizontal: theme.spacing.sm,
-  },
-  tab: {
-    flex: 1,
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: theme.spacing.md,
-    gap: theme.spacing.xs,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  iconPill: {
-    width: 64,
-    height: 32,
-    borderRadius: theme.shape.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconPillActive: {
-    backgroundColor: theme.colors.secondaryContainer,
-  },
-  label: {
-    ...theme.type.labelMedium,
-    color: theme.colors.onSurfaceVariant,
-  },
-  labelActive: {
-    color: theme.colors.onSurface,
-    fontWeight: '600',
-  },
-}))
+/** 底部导航占总高度（不含安全区），列表用它留净空。 */
+export const TAB_BAR_HEIGHT = 56

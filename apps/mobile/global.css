@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * 寻迹 · 设计令牌
+ *
+ * 「克制」= 两档中性色 + 一个强调色。纸白承担画布，墨黑承担文字，
+ * 朱红只出现在当前可执行的那个动作上。层次靠 1px 发丝线与留白，
+ * 不用阴影、不用渐变、不用装饰性图形。
+ */
+
+:root {
+  --canvas: 251 250 247; /* #fbfaf7 纸白 */
+  --surface: 255 255 255; /* #ffffff 抬起的表面（输入框、浮层） */
+  --sunken: 244 243 239; /* #f4f3ef 下沉表面（分组、骨架） */
+  --line: 232 230 225; /* #e8e6e1 发丝线 */
+  --line-strong: 214 211 204; /* #d6d3cc 可交互描边 */
+  --ink: 26 25 23; /* #1a1917 墨 */
+  --muted: 110 108 103; /* #6e6c67 淡墨 */
+  --faint: 163 160 153; /* #a3a099 极淡墨 */
+  --accent: 178 58 38; /* #b23a26 朱红 */
+  --accent-quiet: 247 234 230; /* #f7eae6 朱红的极淡底 */
+  --danger: 179 53 43;
+  --warn: 138 90 32;
+  --ok: 47 107 71;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: 18 18 17;
+    --surface: 27 27 25;
+    --sunken: 12 12 11;
+    --line: 43 43 40;
+    --line-strong: 59 59 55;
+    --ink: 237 234 228;
+    --muted: 155 152 145;
+    --faint: 107 104 98;
+    --accent: 228 113 91;
+    --accent-quiet: 46 29 24;
+    --danger: 228 104 92;
+    --warn: 217 161 91;
+    --ok: 111 190 142;
+  }
+}

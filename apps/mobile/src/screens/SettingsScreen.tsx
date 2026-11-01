@@ -1,75 +1,131 @@
-import { Ionicons } from '@expo/vector-icons'
 import Constants from 'expo-constants'
+import { Ionicons } from '@expo/vector-icons'
+import type { ComponentProps, ReactNode } from 'react'
 import { useCallback, useState } from 'react'
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Switch,
-  Text,
-  View,
-} from 'react-native'
-import { useFocusEffect } from 'expo-router'
+import { Pressable, ScrollView, Text, View } from 'react-native'
+import { useFocusEffect, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import { AppTabBar } from '../components/AppTabBar'
-import { Button } from '../components/ui/Button'
-import { ConfirmDialog } from '../components/ui/ConfirmDialog'
-import { Screen } from '../components/ui/Screen'
-import { TextField } from '../components/ui/TextField'
-import {
-  DEFAULT_LLM,
-  loadLlmState,
-  saveLlmState,
-  testLlmConnection,
-} from '../local/llm'
+import { AppTabBar, TAB_BAR_HEIGHT } from '../components/AppTabBar'
+import { ConfirmDialog } from '../ui/ConfirmDialog'
+import { Divider } from '../ui/Divider'
+import { Screen } from '../ui/Screen'
+import { usePalette } from '../ui/palette'
 import { emitChange } from '../local/bus'
 import { clearAllDocuments } from '../local/db'
+import { loadLlmState } from '../local/llm'
 import * as repo from '../local/repo'
 import type { DocumentStats } from '../local/repo'
 import { useLocalRevision } from '../local/useLocalRevision'
 import { useToast } from '../providers/ToastProvider'
-import { makeStyles, useTheme, withAlpha } from '../theme'
 
 const APP_NAME = '寻迹'
 
-function statsFootnote(stats: DocumentStats): string {
-  if (stats.total === 0) return '还没有收藏，回到首页粘贴第一个链接。'
-  const parts: string[] = []
-  if (stats.searchable > 0) parts.push(`${stats.searchable} 篇可检索`)
+type IconName = ComponentProps<typeof Ionicons>['name']
+
+function statsLine(stats: DocumentStats | null): string {
+  if (stats === null) return '读取中…'
+  if (stats.total === 0) return '还没有收藏'
+  const parts = [`${stats.total} 条`]
   if (stats.processing > 0) parts.push(`${stats.processing} 篇整理中`)
   if (stats.failed > 0) parts.push(`${stats.failed} 篇失败`)
   return parts.join(' · ')
 }
 
+/** 一组设置项：白底、14dp 圆角、1px 描边，行间一条内缩发丝线。 */
+function Group({ children }: { children: ReactNode }) {
+  const items = Array.isArray(children) ? children.filter(Boolean) : [children]
+  return (
+    <View className="overflow-hidden rounded-md border border-line bg-surface">
+      {items.map((child, index) => (
+        <View key={index}>
+          {index > 0 ? (
+            <View className="pl-12">
+              <Divider />
+            </View>
+          ) : null}
+          {child}
+        </View>
+      ))}
+    </View>
+  )
+}
+
+/**
+ * 经典设置行：图标 + 标题 +（可选）副标题 + 右侧值 + 箭头。
+ * 有 onPress 才是可点的行，只读信息行不给箭头——箭头是「这里能进去」的承诺。
+ */
+function Row({
+  icon,
+  title,
+  subtitle,
+  value,
+  onPress,
+  danger = false,
+  accessibilityLabel,
+}: {
+  icon: IconName
+  title: string
+  subtitle?: string
+  value?: string
+  onPress?: () => void
+  danger?: boolean
+  accessibilityLabel?: string
+}) {
+  const p = usePalette()
+  const body = (
+    <View className="min-h-[52px] flex-row items-center gap-3 px-4">
+      <Ionicons name={icon} size={18} color={danger ? p.danger : p.muted} />
+      <View className="flex-1">
+        <Text className={danger ? 'text-body-sm text-danger' : 'text-body-sm text-ink'}>
+          {title}
+        </Text>
+        {subtitle ? <Text className="mt-0.5 text-caption text-muted">{subtitle}</Text> : null}
+      </View>
+      {value ? (
+        <Text className="max-w-[52%] text-caption text-muted" numberOfLines={1}>
+          {value}
+        </Text>
+      ) : null}
+      {onPress ? <Ionicons name="chevron-forward" size={15} color={p.faint} /> : null}
+    </View>
+  )
+
+  if (!onPress) return body
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? title}
+    >
+      {({ pressed }) => <View style={{ opacity: pressed ? 0.55 : 1 }}>{body}</View>}
+    </Pressable>
+  )
+}
+
+function SectionLabel({ children }: { children: string }) {
+  return (
+    <Text className="mb-2 ml-1 text-[11px] font-semibold tracking-[1px] text-faint">{children}</Text>
+  )
+}
+
 export function SettingsScreen() {
+  const router = useRouter()
   const { toast } = useToast()
   const revision = useLocalRevision()
   const insets = useSafeAreaInsets()
-  const theme = useTheme()
-  const styles = useStyles()
 
   const [stats, setStats] = useState<DocumentStats | null>(null)
-  const [hasKey, setHasKey] = useState(false)
-  const [enabled, setEnabled] = useState(DEFAULT_LLM.enabled)
-  const [baseUrl, setBaseUrl] = useState(DEFAULT_LLM.baseUrl)
-  const [model, setModel] = useState(DEFAULT_LLM.model)
-  const [apiKey, setApiKey] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [testing, setTesting] = useState(false)
+  const [llmLabel, setLlmLabel] = useState('读取中…')
   const [confirmingClear, setConfirmingClear] = useState(false)
 
-  const bottomPad = insets.bottom + theme.layout.navBarHeight + theme.spacing.lg
+  const bottomPad = insets.bottom + TAB_BAR_HEIGHT + 24
 
   const reload = useCallback(async () => {
     try {
       const [nextStats, llm] = await Promise.all([repo.documentStats(), loadLlmState()])
       setStats(nextStats)
-      setEnabled(llm.enabled)
-      setBaseUrl(llm.baseUrl)
-      setModel(llm.model)
-      setHasKey(llm.hasKey)
+      setLlmLabel(llm.enabled ? `已开启 · ${llm.model || '未命名模型'}` : '关闭')
     } catch {
       // 读本地库失败时保持上一次的值，不打断用户。
     }
@@ -80,64 +136,6 @@ export function SettingsScreen() {
       void reload()
     }, [reload, revision]),
   )
-
-  async function handleSave() {
-    if (saving) return
-    if (enabled) {
-      if (!/^https?:\/\/\S+$/i.test(baseUrl.trim())) {
-        toast('服务地址需要以 http:// 或 https:// 开头。', { type: 'error' })
-        return
-      }
-      if (!model.trim()) {
-        toast('请填写模型名称。', { type: 'error' })
-        return
-      }
-      if (!hasKey && !apiKey.trim()) {
-        toast('请填写 API Key，或先关闭大模型。', { type: 'error' })
-        return
-      }
-    }
-
-    setSaving(true)
-    try {
-      await saveLlmState(
-        { enabled, baseUrl, model },
-        apiKey.trim() ? apiKey : undefined,
-      )
-      setApiKey('')
-      await reload()
-      toast(enabled ? '已保存，新收藏会用这个模型整理。' : '已保存，将使用本地抽取式摘要。', {
-        type: 'success',
-      })
-    } catch {
-      toast('保存设置失败，请稍后重试。', { type: 'error' })
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function handleTest() {
-    if (testing) return
-    if (!/^https?:\/\/\S+$/i.test(baseUrl.trim())) {
-      toast('服务地址需要以 http:// 或 https:// 开头。', { type: 'error' })
-      return
-    }
-    if (!hasKey && !apiKey.trim()) {
-      toast('请先填写 API Key。', { type: 'error' })
-      return
-    }
-
-    setTesting(true)
-    try {
-      const reply = await testLlmConnection({ enabled: true, baseUrl, model }, apiKey)
-      toast(`连接成功，模型回复：${reply}`, { type: 'success' })
-    } catch (error) {
-      const message = error instanceof Error ? error.message : '连接失败'
-      toast(`连接失败：${message}`, { type: 'error' })
-    } finally {
-      setTesting(false)
-    }
-  }
 
   async function handleClear() {
     try {
@@ -150,161 +148,79 @@ export function SettingsScreen() {
     }
   }
 
-  const total = stats?.total ?? 0
-  const ratio = total > 0 && stats ? Math.round((stats.searchable / total) * 100) : 0
-
   return (
     <Screen>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: bottomPad }}
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          contentContainerStyle={[styles.content, { paddingBottom: bottomPad }]}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          showsVerticalScrollIndicator={false}
-        >
-          <Text style={styles.screenTitle}>我的</Text>
+        <View className="h-14 justify-center">
+          <Text className="text-heading font-semibold text-ink">我的</Text>
+        </View>
+        <Text className="mb-6 text-caption text-faint">本机 · 没有账号，内容不上传</Text>
 
-          <View style={styles.panel}>
-            <View style={styles.panelTop}>
-              <Text style={styles.panelTopText}>本机收藏</Text>
-              <Ionicons
-                name="phone-portrait-outline"
-                size={16}
-                color={theme.colors.inverseOnSurface}
-              />
-            </View>
-            <View style={styles.panelValueRow}>
-              <Text style={styles.panelValue}>{stats === null ? '—' : stats.total}</Text>
-              <Text style={styles.panelUnit}>条</Text>
-            </View>
-            <View
-              style={[
-                styles.panelBar,
-                { backgroundColor: withAlpha(theme.colors.inverseOnSurface, 0.16) },
-              ]}
-            >
-              <View style={[styles.panelBarFill, { width: `${ratio}%` }]} />
-            </View>
-            <Text style={styles.panelFoot}>
-              {stats === null ? '正在读取本机数据……' : statsFootnote(stats)}
-            </Text>
-          </View>
-
-          <Text style={styles.groupLabel}>大模型（可选）</Text>
-          <View style={styles.groupCard}>
-            <View style={styles.switchRow}>
-              <View style={styles.rowBody}>
-                <Text style={styles.rowTitle}>用大模型写摘要</Text>
-                <Text style={styles.rowSub}>关闭时从原文离线抽取摘要和关键词。</Text>
-              </View>
-              <Switch
-                value={enabled}
-                onValueChange={setEnabled}
-                trackColor={{ false: theme.colors.surfaceContainerHighest, true: theme.colors.primary }}
-                thumbColor={enabled ? theme.colors.onPrimary : theme.colors.outline}
-                ios_backgroundColor={theme.colors.surfaceContainerHighest}
-                accessibilityLabel="使用大模型写摘要"
-              />
-            </View>
-
-            <View style={styles.divider} />
-
-            <TextField
-              label="服务地址"
-              value={baseUrl}
-              onChangeText={setBaseUrl}
-              placeholder={DEFAULT_LLM.baseUrl}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-              accessibilityLabel="大模型服务地址"
+        <View className="mb-6">
+          <SectionLabel>同步</SectionLabel>
+          <Group>
+            <Row
+              icon="cloud-offline-outline"
+              title="多端同步"
+              subtitle="暂未开启，后续版本接入"
+              value="未开启"
             />
-
-            <TextField
-              label="模型名称"
-              value={model}
-              onChangeText={setModel}
-              placeholder={DEFAULT_LLM.model}
-              autoCapitalize="none"
-              autoCorrect={false}
-              accessibilityLabel="模型名称"
+            <Row
+              icon="phone-portrait-outline"
+              title="本机存储"
+              subtitle="正文、摘要与索引都在 xunji.db"
+              value={statsLine(stats)}
             />
+          </Group>
+        </View>
 
-            <TextField
-              label="API Key"
-              value={apiKey}
-              onChangeText={setApiKey}
-              placeholder={hasKey ? '已保存在系统钥匙串，留空则不修改' : '填写你的 API Key'}
-              autoCapitalize="none"
-              autoCorrect={false}
-              secureTextEntry
-              hint="密钥只写入系统钥匙串，不会上传，也不会出现在日志里。"
-              accessibilityLabel="大模型 API Key"
+        <View className="mb-6">
+          <SectionLabel>整理</SectionLabel>
+          <Group>
+            <Row
+              icon="sparkles-outline"
+              title="大模型摘要"
+              subtitle="用自己的模型写摘要与关键词"
+              value={llmLabel}
+              onPress={() => router.push('/settings/llm')}
+              accessibilityLabel="打开大模型设置"
             />
+          </Group>
+        </View>
 
-            <View style={styles.actions}>
-              <Button
-                label={saving ? '保存中…' : '保存设置'}
-                onPress={() => void handleSave()}
-                loading={saving}
-                size="small"
-                style={styles.actionButton}
-              />
-              <Button
-                label={testing ? '测试中…' : '测试连接'}
-                onPress={() => void handleTest()}
-                loading={testing}
-                variant="secondary"
-                size="small"
-                style={styles.actionButton}
-              />
-            </View>
-          </View>
+        <View className="mb-6">
+          <SectionLabel>数据</SectionLabel>
+          <Group>
+            <Row
+              icon="trash-outline"
+              title="清空全部收藏"
+              subtitle="删除本机正文、摘要与索引，无法恢复"
+              danger
+              onPress={() => setConfirmingClear(true)}
+              accessibilityLabel="清空全部收藏"
+            />
+          </Group>
+        </View>
 
-          <Text style={styles.groupLabel}>数据</Text>
-          <View style={styles.groupCard}>
-            <View style={styles.row}>
-              <View style={styles.softicon}>
-                <Ionicons name="bookmark-outline" size={19} color={theme.colors.onSurfaceVariant} />
-              </View>
-              <View style={styles.rowBody}>
-                <Text style={styles.rowTitle}>本机存储</Text>
-                <Text style={styles.rowSub}>正文、摘要和索引都在 xunji.db 里。</Text>
-              </View>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.row}>
-              <View style={styles.softicon}>
-                <Ionicons name="sync-outline" size={19} color={theme.colors.onSurfaceVariant} />
-              </View>
-              <View style={styles.rowBody}>
-                <Text style={styles.rowTitle}>多端同步</Text>
-                <Text style={styles.rowSub}>
-                  暂未开启。数据已保留更新时间与删除标记，后续版本可以接上。
-                </Text>
-              </View>
-            </View>
-          </View>
+        <View className="mb-6">
+          <SectionLabel>关于</SectionLabel>
+          <Group>
+            <Row
+              icon="information-circle-outline"
+              title={APP_NAME}
+              subtitle="只保存在这台手机上"
+              value={`v${Constants.expoConfig?.version ?? '—'}`}
+            />
+          </Group>
+        </View>
 
-          <Pressable
-            onPress={() => setConfirmingClear(true)}
-            accessibilityRole="button"
-            accessibilityLabel="清空全部收藏"
-            android_ripple={{ color: withAlpha(theme.colors.error, 0.12) }}
-            style={({ pressed }) => [styles.dangerButton, pressed && styles.pressed]}
-          >
-            <Ionicons name="trash-outline" size={18} color={theme.colors.error} />
-            <Text style={styles.dangerText}>清空全部收藏</Text>
-          </Pressable>
-
-          <Text style={styles.footer}>
-            {APP_NAME} · v{Constants.expoConfig?.version ?? '—'} · 只保存在这台手机上
-          </Text>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        <Text className="mt-2 text-center text-caption text-faint">
+          链接与图片由本机解析，图片文字用端侧 OCR 识别，不会上传。
+        </Text>
+      </ScrollView>
       <AppTabBar active="settings" />
       <ConfirmDialog
         visible={confirmingClear}
@@ -321,152 +237,3 @@ export function SettingsScreen() {
     </Screen>
   )
 }
-
-const useStyles = makeStyles((theme) => ({
-  flex: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: theme.layout.gutter,
-  },
-  screenTitle: {
-    ...theme.type.headlineMedium,
-    marginTop: theme.spacing.sm,
-    color: theme.colors.text,
-  },
-  panel: {
-    marginTop: theme.spacing.lg,
-    borderRadius: theme.shape.xl,
-    backgroundColor: theme.colors.inverseSurface,
-    paddingHorizontal: theme.spacing.xl,
-    paddingVertical: theme.spacing.xl,
-    ...theme.elevation.level1,
-  },
-  panelTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  panelTopText: {
-    ...theme.type.labelMedium,
-    color: theme.colors.inverseOnSurface,
-  },
-  panelValueRow: {
-    marginTop: theme.spacing.xs,
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  panelValue: {
-    ...theme.type.displaySmall,
-    fontWeight: '700',
-    letterSpacing: -1,
-    color: theme.colors.inverseOnSurface,
-    fontVariant: ['tabular-nums'],
-  },
-  panelUnit: {
-    marginLeft: theme.spacing.xs,
-    ...theme.type.bodyMedium,
-    color: theme.colors.inverseOnSurface,
-  },
-  panelBar: {
-    marginTop: theme.spacing.md,
-    height: 6,
-    borderRadius: theme.shape.full,
-    overflow: 'hidden',
-  },
-  panelBarFill: {
-    height: '100%',
-    borderRadius: theme.shape.full,
-    backgroundColor: theme.colors.inversePrimary,
-  },
-  panelFoot: {
-    marginTop: theme.spacing.md,
-    ...theme.type.bodySmall,
-    color: theme.colors.inverseOnSurface,
-    fontVariant: ['tabular-nums'],
-  },
-  groupLabel: {
-    ...theme.type.labelMedium,
-    marginTop: theme.spacing.xl,
-    marginBottom: theme.spacing.sm,
-    marginLeft: theme.spacing.xs,
-    color: theme.colors.textMuted,
-  },
-  groupCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.shape.lg,
-    padding: theme.spacing.lg,
-    gap: theme.spacing.md,
-    ...theme.elevation.level1,
-  },
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.md,
-    minHeight: 48,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.md,
-    minHeight: 48,
-  },
-  softicon: {
-    width: 40,
-    height: 40,
-    borderRadius: theme.shape.full,
-    backgroundColor: theme.colors.surfaceContainerHigh,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rowBody: {
-    flex: 1,
-    gap: 2,
-  },
-  rowTitle: {
-    ...theme.type.titleSmall,
-    color: theme.colors.text,
-  },
-  rowSub: {
-    ...theme.type.bodySmall,
-    color: theme.colors.textMuted,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: theme.colors.outlineVariant,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.xs,
-  },
-  actionButton: {
-    flex: 1,
-  },
-  dangerButton: {
-    marginTop: theme.spacing.xl,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.spacing.sm,
-    minHeight: 48,
-    borderRadius: theme.shape.full,
-    borderWidth: 1,
-    borderColor: theme.colors.error,
-    overflow: 'hidden',
-  },
-  dangerText: {
-    ...theme.type.labelLarge,
-    color: theme.colors.error,
-    fontWeight: '600',
-  },
-  pressed: {
-    opacity: 0.6,
-  },
-  footer: {
-    marginTop: theme.spacing.xl,
-    textAlign: 'center',
-    ...theme.type.bodySmall,
-    color: theme.colors.textMuted,
-  },
-}))

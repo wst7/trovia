@@ -1,6 +1,5 @@
-import { Ionicons } from '@expo/vector-icons'
 import { useCallback, useEffect, useState } from 'react'
-import { ActivityIndicator, Linking, Pressable, ScrollView, Text, View } from 'react-native'
+import { ActivityIndicator, Image, Linking, ScrollView, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { DocumentDetail, ParseStatus, RelatedItem } from '@xunji/shared'
@@ -8,24 +7,31 @@ import {
   domainOf,
   errorMessage,
   formatDate,
-  sourceLabel,
-  SOURCE_TYPE_LABELS,
 } from '@xunji/shared'
 
-import { LiveStatusBadge } from '../components/LiveStatusBadge'
+import { LiveStatusMark } from '../components/LiveStatusMark'
 import { Markdown } from '../components/Markdown'
-import { Postmark } from '../components/Postmark'
-import { RelatedList } from '../components/RelatedList'
-import { Button } from '../components/ui/Button'
-import { ConfirmDialog } from '../components/ui/ConfirmDialog'
-import { IconButton } from '../components/ui/IconButton'
-import { Notice } from '../components/ui/Notice'
-import { Screen } from '../components/ui/Screen'
-import { TopAppBar } from '../components/ui/TopAppBar'
 import { processPendingQueue } from '../local/pipeline'
 import * as repo from '../local/repo'
 import { useToast } from '../providers/ToastProvider'
-import { makeStyles, useTheme, withAlpha } from '../theme'
+import { Button, IconButton, TextButton } from '../ui/Button'
+import { ConfirmDialog } from '../ui/ConfirmDialog'
+import { Divider } from '../ui/Divider'
+import { GUTTER, Screen } from '../ui/Screen'
+import { usePalette } from '../ui/palette'
+
+function bodyFallback(code: string | null): string {
+  if (code === 'APP_ONLY_LINK') {
+    return '这条内容在飞书 App 里。标题和链接已经保存，点下方「打开原文」可以直接回到飞书查看。'
+  }
+  if (code === 'CONTENT_SCRIPT_ONLY') {
+    return '这个链接需要在对应的 App 内打开（比如飞书、微信），正文无法直接读取；链接已保留，点下方「打开原文」可以回到原处。'
+  }
+  if (code === 'FETCH_BLOCKED') {
+    return '页面要求验证或登录，正文暂时无法读取；原始链接始终为你保留。'
+  }
+  return '正文暂时无法读取，原始链接始终为你保留。'
+}
 
 export function DocumentDetailScreen() {
   const router = useRouter()
@@ -33,8 +39,7 @@ export function DocumentDetailScreen() {
   const id = Array.isArray(params.id) ? params.id[0] : params.id
   const { toast } = useToast()
   const insets = useSafeAreaInsets()
-  const theme = useTheme()
-  const styles = useStyles()
+  const p = usePalette()
 
   const [doc, setDoc] = useState<DocumentDetail | null>(null)
   const [related, setRelated] = useState<RelatedItem[]>([])
@@ -102,11 +107,6 @@ export function DocumentDetailScreen() {
     }
   }
 
-  function confirmDelete() {
-    if (deleting) return
-    setConfirmingDelete(true)
-  }
-
   async function openOriginal() {
     if (!doc) return
     try {
@@ -116,32 +116,36 @@ export function DocumentDetailScreen() {
     }
   }
 
-  const topBar = (
-    <TopAppBar
-      title="收藏详情"
-      centerTitle
-      onBack={goBack}
-      actions={
-        doc ? (
-          <IconButton
-            name="trash-outline"
-            onPress={confirmDelete}
-            accessibilityLabel="删除这篇收藏"
-            color={theme.colors.error}
-            disabled={deleting}
-          />
-        ) : null
-      }
-    />
+  const header = (
+    <View className="h-14 flex-row items-center justify-between">
+      <IconButton
+        name="chevron-back"
+        size={22}
+        accessibilityLabel="返回"
+        onPress={goBack}
+      />
+      {doc ? (
+        <IconButton
+          name="trash-outline"
+          size={19}
+          tone="muted"
+          accessibilityLabel="删除这篇收藏"
+          disabled={deleting}
+          onPress={() => setConfirmingDelete(true)}
+        />
+      ) : null}
+    </View>
   )
 
   if (error) {
     return (
       <Screen>
-        {topBar}
-        <View style={styles.stateWrap}>
-          <Notice text={error} tone="error" />
-          <Button label="重试" onPress={() => void load()} variant="secondary" />
+        {header}
+        <View className="flex-1 items-center justify-center px-6">
+          <Text className="text-center text-body text-ink">{error}</Text>
+          <View className="mt-5">
+            <Button label="重试" onPress={() => void load()} size="sm" />
+          </View>
         </View>
       </Screen>
     )
@@ -150,10 +154,9 @@ export function DocumentDetailScreen() {
   if (!doc || status === null) {
     return (
       <Screen>
-        {topBar}
-        <View style={styles.stateWrap}>
-          <ActivityIndicator color={theme.colors.primary} />
-          <Text style={styles.loadingText}>正在加载……</Text>
+        {header}
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="small" color={p.muted} />
         </View>
       </Screen>
     )
@@ -161,48 +164,40 @@ export function DocumentDetailScreen() {
 
   const bodySource = doc.content_markdown ?? doc.plain_text ?? ''
   const canReprocess = status === 'partial' || status === 'failed'
-  const fabBottom = insets.bottom + theme.spacing.md
+  const rawShort = doc.summary_short?.trim() || null
+  const rawLong = doc.summary_long?.trim() || null
+  // 抽取式摘要常常两段一样：一样就只显示一次，别让同一句话占两块版面。
+  const summaryShort = rawShort ?? (rawLong && rawLong.length <= 120 ? rawLong : null)
+  const summaryLong = rawLong && rawLong !== summaryShort && rawLong !== rawShort ? rawLong : null
+  const summary = summaryShort ?? summaryLong
+  // 抽取式摘要对短文就等于全文：这时候摘要块只是把原文又说一遍，直接不显示。
+  const flat = (s: string) => s.replace(/\s+/g, '')
+  const summaryRepeatsBody = Boolean(summary && bodySource && flat(bodySource).includes(flat(summary)))
 
   return (
     <Screen>
-      {topBar}
+      {header}
 
       <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingBottom:
-              insets.bottom + theme.layout.fabHeight + theme.spacing.md + theme.spacing.xl,
-          },
-        ]}
+        contentContainerStyle={{ paddingHorizontal: GUTTER, paddingBottom: insets.bottom + 88 }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.titleRow}>
-          <View style={styles.titleCol}>
-            <View style={styles.domainChip}>
-              <Ionicons
-                name="globe-outline"
-                size={14}
-                color={theme.colors.onSecondaryContainer}
-              />
-              <Text style={styles.domainText} numberOfLines={1}>
-                {domainOf(doc.url)}
-              </Text>
-            </View>
+        {doc.title && doc.title.trim() !== doc.url ? (
+          <Text className="text-caption text-faint" numberOfLines={1}>
+            {domainOf(doc.url)}
+          </Text>
+        ) : null}
 
-            <Text style={styles.title}>{doc.title || doc.url}</Text>
-          </View>
-          <Postmark savedAt={doc.saved_at} status={status} size={64} style={styles.postmark} />
-        </View>
+        <Text className="mt-2 text-title font-semibold text-ink">{doc.title || doc.url}</Text>
 
-        <Text style={styles.meta}>
-          {sourceLabel(doc.url, doc.site_name, SOURCE_TYPE_LABELS[doc.source_type])}
-          {doc.author ? ` · ${doc.author}` : ''} · 收藏于 {formatDate(doc.saved_at)}
+        <Text className="mt-2 text-caption text-muted">
+          {doc.author ? `${doc.author} · ` : ''}收藏于 {formatDate(doc.saved_at)}
         </Text>
 
-        {status !== 'completed' && (
-          <View style={styles.statusRow}>
-            <LiveStatusBadge
+
+        {status !== 'completed' ? (
+          <View className="mt-3 flex-row items-center gap-3">
+            <LiveStatusMark
               docId={doc.id}
               status={status}
               onTerminal={(next) => {
@@ -210,86 +205,103 @@ export function DocumentDetailScreen() {
                 void load()
               }}
             />
-            {canReprocess && (
-              <Button
+            {canReprocess ? (
+              <TextButton
                 label={reprocessing ? '提交中…' : '重新解析'}
                 onPress={() => void handleReprocess()}
-                variant="ghost"
-                size="small"
                 disabled={reprocessing}
               />
+            ) : null}
+          </View>
+        ) : null}
+
+        {summary && !summaryRepeatsBody ? (
+          <View className="mt-6 rounded-md bg-sunken p-4">
+            <Text className="text-[11px] font-semibold tracking-[1px] text-faint">摘要</Text>
+            {summaryShort ? (
+              <Text className="mt-2 text-body text-ink">{summaryShort}</Text>
+            ) : null}
+            {summaryLong ? (
+              <Text className={summaryShort ? 'mt-2 text-body-sm text-muted' : 'mt-2 text-body text-ink'}>
+                {summaryLong}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+
+        {doc.keywords.length > 0 ? (
+          <Text className="mt-4 text-caption text-muted">
+            {doc.keywords.join(' · ')}
+          </Text>
+        ) : null}
+
+        <View className="mt-8">
+          <Text className="text-[11px] font-semibold tracking-[1px] text-faint">原文</Text>
+          <View className="mt-3">
+            {bodySource ? (
+              <Markdown source={bodySource} />
+            ) : (
+              <Text className="text-body-sm text-muted">{bodyFallback(doc.parse_error_code)}</Text>
             )}
           </View>
-        )}
+        </View>
 
-        {(doc.summary_short || doc.summary_long) && (
-          <View style={styles.summaryBlock}>
-            <View style={styles.blockLabelRow}>
-              <Ionicons name="sparkles" size={14} color={theme.colors.primary} />
-              <Text style={styles.label}>摘要</Text>
+        {doc.images && doc.images.length > 0 ? (
+          <View className="mt-8">
+            <Text className="text-[11px] font-semibold tracking-[1px] text-faint">图片</Text>
+            <View className="mt-3 gap-2">
+              {doc.images.slice(0, 4).map((uri) => (
+                <Image
+                  key={uri}
+                  source={{ uri }}
+                  className="w-full rounded-sm bg-sunken"
+                  style={{ height: 200 }}
+                  resizeMode="cover"
+                  accessibilityIgnoresInvertColors
+                />
+              ))}
             </View>
-            <View style={styles.summarySeg} />
-            {doc.summary_short && <Text style={styles.summaryLead}>{doc.summary_short}</Text>}
-            {doc.summary_long && <Text style={styles.summaryLong}>{doc.summary_long}</Text>}
+            {doc.images.length > 4 ? (
+              <Text className="mt-2 text-caption text-faint">另有 {doc.images.length - 4} 张未显示</Text>
+            ) : null}
           </View>
-        )}
+        ) : null}
 
-        {doc.keywords.length > 0 && (
-          <View style={styles.keywordBlock}>
-            <Text style={styles.keywordLabel}>关键词</Text>
-            <View style={styles.chips}>
-              {doc.keywords.map((keyword) => (
-                <View key={keyword} style={styles.chip}>
-                  <Text style={styles.chipText}>{keyword}</Text>
+        {related.length > 0 ? (
+          <View className="mt-8">
+            <Divider />
+            <Text className="mt-6 text-[11px] font-semibold tracking-[1px] text-faint">相关</Text>
+            <View className="mt-1">
+              {related.map((item) => (
+                <View key={item.document_id}>
+                  <Text
+                    className="py-3 text-body-sm text-ink"
+                    numberOfLines={1}
+                    onPress={() => router.push(`/documents/${item.document_id}`)}
+                  >
+                    {item.title || item.url}
+                  </Text>
+                  <Divider />
                 </View>
               ))}
             </View>
           </View>
-        )}
-
-        <View style={styles.body}>
-          <View style={styles.blockLabelRow}>
-            <Ionicons name="document-text-outline" size={14} color={theme.colors.text} />
-            <Text style={styles.bodyLabel}>原文</Text>
-          </View>
-          <View style={styles.summarySeg} />
-          {bodySource ? (
-            <Markdown source={bodySource} />
-          ) : (
-            <Text style={styles.emptyBody}>
-              {doc.parse_error_code === 'APP_ONLY_LINK'
-                ? '这条内容在飞书 App 里。标题和链接已经保存，点下方「打开原文」可以直接回到飞书查看。'
-                : doc.parse_error_code === 'CONTENT_SCRIPT_ONLY'
-                  ? '这个链接需要在对应的 App 内打开（比如飞书、微信），正文无法直接读取；链接已保留，点下方「打开原文」可以回到原处。'
-                  : doc.parse_error_code === 'FETCH_BLOCKED'
-                    ? '页面要求验证或登录，正文暂时无法读取；原始链接始终为你保留。'
-                    : '正文暂时无法读取，原始链接始终为你保留。'}
-            </Text>
-          )}
-        </View>
-
-        {related.length > 0 && (
-          <RelatedList items={related} onPress={(nextId) => router.push(`/documents/${nextId}`)} />
-        )}
+        ) : null}
       </ScrollView>
 
-      <Pressable
-        onPress={() => void openOriginal()}
-        accessibilityRole="button"
-        accessibilityLabel="打开原文"
-        android_ripple={{
-          color: withAlpha(theme.colors.onPrimaryContainer, 0.12),
-          borderless: false,
-        }}
-        style={({ pressed }) => [
-          styles.fab,
-          { bottom: fabBottom },
-          pressed && styles.fabPressed,
-        ]}
+      {/* 这一屏只有一个动作，所以它值得朱红。 */}
+      <View
+        className="absolute inset-x-0 bottom-0 border-t border-line bg-canvas px-4 pt-3"
+        style={{ paddingBottom: insets.bottom + 12 }}
       >
-        <Ionicons name="open-outline" size={20} color={theme.colors.onPrimaryContainer} />
-        <Text style={styles.fabLabel}>打开原文</Text>
-      </Pressable>
+        <Button
+          label="打开原文"
+          icon="open-outline"
+          variant="primary"
+          onPress={() => void openOriginal()}
+          className="w-full"
+        />
+      </View>
 
       <ConfirmDialog
         visible={confirmingDelete}
@@ -306,164 +318,3 @@ export function DocumentDetailScreen() {
     </Screen>
   )
 }
-
-const useStyles = makeStyles((theme) => ({
-  content: {
-    paddingHorizontal: theme.layout.gutter,
-    paddingTop: theme.spacing.xs,
-  },
-  stateWrap: {
-    padding: theme.spacing.lg,
-    gap: theme.spacing.lg,
-  },
-  loadingText: {
-    ...theme.type.bodyMedium,
-    color: theme.colors.textMuted,
-    textAlign: 'center',
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: theme.spacing.md,
-  },
-  titleCol: {
-    flex: 1,
-    minWidth: 0,
-  },
-  postmark: {
-    // 票面右上角的销戳，盖歪 −8°。
-    transform: [{ rotate: '-8deg' }],
-    marginTop: 2,
-  },
-  domainChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 6,
-    minHeight: 32,
-    maxWidth: '100%',
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.shape.sm,
-    backgroundColor: theme.colors.secondaryContainer,
-    marginBottom: theme.spacing.md,
-  },
-  domainText: {
-    ...theme.type.labelMedium,
-    fontWeight: '500',
-    color: theme.colors.onSecondaryContainer,
-    flexShrink: 1,
-  },
-  title: {
-    ...theme.type.headlineSmall,
-    color: theme.colors.text,
-  },
-  meta: {
-    ...theme.type.bodySmall,
-    color: theme.colors.textMuted,
-    marginTop: theme.spacing.sm,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.md,
-    marginLeft: -theme.spacing.xs,
-  },
-  summaryBlock: {
-    marginTop: theme.spacing.lg,
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.shape.md,
-    padding: theme.spacing.lg,
-    gap: theme.spacing.sm,
-    ...theme.elevation.level1,
-  },
-  blockLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  summarySeg: {
-    height: 1,
-    backgroundColor: theme.colors.divider,
-  },
-  bodyLabel: {
-    ...theme.type.labelMedium,
-    color: theme.colors.text,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  label: {
-    ...theme.type.labelMedium,
-    color: theme.colors.primary,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  summaryLead: {
-    ...theme.type.titleMedium,
-    color: theme.colors.text,
-  },
-  summaryLong: {
-    ...theme.type.bodyMedium,
-    color: theme.colors.textMuted,
-  },
-  keywordBlock: {
-    marginTop: theme.spacing.lg,
-  },
-  keywordLabel: {
-    ...theme.type.labelMedium,
-    fontWeight: '600',
-    color: theme.colors.textMuted,
-    marginBottom: theme.spacing.sm,
-  },
-  chips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.sm,
-  },
-  chip: {
-    height: 32,
-    paddingHorizontal: theme.spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.outlineVariant,
-    borderRadius: theme.shape.sm,
-  },
-  chipText: {
-    ...theme.type.labelMedium,
-    color: theme.colors.textMuted,
-  },
-  body: {
-    marginTop: theme.spacing.lg,
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.shape.md,
-    padding: theme.spacing.lg,
-    gap: theme.spacing.sm,
-    ...theme.elevation.level1,
-  },
-  emptyBody: {
-    ...theme.type.bodyMedium,
-    color: theme.colors.textMuted,
-  },
-  fab: {
-    position: 'absolute',
-    right: theme.layout.gutter,
-    height: theme.layout.fabHeight,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.lg + 2,
-    borderRadius: theme.shape.lg,
-    backgroundColor: theme.colors.primaryContainer,
-    overflow: 'hidden',
-    ...theme.elevation.level3,
-  },
-  fabPressed: {
-    opacity: 0.9,
-  },
-  fabLabel: {
-    ...theme.type.labelLarge,
-    fontWeight: '600',
-    color: theme.colors.onPrimaryContainer,
-  },
-}))

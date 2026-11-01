@@ -1,316 +1,191 @@
 ---
 name: 寻迹 Mobile
-description: 集邮册与销戳 —— 每篇收藏是一枚被销戳的邮票
+description: 克制的找回工具 —— 两档中性色、一个输入框、一个强调色
 colors:
-  primary: "#b53823"
-  on-primary: "#ffffff"
-  primary-container: "#ffdad4"
-  on-primary-container: "#400200"
-  secondary: "#625a78"
-  on-secondary: "#ffffff"
-  secondary-container: "#e8ddff"
-  on-secondary-container: "#1e1731"
-  tertiary: "#446559"
-  on-tertiary: "#ffffff"
-  tertiary-container: "#c6ebdb"
-  on-tertiary-container: "#002117"
-  error: "#ba1a1a"
-  error-container: "#ffdad6"
-  on-error-container: "#410002"
-  warning: "#9b4500"
-  warning-container: "#ffdbca"
-  on-warning-container: "#331200"
-  success: "#006d30"
-  success-container: "#95f8a7"
-  on-success-container: "#00210a"
-  canvas: "#f3ede0"
-  card: "#fffdf7"
-  card-muted: "#fbf6ed"
-  field: "#e7e2d9"
-  surface-container: "#f4efe5"
-  surface-container-high: "#ede8de"
-  text: "#2e2742"
-  text-muted: "#55524b"
-  divider: "#cbc6bd"
-  outline: "#827e77"
-  outline-variant: "#cbc6bd"
-  inverse-surface: "#3f3753"
-  inverse-on-surface: "#f6f0e7"
-  inverse-primary: "#ffb4a6"
+  canvas: "#fbfaf7"
+  surface: "#ffffff"
+  sunken: "#f4f3ef"
+  line: "#e8e6e1"
+  line-strong: "#d6d3cc"
+  ink: "#1a1917"
+  muted: "#6e6c67"
+  faint: "#a3a099"
+  accent: "#b23a26"
+  accent-quiet: "#f7eae6"
+  danger: "#b3352b"
+  warn: "#8a5a20"
+  ok: "#2f6b47"
 typography:
-  display:
-    fontFamily: "-apple-system, 'SF Pro Text', 'Roboto', sans-serif"
-    fontSize: "36px"
-    fontWeight: 400
-    lineHeight: "44px"
-    letterSpacing: "-0.4px"
-  headline:
-    fontFamily: "-apple-system, 'SF Pro Text', 'Roboto', sans-serif"
-    fontSize: "32px"
-    fontWeight: 700
-    lineHeight: "40px"
-    letterSpacing: "-0.4px"
-  title:
-    fontFamily: "-apple-system, 'SF Pro Text', 'Roboto', sans-serif"
-    fontSize: "16px"
-    fontWeight: 600
-    lineHeight: "24px"
-    letterSpacing: "-0.15px"
-  title-large:
-    fontFamily: "-apple-system, 'SF Pro Text', 'Roboto', sans-serif"
-    fontSize: "22px"
-    fontWeight: 500
-    lineHeight: "28px"
-    letterSpacing: "-0.2px"
-  body:
-    fontFamily: "-apple-system, 'SF Pro Text', 'Roboto', sans-serif"
-    fontSize: "16px"
-    fontWeight: 400
-    lineHeight: "24px"
-    letterSpacing: "0px"
-  body-medium:
-    fontFamily: "-apple-system, 'SF Pro Text', 'Roboto', sans-serif"
-    fontSize: "14px"
-    fontWeight: 400
-    lineHeight: "20px"
-    letterSpacing: "0px"
-  body-small:
-    fontFamily: "-apple-system, 'SF Pro Text', 'Roboto', sans-serif"
-    fontSize: "12px"
-    fontWeight: 400
-    lineHeight: "16px"
-    letterSpacing: "0px"
-  label:
-    fontFamily: "-apple-system, 'SF Pro Text', 'Roboto', sans-serif"
-    fontSize: "14px"
-    fontWeight: 500
-    lineHeight: "20px"
-    letterSpacing: "0.5px"
-  label-medium:
-    fontFamily: "-apple-system, 'SF Pro Text', 'Roboto', sans-serif"
-    fontSize: "12px"
-    fontWeight: 500
-    lineHeight: "16px"
-    letterSpacing: "0.5px"
-  label-small:
-    fontFamily: "-apple-system, 'SF Pro Text', 'Roboto', sans-serif"
-    fontSize: "11px"
-    fontWeight: 500
-    lineHeight: "16px"
-    letterSpacing: "0.5px"
-  mono:
-    fontFamily: "'SF Mono', Menlo, 'Roboto Mono', monospace"
-    fontSize: "11px"
-    fontWeight: 700
-    lineHeight: "16px"
-    letterSpacing: "0px"
+  display: "28px / 36px / 600 / -0.5px"
+  title: "20px / 28px / 600 / -0.2px"
+  heading: "16px / 24px / 600 / -0.1px"
+  body: "16px / 25px / 400 / 0"
+  body-sm: "14px / 22px / 400 / 0"
+  caption: "12px / 18px / 400 / 0"
+  label: "13px / 18px / 500 / +0.3px"
+  mono: "12px / 18px / Menlo 等宽 / 0"
 rounded:
-  xs: "4px"
   sm: "8px"
-  md: "12px"
-  lg: "16px"
-  xl: "28px"
+  md: "14px"
   full: "999px"
 spacing:
-  xs: "4px"
-  sm: "8px"
-  md: "12px"
-  lg: "16px"
-  xl: "24px"
-  xxl: "32px"
-  xxxl: "48px"
+  1: "4px"
+  2: "8px"
+  3: "12px"
+  4: "16px"
+  5: "20px"
+  6: "24px"
+  8: "32px"
+  10: "40px"
+  12: "48px"
+  16: "64px"
 components:
   button-primary:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.on-primary}"
-    rounded: "{rounded.full}"
+    background: "{colors.accent}"
+    text: "#ffffff"
     height: "48px"
-    padding: "0 24px"
-  button-tonal:
-    backgroundColor: "{colors.secondary-container}"
-    textColor: "{colors.on-secondary-container}"
-    rounded: "{rounded.full}"
-    height: "48px"
-    padding: "0 24px"
+    radius: "{rounded.sm}"
+    padding: "0 20px"
   button-secondary:
-    backgroundColor: "transparent"
-    textColor: "{colors.primary}"
-    rounded: "{rounded.full}"
+    background: "{colors.surface}"
+    border: "1px {colors.line-strong}"
+    text: "{colors.ink}"
     height: "48px"
-    padding: "0 24px"
-  card-ticket:
-    backgroundColor: "{colors.card}"
-    textColor: "{colors.text}"
-    rounded: "{rounded.md}"
-    padding: "16px"
-  input-search:
-    backgroundColor: "{colors.surface-container-high}"
-    textColor: "{colors.text}"
-    rounded: "{rounded.full}"
-    height: "56px"
-    padding: "0 16px"
-  input-save:
-    backgroundColor: "{colors.field}"
-    textColor: "{colors.text}"
-    rounded: "{rounded.sm}"
-    height: "56px"
-    padding: "0 12px"
-  chip-local:
-    backgroundColor: "transparent"
-    textColor: "{colors.text-muted}"
-    rounded: "{rounded.sm}"
-    height: "32px"
-    padding: "0 12px"
-  postmark:
-    backgroundColor: "transparent"
-    textColor: "{colors.text}"
-    rounded: "{rounded.full}"
-    size: "56px"
+    radius: "{rounded.sm}"
+  composer:
+    background: "{colors.surface}"
+    border: "1px {colors.line} → 聚焦 {colors.line-strong}"
+    radius: "{rounded.md}"
+    minHeight: "52px"
+  list-row:
+    minHeight: "60px"
+    separator: "1px {colors.line}"
+  tab-bar:
+    height: "56px + 安全区"
+    borderTop: "1px {colors.line}"
+    active: "{colors.ink}"
+    inactive: "{colors.faint}"
 ---
 
 # Design System: 寻迹 Mobile
 
 ## Overview
 
-**Creative North Star: "集邮册与销戳（The Stamp Album & Postmark）"**
+**Creative North Star: 「一张纸上的一件事」**
 
-每篇收藏是一枚被销戳的邮票——保存的那天，邮戳就盖在它身上，找回就是从集邮册里认出那枚戳。整套系统拒绝「稍后读」类应用的品类默认：白底圆角卡片流 + 中性强调色，把收藏当成无差别的行。这里是胶面纸底、深色下是深绿集邮册布面；朱红只在寄出动作上点亮；每一枚票都有出处（来源邮票）、有日期（等宽账簿数字）、有经手痕迹（销戳的形状就是处理状态）。产品真相约束着视觉：保存成本接近于零，所以收藏面只有一个输入框；优先找回而不是管理，所以首页先是搜索胶囊，然后才是贴票。
+这一版把上一版的集邮册世界收起来了：邮票齿孔、销戳、盖章动画、双主题色心理战全部退场。留下的是一张纸、一支笔、一个动作。
 
-视觉密度是「一页正在用的册页」——发丝分段线代替边框和阴影堆叠，票面之间靠色调层次拉开，戳、票、注记各占其位。状态永远先用形状编码（实圈、虚圈、划销），颜色只是确认。系统是单栏移动布局（390×844 基准），不为平板做双栏；Material 3 管结构、导航与交互，世界只出四样：字、色、密度、一个签名动作（保存瞬间邮戳弹压上票面）。
+克制在这里不是形容词，而是四条可检查的规则：
 
-**Key Characteristics:**
-- 形状即状态：实圈＝完成、虚圈＝整理中、划销＝部分/失败；先看形，再看色。
-- 齿孔是票与卡的分界：点状边打穿、露出底纸（brand mark、来源邮票、空状态）。
-- 销戳永远盖歪（−8°），日期用等宽数字、账簿式对齐。
-- 朱红稀用：只在寄出按钮、注记图标与聚焦描边上点亮。
-- 8dp 网格 + 4dp 半步；发丝分段线（1dp）代替卡片描边。
+1. **一个屏幕只有一个强调色位置。** 朱红 `#b23a26` 只出现在「当前可执行的那个动作」上——首页输入框的提交键、详情页的「打开原文」、设置页的「保存设置」、聚焦时的下划线。除此之外全屏无彩。
+2. **层次只用发丝线和留白。** 没有阴影、没有渐变、没有卡片投影堆叠。1px `line` 色分隔列表行，靠 16dp 留白成组。
+3. **一个输入框。** 首页不再并排「提问」和「收藏」两张卡。一个框，看得出是链接就存，看不出就当一句话去搜；框下方那行小字随输入变化，告诉用户这次会做什么。
+4. **状态用形状，不用颜色也读得懂。** 实心小圆＝已完成、空心＝整理中、实心带色＝部分/失败。已完成的条目不带任何状态文字——默认状态不占用眼力。
+
+技术实现是 **NativeWind（Tailwind 4 / react-native-css-interop）**：色彩走 CSS 变量（`global.css` 的 `:root` 与 `@media (prefers-color-scheme: dark)`），明暗随系统切换；命令式取色（图标色、placeholder、RefreshControl）走 `src/ui/palette.ts`，两份值必须同步改。
 
 ## Colors
 
-双主题（light / dark）全 MD3 角色表，每一对 on-/container 在提交前都过 WCAG 4.5:1（描边与大图标 3:1）；上面 frontmatter 是 light 规范值，dark 值见各条括注。色种由 `@material/material-color-utilities` 从世界种子生成：朱红 `#c2402c`（压到 `#b53823` 作 light primary，保证朱红文字在每个面上都过 4.5:1）、邮戳紫黑 `#2e2742`、集邮绿 `#35564a`；中性 ramp 保持纸与布的色相在低彩度。`surfaceContainerLowest` 被钉死在暖色 `#fffdf7`——HCT 求解器在 tone 99 会偏蓝，落在纸上显脏。
+两档中性色 + 一个强调色 + 三个状态色，light / dark 各一套。
 
-### Primary
-- **朱红 Vermilion** (#b53823 / dark #ff8f73): 唯一强调色。寄出/找回按钮、聚焦描边、注记「为什么找到它」的标签与 sparkles 图标、品牌标底色。它稀用，出现即动作。
-- **朱红容器 Vermilion Container** (#ffdad4 / dark #8c1809): 收藏面头部圆形 softicon 底、详情页摘要栏头。
-
-### Secondary
-- **邮戳紫 Ink Violet** (#625a78 / dark #ccc1e4; 墨色本体 #2e2742 / dark #eae5d6): 全局文字墨色与 tonal 按钮/空状态图标的来源。secondaryContainer `#e8ddff`（dark #4a425f）承担 tonal 按钮、tab 选中胶囊、空状态邮票位。
-
-### Tertiary
-- **集邮绿 Album Green** (#446559 / dark #aacebf; 容器 #c6ebdb / dark #2c4d41): 册页的第二容器色，用于场景化容器与成功语义的近亲，不与朱红抢焦点。
-
-### Neutral
-- **胶面纸 Paper** (#f3ede0 / dark 布面 Cloth #1c2422): canvas/背景/表面。
-- **票面 Card** (#fffdf7 / dark #242927): 卡片底。注意 dark 下 card 翻转为 surfaceContainerLow（而不是 lowest），保证卡片永远浮在 canvas 之上。
-- **票面哑光 Card Muted** (#fbf6ed / dark #333836): 按压态的卡片底。
-- **票口 Field** (#e7e2d9 / dark #3c413f): 票面输入区（收藏面单行输入槽）底色。
-- **墨 Ink** (#2e2742 / dark #eae5d6): 主文字。**淡墨** (#55524b / dark #c8cdcb): 次要文字、占位符。
-- **发丝 Divider** (#cbc6bd / dark #434846): 1dp 分段线与邮票齿孔边；**描边 Outline** (#827e77 / dark #8d9290): outlined 按钮与本地 chip 边。
-- **反色面 Inverse Surface** (#3f3753 / dark #ede8de): Toast 底，配反色文字 #f6f0e7。
-
-### Status
-- **错误 Error** (#ba1a1a / dark #ffb4ab)、**警告 Warning** (#9b4500 / dark #ffb68e)、**成功 Success** (#006d30 / dark #79db8d) 及各容器色：只出现在状态文本、划销线与提示行，不做大面积底色。
+| 角色 | Light | Dark | 用途 |
+| --- | --- | --- | --- |
+| canvas | `#fbfaf7` | `#121211` | 页面底、导航栏底 |
+| surface | `#ffffff` | `#1b1b19` | 抬起的表面：输入框、对话框 |
+| sunken | `#f4f3ef` | `#0c0c0b` | 下沉表面：摘要块、代码块 |
+| line | `#e8e6e1` | `#2b2b28` | 发丝线、分隔、描边静息态 |
+| line-strong | `#d6d3cc` | `#3b3b37` | 可交互描边、输入框聚焦描边 |
+| ink | `#1a1917` | `#edeae4` | 主文字、反底提示条的底 |
+| muted | `#6e6c67` | `#9b9891` | 次要文字、摘要、说明 |
+| faint | `#a3a099` | `#6b6862` | 极淡：栏目名、占位符、已完成状态点 |
+| accent | `#b23a26` | `#e4715b` | **唯一强调色**，见 The One-Accent Rule |
+| accent-quiet | `#f7eae6` | `#2e1d18` | 强调色的淡底（当前版本基本不用，留给未来的选中态） |
+| danger | `#b3352b` | `#e4685c` | 删除、失败 |
+| warn | `#8a5a20` | `#d9a15b` | 部分成功 |
+| ok | `#2f6b47` | `#6fbe8e` | 成功（提示文字之外的场合） |
 
 ### Named Rules
-**The Paired-Tones Rule.** 每个色都与它的 on-/container 角色成对存在；改一个 tone 必须重新生成整对（`src/design/colorSchemes.ts` 明令禁止手改单色），否则对比度契约破裂。
 
-**The Vermilion Restraint Rule.** 朱红是全 app 唯一强调色，且必须稀用：寄出按钮、聚焦描边、注记标签三类之外不出现大面积朱红。它的稀缺就是它的语义——「这里要寄出/这里是找到你的证据」。
+**The One-Accent Rule.** 一屏只能有一个朱红动作。它的稀缺就是它的语义：这里是「你现在能做的那一件事」。两处朱红＝没有重点。
+
+**The No-Decoration Rule.** 不引入第二个色相、不做渐变、不做齿孔/印章/贴纸这类图形隐喻。装饰只在信息真的存在时出现（来源站名、日期、状态）。
+
+**The Paired-Sync Rule.** `global.css` 的 CSS 变量与 `src/ui/palette.ts` 是同一份颜色的两种写法，改一处必须改另一处，否则图标与文字会分家。
 
 ## Typography
 
-**Display/Body Font:** 系统字族——iOS SF Pro（`-apple-system`）、Android Roboto（`sans-serif`），无字体包。**Mono Font:** iOS Menlo / Android monospace，只给销戳日期。
+**字体：系统字族。** iOS SF Pro / Android Roboto，无字体包——中文字体包动辄几 MB，换来的收益不如把字距和字重调对。
 
-**Character:** MD3 字阶坐在系统字上，中文与拉丁共用一套 scale；标题微收字距（−0.15 ~ −0.4px）让中文大字更紧实，正文保持 0，而 label 全员 +0.5px 字距——标签是销戳与单据上的字，是这个邮票世界的嗓音。
+**Character:** 小步长、低对比。全站只有五档字阶：display 只出现在首页那一句问句和收藏页的数字上；title 给页面标题与详情标题；heading 给品牌名与小节标题；body 是正文；caption 承载元信息。中文大字号一律负字距（-0.2 ~ -0.5px）才紧实，正文 0，label 是唯一带正字距的字（+0.3px，栏目名与按钮），因为它要和正文拉开呼吸。
 
 ### Hierarchy
-- **Display** (400, 36px/44px, −0.4px): 空状态大标题等超大字位。
-- **Headline** (700, 32px/40px, −0.4px): 首页英雄句「今天想找点什么？」；headlineSmall (600, 24px/32px) 用于空状态标题。
-- **Title** (600, 16px/24px, −0.15px): 票面标题、卡片与输入区的栏头（「提问」「收藏」）；titleLarge (500, 22px/28px) 给品牌名「寻迹」。
-- **Body** (400, 16px/24px, 0): 输入内容与正文；bodyMedium (14px/20px) 摘要与注记正文；bodySmall (12px/16px) 元信息（来源 · 时间）、副标与斜体摘录。
-- **Label** (500, 14px/20px, +0.5px): 按钮文字（实际加粗到 600）；labelMedium (12px/16px, +0.5px) tab 标签与 chip；labelSmall (11px/16px, +0.5px) 注记标签「为什么找到它」（实际 700、字距 1px）。
 
-### Named Rules
-**The Cancellation-Slip Label Rule.** 所有 label 保持 +0.5px（注记标签 1px）字距、500+ 字重——像销戳与注销单据上的印刷字；正文永不加字距。
+- **display** 28/36/600/-0.5 —— 首页「想找点什么？」、收藏页的计数
+- **title** 20/28/600/-0.2 —— 页面标题、详情标题
+- **heading** 16/24/600/-0.1 —— 品牌名、小节标题、结果行标题
+- **body** 16/25/400 —— 正文、输入内容、摘要首句
+- **body-sm** 14/22/400 —— 说明、摘要、按钮外的辅助文字
+- **caption** 12/18/400 —— 出处 · 时间、提示、脚注
+- **label** 13/18/500/+0.3 —— 按钮、动作、tab
+- **mono** 12/18 —— 代码块、数字对齐场合
 
-**The Tabular-Date Rule.** 日期与数字走等宽（Menlo/monospace）且账簿式对齐：销戳里的年份小号 +0.8px 字距在上，月日在下加粗（11px/700 @ size 56）。
+栏目名另有一条微样式：`text-[11px] font-semibold tracking-[1px] text-faint`（「最近收藏」「大模型（可选）」「原文」「相关」「摘要」）。它靠大写式的稀疏字距充当收束，不靠色块。
 
 ## Layout
 
-单栏移动布局，基准视口 390×844。8dp 网格、4dp 半步（spacing: 4/8/12/16/24/32/48）；页面左右 gutter 16dp，内容最大宽 720dp（`maxContentWidth`，宽屏只居中不重排）。顶栏三种高度：small 64 / medium 112 / large 152（large 标题沉底、随内容滚走）。底部导航通栏 80dp、`surfaceContainer` 底色，滚动内容为其留 96dp 净空（`navBarClearance`）。所有可触目标 ≥48dp（iconButton 48、提交按钮触区 48 / 圆面 40、FAB 56）。首页三段式：品牌行（34dp 齿孔品牌标 + 「寻迹」+ 「仅本机」chip）→ 英雄句 → 找回（搜索胶囊）与收藏（贴票输入卡）两块，各约 112/140dp。
+单栏移动布局，基准 390×844。8dp 网格（4dp 半步），页面左右 gutter 16dp，底部导航 56dp + 安全区，滚动内容为它留出净空（`insets.bottom + 56 + 24`）。
 
-## Elevation & Depth
+页面骨架统一：顶部 56dp 高的标题行（品牌名 / 页面名，右对齐放至多一个图标按钮）→ 内容 → 底部导航（首页 / 收藏 / 我的）。
 
-这是「色调优先」的平面系统：层次主要由 surface-container 阶梯（lowest → highest）表达，阴影只在两个表面相接处补一笔分离感，不做悬浮堆叠。dark 模式阴影不透明度更高（黑影会沉进深色 canvas）。
+**首页三段式**：标题行 → 一句问句 + 一句说明 → 输入框 → 「最近收藏」四条。搜索后同一位置换成「找到 N 条 · 清除」+ 结果行，输入框留在原处不动。
 
-### Shadow Vocabulary
-- **level1** (`0 1px 3px rgba(0,0,0,0.07)` / dark 0.30): 票面卡片、AskCard、SaveField——列表里每张票的默认分离。
-- **level2** (`0 2px 8px rgba(0,0,0,0.10)` / dark 0.38): 需要再抬一级的表面。
-- **level3** (`0 6px 16px rgba(0,0,0,0.12)` / dark 0.42): ConfirmDialog、Toast——浮层。
+## Motion
 
-### Named Rules
-**The Flat-By-Default Rule.** 静止表面是平的：卡片只带 level1，靠色调而非阴影分层；更重的阴影只留给真正的浮层（对话框、Toast）。
-
-## Shapes
-
-圆角阶梯：邮票形 4px（来源邮票、品牌标、Toast）、空状态邮票位 6px、票口输入槽只圆上角 8px、票面卡片 12px、场景容器 16px、对话框/设置分组 28px、胶囊一律 full（999px：搜索、按钮、tab 胶囊、softicon、销戳本身）。边语言只有两种：1dp 发丝线（分段线、chip 描边）和 2.5–3dp 点状边——点状边就是齿孔，打穿后露出的颜色必须是这张票贴着的底纸色（结果票上是 card、空状态上是 canvas）。销戳是正圆双环：外环 1.25dp（size ≥60 时 1.75dp），内环 1dp、内缩 5dp、45% 墨色；划销线 1.5dp、超出戳缘 3dp、再转 −14°。静态销戳整体盖歪 −8°（保存动画从 −24° 弹压到 −8°）。
-
-### Named Rules
-**The Unperforated Launcher Rule.** 齿孔只活在应用内（品牌标、来源邮票、空状态）与 Android splash（真打穿 44 孔）。启动器/iOS 图标刻意无齿孔——各家 launcher 遮罩（圆/方/水滴）与 iOS squircle 会把贴边孔洞切碎；图标保留朱红圆角方块 + 白书签。这是记录在案的刻意偏差，不是遗漏。
+只保留两处：提示条 160ms 淡入上移，对话框 140ms 淡入。不做弹性动画、不做盖章、不做共享元素。系统开启「移除动画」时这两处也足够安静。
 
 ## Components
 
 ### Buttons
-- **Shape:** 胶囊全圆角（full），高 48dp（small 40dp），水平内距 24dp（small 16dp），1dp 透明描边占位。
-- **Primary:** 朱红底 + onPrimary 文字，label 14px/600/+0.5px，图标 18dp（small 16dp）。按压 opacity 0.86，禁用 0.38。
-- **Tonal:** secondaryContainer 底 + onSecondaryContainer 文字——次要强调（空状态行动按钮等）。
-- **Secondary / Ghost:** outlined（1dp outline 描边）与 text 按钮，文字均为 primary 色。
-- Android ripple：withAlpha(前景色, 0.16)。
+- **Primary**：朱红底、白字（暗色下用 canvas 墨色字）、48dp 高、8dp 圆角、水平 20dp。整屏最多一个。
+- **Secondary**：surface 底 + `line-strong` 1px 描边、ink 字。次级动作。
+- **Quiet**：纯文字，accent 或 danger 色，44dp 触区。
+- **IconButton**：48dp 触区，无底色，按压 opacity 0.5。
 
-### Chips
-- **「仅本机」assist chip:** 高 32dp、圆角 8dp、1dp outlineVariant 描边、透明底，labelMedium 淡墨文字 + 14dp shield 图标（primary 色）。
+### Composer（签名组件）
+首页唯一的输入面。`surface` 底 + 1px 描边（聚焦变 `line-strong`），14dp 圆角，最小 52dp、最高 132dp（约五行）。右下角一个 36dp 方块提交键：未就绪时 `sunken` 底 + 极淡图标，就绪时朱红底 + 白图标；识别到链接时图标是书签，否则是向上箭头。框下一行 caption 随状态变化：空 → 提示语；有字 → 「按这句描述找回」；识别到链接 → 「保存这个链接」；出错 → 朱红错误句。
 
-### Cards / Containers
-- **Corner Style:** 票面卡片圆角 12dp；场景容器（详情页摘要、设置分组）16–28dp。
-- **Background:** light 下 card `#fffdf7`（比 canvas 亮），dark 下翻转为 surfaceContainerLow；按压整卡变 card-muted。
-- **Shadow Strategy:** level1（见 Elevation）。
-- **Internal Padding:** 卡片 16dp（AskCard/SaveField 用 18dp），卡内分段线之上留 16dp。
-- **结果票:** 来源邮票居左（40dp，最强命中 44dp），标题≤2 行、元信息 1 行、摘要≤2 行；1dp 分段线之下是「为什么找到它」注记段，销戳坐在注记行右端（60/56dp）、`marginBottom -4` 不参与布局压缩。按压反馈 ripple `withAlpha(onSurface, 0.08)` + 底色变哑。
+### List rows
+- **RecentRow**：标题 1 行（body/500）+ 元信息 1 行（caption）+ 右侧状态标记；最小 60dp，行间 1px 发丝线。
+- **ResultRow**：标题 2 行（heading/600）+ 元信息 + 摘要 2 行 + 「为什么找到它」1–2 行 + 斜体摘录 2 行。没有卡片底色、没有缩略图、没有箭头。
 
-### Inputs / Fields
-- **找回（搜索胶囊）:** 高 56dp 全圆角、surfaceContainerHigh 底、1.5dp 描边透明→聚焦变 primary；尾部 40dp 朱红圆形提交（未就绪时 field 底、淡墨图标）；有内容时出现 tonal 清空按钮。
-- **收藏（票口输入槽):** 高 ≥56dp、只圆上角 8dp、field 底、overflow hidden；底部 2dp 指示条透明→聚焦变 primary；头行下发丝分段线；朱红 40dp 圆形提交只在识别出合法 URL 后点亮。
-- **提问卡（多行）:** 同胶囊语言但 minHeight 112dp、多行输入、提交钮沉底对齐。
-- **Error:** 提示行 14dp alert 图标 + error 色 bodySmall，不做整框变红。
+### Fields
+- **TextField**（设置页）：11px 栏目名在上，输入框只有一条下划线，聚焦变朱红；下方可带一行 caption 说明。
+- **SearchInput**（收藏页）：放大镜 + 下划线，聚焦时下划线变朱红，有内容时出现清除按钮。
 
 ### Navigation
-- **NavigationBar:** 通栏 80dp、surfaceContainer 底；每项 = 64×32dp 全圆角胶囊（选中 secondaryContainer）+ 24dp 图标（选中 onSecondaryContainer，未选 onSurfaceVariant）+ labelMedium 标签（选中 onSurface 600）。三个 tab：首页 / 收藏 / 我的，`router.replace` 切换。
-
-### Postmark（签名组件）
-正圆双环销戳，形状编码状态：`completed` = 实圈实线环，处理中（pending/fetching/parsing/analyzing/indexing）= 虚线环，`partial`/`failed` = 实环 + 划销线（warning/error 色，否则墨色）。内环里年份小号在上、等宽月日在下。size 56 = 票面、60 = 最强命中、64 = 详情页。戳不自带旋转：静态票面 −8° 由调用方给出；保存成功瞬间 `LivePostmark` 以 expressive spring 从 scale 1.5/−24° 弹压收敛到 1/−8°，然后作为收据留场、挂本机轮询自己从虚圈变实圈或划销（系统开启「移除动画」时直接落位）。
-
-### SourceStamp（签名组件）
-来源邮票：站点名（或域名，缺省「拾」）稳定哈希从六组 tint 里选票面色（朱红/集邮绿/邮戳紫/赭石/酒红/邮政蓝，same site = same stamp），首字压在票面中央（size×0.4px、600、票面色的对偶墨色），四周 3dp 点状边打齿孔——齿孔色 = 这张票贴着的底纸色（结果票传 card）。40dp 常规、44dp 最强命中。纯装饰，对无障碍隐藏。
+底部导航通栏、`canvas` 底、顶部 1px 发丝线。三项：图标 21dp + 10px 标签。选中＝ink，未选＝faint。没有胶囊、没有指示条。
 
 ### 其他
-- **TopAppBar:** small 64dp（标题可居中）/ large 152dp（大标题沉底随内容滚走），返回箭头 + 48dp 触区。
-- **EmptyState:** 68×68dp 邮票形图标位（6dp 圆角、secondaryContainer 底、3dp 点状边露 canvas、−6° 歪贴）+ headlineSmall 标题 + bodyMedium 说明（maxWidth 320）+ tonal small 按钮。
-- **ConfirmDialog:** surfaceContainerHigh 底、28dp 圆角、24dp 内距、level3 阴影。
-- **Toast:** inverseSurface 底、4px 圆角、level3 阴影，反色文字。
+- **图片**：详情页在原文之后列出正文里的图片，最多四张，单列、8dp 圆角、`sunken` 底占位，超出部分只写一行「另有 N 张未显示」。图片里的文字由端侧 OCR 全部读出（最多 24 张、单篇 45 秒预算）并接在原文末尾（`## 图片文字`），所以长文里的截屏、「一图流」这类内容也能被搜到。
+- **设置子页**：「我的」只列入口（大模型摘要、本机存储、多端同步、清空），具体配置点进 `/settings/llm`。子页有返回箭头，表单在开关关闭时整体 45% 不透明。
+- **ConfirmDialog**：`surface` 底、14dp 圆角、1px 描边、24dp 内距、遮罩 35% 黑；按钮靠右，取消为 quiet、确认按语义取 primary 或 destructive。
+- **Toast**：`ink` 反底、`canvas` 文字、8dp 圆角，最多 3 条，浮在导航栏上方 72dp 处；动作是带下划线的文字。
+- **StatusMark**：8dp 圆点。空心（`border-muted`）＝整理中并带「整理中」；实心 `faint`＝已完成（无文字）；实心 `warn`＝部分；实心 `danger`＝失败。
+- **Markdown**：标题、段落、列表、引用（左侧 2px 线）、代码块（`sunken` 底）、行内代码、链接（accent + 下划线）。永不进 WebView，永不注入原始 HTML。
 
 ## Do's and Don'ts
 
-### Do:
-- **Do** 用形状表达状态：实圈＝完成、虚圈＝整理中、划销＝部分/失败（`partial` 用 warning 色划销、`failed` 用 error 色）。
-- **Do** 保持 8dp 节奏（4dp 半步）、gutter 16dp、触区 ≥48dp、内容最大宽 720dp。
-- **Do** 让朱红稀缺：寄出按钮、聚焦描边、注记标签三类之外不铺朱红。
-- **Do** 给每张票留戳位：结果票注记行右侧、保存票右上角（标题行让位 64dp），静态戳一律 −8°、日期等宽。
-- **Do** 齿孔用 2.5–3dp 点状边、边色 = 它所贴的底纸色（票上是 card、空状态是 canvas）。
-- **Do** 卡片静止时只带 level1 阴影，层次靠 surface-container 色调拉开。
+### Do
+- **Do** 让一屏只有一个朱红动作；用留白和字重做层次。
+- **Do** 用 1px 发丝线分隔列表行，gutter 16dp，触区 ≥44dp（图标按钮 48dp）。
+- **Do** 把「为什么找到它」写在结果行里，只用真实命中证据，不加图标。
+- **Do** 首页保持「一句问句 + 一个输入框 + 最近四条」的三段式，搜索时输入框不动。
+- **Do** 需要用字符串给控件上色时（Ionicons、placeholderTextColor、RefreshControl）从 `usePalette()` 取，别写死十六进制。
+- **Do** 改颜色时同步 `global.css` 与 `src/ui/palette.ts`。
 
-### Don't:
-- **Don't** 用颜色单独表达状态——没有形状差异就不算状态；也不要给最强命中加数字角标（票与戳各加大一号即可）。
-- **Don't** 给启动器 / iOS 应用图标打齿孔——平台遮罩会把贴边孔洞切碎（The Unperforated Launcher Rule）。
-- **Don't** 手改单个色调或拆散 on-/container 配对——重新生成整对（The Paired-Tones Rule）。
-- **Don't** 给输入框做整框变红的错误态，也不要在正文/标题上加字距。
-- **Don't** 引入组件库、Tailwind 或字体包——Material 3 语义 + 手写视图 + 系统字族；Markdown 永不进 WebView/原始 HTML。
-- **Don't** 给注记编造匹配理由——「为什么找到它」只能由真实命中证据拼出。
+### Don't
+- **Don't** 加阴影、渐变、齿孔、印章、贴纸、倾斜文字——上一版的集邮世界已经收起来了。
+- **Don't** 在首页重新放两个输入框，也不要给保存单独开一张卡。
+- **Don't** 用颜色单独表达状态；没有形状差异就不算状态。
+- **Don't** 给列表加卡片底、缩略图、箭头——一行就是一条内容。
+- **Don't** 手写 `StyleSheet` 或 `makeStyles`：样式一律走 `className`，只有原生 prop 需要的字符串才用 `usePalette()`。
