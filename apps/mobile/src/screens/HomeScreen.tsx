@@ -43,6 +43,8 @@ export function HomeScreen() {
 
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[] | null>(null)
+  // 引擎对这次查询的理解，例如「昨天保存的」；直接显示，用户才知道我按什么找的。
+  const [interpretation, setInterpretation] = useState<string | null>(null)
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
   const [lastQuery, setLastQuery] = useState('')
@@ -81,7 +83,9 @@ export function HomeScreen() {
     void repo
       .searchDocuments(lastQuery)
       .then((next) => {
-        if (!cancelled) setResults(next)
+        if (cancelled) return
+        setResults(next.results)
+        setInterpretation(next.interpretation)
       })
       .catch(() => undefined)
     return () => {
@@ -97,7 +101,9 @@ export function HomeScreen() {
     setLastQuery(q)
     setResults(null)
     try {
-      setResults(await repo.searchDocuments(q))
+      const outcome = await repo.searchDocuments(q)
+      setResults(outcome.results)
+      setInterpretation(outcome.interpretation)
     } catch (e) {
       setSearchError(errorMessage(e, '搜索暂时不可用，请稍后重试。'))
     } finally {
@@ -107,6 +113,7 @@ export function HomeScreen() {
 
   function clearSearch() {
     setResults(null)
+    setInterpretation(null)
     setSearchError(null)
     setLastQuery('')
     setQuery('')
@@ -174,7 +181,11 @@ export function HomeScreen() {
             <>
               <View className="mt-1 flex-row items-center justify-between">
                 <Text className="text-body-sm text-muted">
-                  {searching ? '正在找回…' : `找到 ${results?.length ?? 0} 条`}
+                  {searching
+                    ? '正在找回…'
+                    : interpretation
+                      ? `${interpretation} ${results?.length ?? 0} 条`
+                      : `找到 ${results?.length ?? 0} 条`}
                 </Text>
                 <TextButton label="清除" onPress={clearSearch} tone="muted" />
               </View>
@@ -190,9 +201,13 @@ export function HomeScreen() {
                 </View>
               ) : results !== null && results.length === 0 ? (
                 <View className="mt-10">
-                  <Text className="text-body text-ink">没有足够相关的内容。</Text>
+                  <Text className="text-body text-ink">
+                    {interpretation ? `没有${interpretation}内容。` : '没有足够相关的内容。'}
+                  </Text>
                   <Text className="mt-1 text-body-sm text-muted">
-                    换一种描述，或者把原链接粘到上面保存下来。
+                    {interpretation
+                      ? '换一天试试，或者直接描述你还记得的内容。'
+                      : '换一种描述，或者把原链接粘到上面保存下来。'}
                   </Text>
                 </View>
               ) : results ? (

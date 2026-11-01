@@ -10,6 +10,8 @@ import type {
 
 import type { ExtractedArticle } from './article'
 import { getDb } from './db'
+import { matchRange, parseQuery, timeOf } from './query'
+import type { DateRange } from './query'
 import { newId, normalizeUrl, nowIso, oneLine, parseJsonArray, parseJsonObject, sourceTypeOf } from './util'
 
 interface DocumentRow {
@@ -251,7 +253,7 @@ export async function saveParsed(
   const now = nowIso()
   await db.runAsync(
     `UPDATE documents SET
-       title = ?, site_name = ?, author = ?, description = ?, language = ?,
+       title = ?, site_name = ?, author = ?, published_at = COALESCE(?, published_at), description = ?, language = ?,
        summary_short = ?, summary_long = ?, keywords = ?,
        content_markdown = ?, plain_text = ?, images = ?, search_text = ?,
        parse_status = 'completed', parse_stage = NULL, parse_error_code = NULL,
@@ -260,6 +262,7 @@ export async function saveParsed(
     article.title,
     article.siteName,
     article.author,
+    article.publishedAt,
     article.description,
     article.language,
     summaryShort,
@@ -295,7 +298,8 @@ export async function savePartial(id: string, article: ExtractedArticle): Promis
         : 'PARSE_INCOMPLETE'
   await db.runAsync(
     `UPDATE documents SET
-       title = COALESCE(?, title), site_name = ?, author = ?, description = ?, language = ?,
+       title = COALESCE(?, title), site_name = ?, author = ?, published_at = COALESCE(?, published_at),
+       description = ?, language = ?,
        summary_short = ?, plain_text = ?, content_markdown = ?, images = ?, search_text = ?,
        parse_status = 'partial', parse_stage = NULL, parse_error_code = ?,
        last_parsed_at = ?, updated_at = ?
@@ -303,6 +307,7 @@ export async function savePartial(id: string, article: ExtractedArticle): Promis
     article.title,
     article.siteName,
     article.author,
+    article.publishedAt,
     article.description,
     article.language,
     summary,
@@ -445,18 +450,50 @@ function excerptAround(text: string, terms: string[]): string | null {
   return `${prefix}${oneLine(text.slice(start, end), 140)}${suffix}`
 }
 
-export async function searchDocuments(query: string, limit = 20): Promise<SearchResult[]> {
-  const terms = queryTerms(query)
-  if (terms.length === 0) return []
+export interface SearchOutcome {
+  results: SearchResult[]
+  /** 人话解释，例如「昨天保存的」；没有时间条件时为 null。 */
+  interpretation: string | null
+}
+
+/** 这一行命中的时间区间（按收藏时间或发表时间），没命中返回 null。 */
+function dateHitOf(row: DocumentRow, ranges: DateRange[]): DateRange | null {
+  if (ranges.length === 0) return null
+  for (const range of ranges) {
+    const at = range.field === 'published' ? timeOf(row.published_at) : timeOf(row.saved_at)
+    const hit = matchRange(at, [range])
+    if (hit) return hit
+  }
+  return null
+}
+
+function dateLabelOf(range: DateRange): string {
+  return `${range.label}${range.field === 'published' ? '发表' : '保存'}的`
+}
+
+/** 用于排序的参考时间：有时间条件时用命中的那天，否则用收藏时间。 */
+function sortTimeOf(row: DocumentRow, hit: DateRange | null): number {
+  const field = hit?.field ?? 'saved'
+  return timeOf(field === 'published' ? row.published_at : row.saved_at) ?? 0
+}
+
+export async function searchDocuments(query: string, limit = 20): Promise<SearchOutcome> {
+  const parsed = parseQuery(query)
+  const terms = queryTerms(parsed.text)
+  // 「找找昨天的」没有关键词，也必须出结果——所以不能因为 terms 为空就直接返回。
+  if (terms.length === 0 && parsed.ranges.length === 0) return { results: [], interpretation: null }
 
   const db = await getDb()
   const rows = await db.getAllAsync<DocumentRow>(
     'SELECT * FROM documents WHERE deleted_at IS NULL ORDER BY saved_at DESC LIMIT 2000',
   )
 
-  const scored: { row: DocumentRow; score: number; reason: string; excerpt: string | null }[] = []
+  const dateOnly = terms.length === 0
+  const scored: { row: DocumentRow; score: number; reason: string; excerpt: string | null; at: number }[] = []
 
   for (const row of rows) {
+    const hit = dateHitOf(row, parsed.ranges)
+    if (parsed.ranges.length > 0 && !hit) continue
     const title = (row.title ?? '').toLowerCase()
     const keywordsText = parseJsonArray(row.keywords).join(' ').toLowerCase()
     const summary = (row.summary_long ?? row.summary_short ?? '').toLowerCase()
@@ -493,9 +530,11 @@ export async function searchDocuments(query: string, limit = 20): Promise<Search
       }
     }
 
-    if (score <= 0) continue
+    // 只有时间条件时，区间内的每条都算命中，靠时间排序。
+    if (!dateOnly && score <= 0) continue
 
     const parts: string[] = []
+    if (hit) parts.unshift(dateLabelOf(hit))
     if (hitTitle.length) parts.push(`标题命中「${hitTitle.join('」「')}」`)
     if (hitKeywords.length) parts.push(`关键词命中「${hitKeywords.join('」「')}」`)
     if (hitSummary.length) parts.push(`摘要命中「${hitSummary.join('」「')}」`)
@@ -504,15 +543,17 @@ export async function searchDocuments(query: string, limit = 20): Promise<Search
 
     scored.push({
       row,
-      score: score / (terms.length * 10),
+      score: dateOnly ? 1 : score / (terms.length * 10),
       reason: parts.slice(0, 3).join('；'),
-      excerpt: excerptAround(row.plain_text ?? '', terms),
+      excerpt: dateOnly ? null : excerptAround(row.plain_text ?? '', terms),
+      at: sortTimeOf(row, hit),
     })
   }
 
-  scored.sort((a, b) => b.score - a.score)
+  // 有时间条件时按那条时间倒序；否则相关度优先，同分再看时间。
+  scored.sort((a, b) => (dateOnly ? b.at - a.at : b.score - a.score || b.at - a.at))
 
-  return scored.slice(0, limit).map(({ row, score, reason, excerpt }) => ({
+  const results = scored.slice(0, limit).map(({ row, score, reason, excerpt }) => ({
     document_id: row.id,
     title: row.title,
     url: row.url,
@@ -525,6 +566,8 @@ export async function searchDocuments(query: string, limit = 20): Promise<Search
     saved_at: row.saved_at,
     parse_status: row.parse_status as ParseStatus,
   }))
+
+  return { results, interpretation: parsed.summary }
 }
 
 function bigrams(text: string): Set<string> {

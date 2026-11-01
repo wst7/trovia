@@ -191,7 +191,9 @@ export function DocumentDetailScreen() {
         <Text className="mt-2 text-title font-semibold text-ink">{doc.title || doc.url}</Text>
 
         <Text className="mt-2 text-caption text-muted">
-          {doc.author ? `${doc.author} · ` : ''}收藏于 {formatDate(doc.saved_at)}
+          {doc.author ? `${doc.author} · ` : ''}
+          {doc.published_at ? `${formatDate(doc.published_at)} 发表 · ` : ''}
+          收藏于 {formatDate(doc.saved_at)}
         </Text>
 
 

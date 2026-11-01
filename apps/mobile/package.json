@@ -10,7 +10,8 @@
     "prebuild": "expo prebuild",
     "typecheck": "tsc --noEmit",
     "doctor": "npx expo-doctor",
-    "export": "expo export --platform all --output-dir dist"
+    "export": "expo export --platform all --output-dir dist",
+    "test:query": "tsx src/local/__tests__/query.test.mts"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
