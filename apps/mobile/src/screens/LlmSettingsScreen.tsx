@@ -25,6 +25,7 @@ export function LlmSettingsScreen() {
   const [enabled, setEnabled] = useState(DEFAULT_LLM.enabled)
   const [baseUrl, setBaseUrl] = useState(DEFAULT_LLM.baseUrl)
   const [model, setModel] = useState(DEFAULT_LLM.model)
+  const [intent, setIntent] = useState(DEFAULT_LLM.intent)
   const [apiKey, setApiKey] = useState('')
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
@@ -40,6 +41,7 @@ export function LlmSettingsScreen() {
       setEnabled(llm.enabled)
       setBaseUrl(llm.baseUrl)
       setModel(llm.model)
+      setIntent(llm.intent)
       setHasKey(llm.hasKey)
     } catch {
       // 读不到就保持上一次的值，不打断用户。
@@ -71,7 +73,7 @@ export function LlmSettingsScreen() {
 
     setSaving(true)
     try {
-      await saveLlmState({ enabled, baseUrl, model }, apiKey.trim() ? apiKey : undefined)
+      await saveLlmState({ enabled, baseUrl, model, intent }, apiKey.trim() ? apiKey : undefined)
       setApiKey('')
       await reload()
       toast(enabled ? '已保存，新收藏会用这个模型整理。' : '已保存，将使用本地抽取式摘要。', {
@@ -97,7 +99,7 @@ export function LlmSettingsScreen() {
 
     setTesting(true)
     try {
-      const reply = await testLlmConnection({ enabled: true, baseUrl, model }, apiKey)
+      const reply = await testLlmConnection({ enabled: true, baseUrl, model, intent }, apiKey)
       toast(`连接成功，模型回复：${reply}`, { type: 'success' })
     } catch (error) {
       const message = error instanceof Error ? error.message : '连接失败'
@@ -126,6 +128,7 @@ export function LlmSettingsScreen() {
           <Text className="text-title font-semibold text-ink">大模型</Text>
           <Text className="mt-2 text-body-sm text-muted">
             可选。打开后新收藏会交给你自己的模型写摘要与关键词；关闭时从原文离线抽取，不上传任何内容。
+            搜索时只把这一句话发给模型，不会发送你的收藏内容。
           </Text>
 
           <View className="mt-6 flex-row items-center gap-3">
@@ -139,6 +142,23 @@ export function LlmSettingsScreen() {
               thumbColor={p.surface}
               ios_backgroundColor={p.line}
               accessibilityLabel="使用大模型写摘要"
+            />
+          </View>
+
+          <View className="mt-4 flex-row items-center gap-3">
+            <View className="flex-1">
+              <Text className="text-body-sm text-ink">用模型理解搜索意图</Text>
+              <Text className="mt-1 text-caption text-muted">
+                把「上次存的那篇讲睡眠的」这类话翻译成时间与关键词；不打开时只用本地规则。
+              </Text>
+            </View>
+            <Switch
+              value={intent}
+              onValueChange={setIntent}
+              trackColor={{ false: p.line, true: p.accent }}
+              thumbColor={p.surface}
+              ios_backgroundColor={p.line}
+              accessibilityLabel="使用模型理解搜索意图"
             />
           </View>
 

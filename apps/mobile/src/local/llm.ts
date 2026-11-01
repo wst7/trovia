@@ -10,6 +10,8 @@ export interface LlmConfig {
   enabled: boolean
   baseUrl: string
   model: string
+  /** 用模型理解「找找昨天的」这类搜索意图，默认开启。 */
+  intent: boolean
 }
 
 export interface LlmState extends LlmConfig {
@@ -20,6 +22,7 @@ export const DEFAULT_LLM: LlmConfig = {
   enabled: false,
   baseUrl: 'https://api.openai.com/v1',
   model: 'gpt-4o-mini',
+  intent: true,
 }
 
 const CONFIG_KEY = 'xunji.llm.v1'
@@ -40,6 +43,7 @@ export async function loadLlmState(): Promise<LlmState> {
     enabled: parsed.enabled === true,
     baseUrl: typeof parsed.baseUrl === 'string' && parsed.baseUrl ? parsed.baseUrl : DEFAULT_LLM.baseUrl,
     model: typeof parsed.model === 'string' && parsed.model ? parsed.model : DEFAULT_LLM.model,
+    intent: parsed.intent !== false,
     hasKey: Boolean(key),
   }
 }
@@ -49,6 +53,7 @@ export async function saveLlmState(config: LlmConfig, apiKey?: string): Promise<
     enabled: config.enabled,
     baseUrl: config.baseUrl.trim().replace(/\/+$/, ''),
     model: config.model.trim(),
+    intent: config.intent !== false,
   }
   await AsyncStorage.setItem(CONFIG_KEY, JSON.stringify(next))
   if (apiKey !== undefined) {
@@ -70,9 +75,16 @@ function endpointOf(baseUrl: string): string {
   return base.endsWith('/chat/completions') ? base : `${base}/chat/completions`
 }
 
-async function chat(config: LlmConfig, key: string, messages: unknown[], maxTokens: number): Promise<string> {
+/** 一次 JSON 友好的补全；意图解析复用它，超时比摘要短。 */
+export async function chat(
+  config: LlmConfig,
+  key: string,
+  messages: unknown[],
+  maxTokens: number,
+  timeoutMs = TIMEOUT_MS,
+): Promise<string> {
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
     const response = await fetch(endpointOf(config.baseUrl), {
       method: 'POST',

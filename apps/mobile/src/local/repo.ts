@@ -10,7 +10,10 @@ import type {
 
 import type { ExtractedArticle } from './article'
 import { getDb } from './db'
-import { matchRange, parseQuery, timeOf } from './query'
+import type { Completer } from './intent'
+import { resolveIntent } from './intent'
+import { chat, loadLlmKey, loadLlmState } from './llm'
+import { matchRange, timeOf } from './query'
 import type { DateRange } from './query'
 import { newId, normalizeUrl, nowIso, oneLine, parseJsonArray, parseJsonObject, sourceTypeOf } from './util'
 
@@ -477,8 +480,24 @@ function sortTimeOf(row: DocumentRow, hit: DateRange | null): number {
   return timeOf(field === 'published' ? row.published_at : row.saved_at) ?? 0
 }
 
+/**
+ * 配置了大模型（且开了「理解搜索意图」）时，把这句话交给模型翻译；
+ * 没配、超时、报错都返回 null，搜索退回规则层，不会因此变慢或失败。
+ */
+async function intentCompleter(): Promise<Completer | null> {
+  try {
+    const state = await loadLlmState()
+    if (!state.enabled || !state.intent) return null
+    const key = await loadLlmKey()
+    if (!key) return null
+    return (messages, maxTokens) => chat(state, key, messages, maxTokens, 6_000)
+  } catch {
+    return null
+  }
+}
+
 export async function searchDocuments(query: string, limit = 20): Promise<SearchOutcome> {
-  const parsed = parseQuery(query)
+  const parsed = await resolveIntent(query, { complete: await intentCompleter() })
   const terms = queryTerms(parsed.text)
   // 「找找昨天的」没有关键词，也必须出结果——所以不能因为 terms 为空就直接返回。
   if (terms.length === 0 && parsed.ranges.length === 0) return { results: [], interpretation: null }
