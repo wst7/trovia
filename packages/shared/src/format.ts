@@ -42,7 +42,9 @@ export function statusText(status: ParseStatus, errorCode?: string | null): stri
         return STATUS_TEXT.failed
     }
   }
-  if (status === 'partial' && errorCode === 'PARSE_INCOMPLETE') return '只读到部分内容'
+  // 「部分内容无法读取」听起来像丢了大半；实际多数情况是只拿到了页面公开的那部分
+  // （推文、前言、标题），所以换个更准确的说法。
+  if (status === 'partial') return '只读到部分内容'
   return STATUS_TEXT[status]
 }
 

@@ -34,6 +34,12 @@ function bodyFallback(code: string | null): string {
   if (code === 'FETCH_FAILED') {
     return '这次没连上站点，可能是网络问题。链接已经保存，可以点「重新解析」再试一次。'
   }
+  if (code === 'CONTENT_SCRIPT_ONLY') {
+    return '页面只把公开的那部分发给了本机（比如推文正文、标题、时间），回复或需要登录的内容读不到。链接保留着，点下方「打开原文」看完整页面。'
+  }
+  if (code === 'PARSE_INCOMPLETE') {
+    return '只读到了页面的一部分正文，可能是站点分批加载。链接已经保存，可以点「重新解析」再试一次。'
+  }
   return '正文暂时无法读取，原始链接始终为你保留。'
 }
 
