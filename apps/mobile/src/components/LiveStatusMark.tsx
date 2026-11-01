@@ -9,6 +9,7 @@ import { usePalette } from '../ui/palette'
 interface LiveStatusMarkProps {
   docId: string
   status: ParseStatus
+  errorCode?: string | null
   onTerminal?: (status: ParseStatus) => void
   withLabel?: boolean
 }
@@ -19,6 +20,7 @@ interface LiveStatusMarkProps {
 export function LiveStatusMark({
   docId,
   status: initialStatus,
+  errorCode,
   onTerminal,
   withLabel = true,
 }: LiveStatusMarkProps) {
@@ -35,7 +37,7 @@ export function LiveStatusMark({
     onTerminalRef.current?.(next)
   })
 
-  return <StatusMark status={status} withLabel={withLabel} />
+  return <StatusMark status={status} errorCode={errorCode} withLabel={withLabel} />
 }
 
 /** 供只需要颜色时使用（详情页的分段、分割线等）。 */

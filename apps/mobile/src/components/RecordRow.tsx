@@ -45,6 +45,7 @@ export function RecentRow({
             <LiveStatusMark
               docId={item.id}
               status={item.parse_status}
+              errorCode={item.parse_error_code}
               onTerminal={onTerminal}
             />
           </View>
@@ -86,6 +87,7 @@ export function ResultRow({
             <LiveStatusMark
               docId={item.document_id}
               status={item.parse_status}
+              errorCode={item.parse_error_code ?? null}
               onTerminal={onTerminal}
             />
           </View>

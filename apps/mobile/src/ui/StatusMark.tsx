@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native'
 import type { ParseStatus } from '@xunji/shared'
-import { STATUS_TEXT } from '@xunji/shared'
+import { statusText } from '@xunji/shared'
 
 import { cx } from './cx'
 
@@ -12,10 +12,13 @@ const IN_FLIGHT: ParseStatus[] = ['pending', 'fetching', 'parsing', 'analyzing',
  */
 export function StatusMark({
   status,
+  errorCode,
   withLabel = true,
   className,
 }: {
   status: ParseStatus
+  /** 失败原因：不同原因给不同的说法，用户才知道该做什么。 */
+  errorCode?: string | null
   withLabel?: boolean
   className?: string
 }) {
@@ -38,7 +41,7 @@ export function StatusMark({
         <Text className="text-caption text-muted">整理中</Text>
       ) : withLabel && (partial || failed) ? (
         <Text className={cx('text-caption', failed ? 'text-danger' : 'text-warn')} numberOfLines={1}>
-          {STATUS_TEXT[status]}
+          {statusText(status, errorCode)}
         </Text>
       ) : null}
     </View>

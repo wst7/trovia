@@ -560,6 +560,7 @@ async function semanticMatches(text: string, exclude: Set<string>, limit: number
           matched_excerpt: null,
           saved_at: row.saved_at,
           parse_status: row.parse_status as ParseStatus,
+          parse_error_code: row.parse_error_code,
           match_kind: 'semantic' as const,
         },
       ]
@@ -657,6 +658,7 @@ export async function searchDocuments(query: string, limit = 20): Promise<Search
     matched_excerpt: excerpt,
     saved_at: row.saved_at,
     parse_status: row.parse_status as ParseStatus,
+    parse_error_code: row.parse_error_code,
   }))
 
   // 字面不够好才补语义；时间条件是硬过滤，语义只在同一天里找没有意义。

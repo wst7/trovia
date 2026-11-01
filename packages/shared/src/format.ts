@@ -23,6 +23,29 @@ export const STATUS_TEXT: Record<ParseStatus, string> = {
   failed: '暂时无法解析',
 }
 
+/**
+ * 失败也分原因：被站点拦下和网络不通，用户能做的事完全不同，
+ * 所以不能都显示成「暂时无法解析」。
+ */
+export function statusText(status: ParseStatus, errorCode?: string | null): string {
+  if (status === 'failed') {
+    switch (errorCode) {
+      case 'FETCH_BLOCKED':
+        return '站点拒绝读取'
+      case 'APP_ONLY_LINK':
+        return '需在 App 内打开'
+      case 'CONTENT_SCRIPT_ONLY':
+        return '正文需脚本渲染'
+      case 'FETCH_FAILED':
+        return '没能连上站点'
+      default:
+        return STATUS_TEXT.failed
+    }
+  }
+  if (status === 'partial' && errorCode === 'PARSE_INCOMPLETE') return '只读到部分内容'
+  return STATUS_TEXT[status]
+}
+
 export const RELATION_LABELS: Record<string, string> = {
   semantic_similarity: '内容相近',
   shared_topic: '相同主题',

@@ -48,8 +48,11 @@ async function processOne(id: string, url: string): Promise<void> {
   let article
   try {
     article = await fetchArticle(url)
-  } catch {
-    await repo.markFailed(id, 'FETCH_FAILED')
+  } catch (error) {
+    // 403/401/412/451 是站点主动拒绝，不是网络抖动：两者的补救方式完全不同。
+    const message = error instanceof Error ? error.message : ''
+    const refused = /HTTP (401|403|412|451)/.test(message)
+    await repo.markFailed(id, refused ? 'FETCH_BLOCKED' : 'FETCH_FAILED')
     emitChange()
     return
   }

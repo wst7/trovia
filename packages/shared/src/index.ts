@@ -130,6 +130,8 @@ export interface SearchResult {
   matched_excerpt: string | null
   /** 命中方式：字面匹配，或只找到意思相近的内容。 */
   match_kind?: 'literal' | 'semantic'
+  /** 失败原因，用于列表里说清「为什么没读到」。 */
+  parse_error_code?: string | null
   saved_at: string
   parse_status: ParseStatus
 }

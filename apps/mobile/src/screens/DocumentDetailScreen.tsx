@@ -29,7 +29,10 @@ function bodyFallback(code: string | null): string {
     return '这个链接需要在对应的 App 内打开（比如飞书、微信），正文无法直接读取；链接已保留，点下方「打开原文」可以回到原处。'
   }
   if (code === 'FETCH_BLOCKED') {
-    return '页面要求验证或登录，正文暂时无法读取；原始链接始终为你保留。'
+    return '这个站点拒绝本机读取（要求登录、人机验证或屏蔽了非浏览器请求），所以正文读不到。链接和标题已经保留，点下方「打开原文」可以去看。'
+  }
+  if (code === 'FETCH_FAILED') {
+    return '这次没连上站点，可能是网络问题。链接已经保存，可以点「重新解析」再试一次。'
   }
   return '正文暂时无法读取，原始链接始终为你保留。'
 }
@@ -172,7 +175,9 @@ export function DocumentDetailScreen() {
   }
 
   const bodySource = doc.content_markdown ?? doc.plain_text ?? ''
-  const canReprocess = status === 'partial' || status === 'failed'
+  // 被站点拒绝时重试没有意义（再点一次还是 403），别给用户假动作。
+  const blockedBySite = doc?.parse_error_code === 'FETCH_BLOCKED' || doc?.parse_error_code === 'APP_ONLY_LINK'
+  const canReprocess = status === 'partial' || (status === 'failed' && !blockedBySite)
   const rawShort = doc.summary_short?.trim() || null
   const rawLong = doc.summary_long?.trim() || null
   // 抽取式摘要常常两段一样：一样就只显示一次，别让同一句话占两块版面。
@@ -215,6 +220,7 @@ export function DocumentDetailScreen() {
             <LiveStatusMark
               docId={doc.id}
               status={status}
+              errorCode={doc.parse_error_code}
               onTerminal={(next) => {
                 setStatus(next)
                 void load()
