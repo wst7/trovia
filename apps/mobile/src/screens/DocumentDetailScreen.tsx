@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ActivityIndicator, Image, Linking, ScrollView, Text, View } from 'react-native'
+import { ActivityIndicator, Image, Linking, Pressable, ScrollView, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { DocumentDetail, ParseStatus, RelatedItem } from '@xunji/shared'
@@ -9,6 +9,7 @@ import {
   formatDate,
 } from '@xunji/shared'
 
+import { ImageViewer } from '../components/ImageViewer'
 import { LiveStatusMark } from '../components/LiveStatusMark'
 import { Markdown } from '../components/Markdown'
 import { processPendingQueue } from '../local/pipeline'
@@ -48,6 +49,12 @@ export function DocumentDetailScreen() {
   const [reprocessing, setReprocessing] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  // 看图：整篇图片一起传，左右能翻。
+  const [viewer, setViewer] = useState<{ open: boolean; index: number; images: string[] }>({
+    open: false,
+    index: 0,
+    images: [],
+  })
 
   const load = useCallback(async () => {
     if (!id) return
@@ -241,30 +248,46 @@ export function DocumentDetailScreen() {
           <Text className="text-[11px] font-semibold tracking-[1px] text-faint">原文</Text>
           <View className="mt-3">
             {bodySource ? (
-              <Markdown source={bodySource} />
+              <Markdown
+                source={bodySource}
+                onImagePress={(url, images) =>
+                  setViewer({ open: true, index: Math.max(0, images.indexOf(url)), images })
+                }
+              />
             ) : (
               <Text className="text-body-sm text-muted">{bodyFallback(doc.parse_error_code)}</Text>
             )}
           </View>
         </View>
 
-        {doc.images && doc.images.length > 0 ? (
+        {doc.images && doc.images.length > 0 && !bodySource.includes('![') ? (
           <View className="mt-8">
             <Text className="text-[11px] font-semibold tracking-[1px] text-faint">图片</Text>
             <View className="mt-3 gap-2">
-              {doc.images.slice(0, 4).map((uri) => (
-                <Image
+              {doc.images.slice(0, 4).map((uri, i) => (
+                <Pressable
                   key={uri}
-                  source={{ uri }}
-                  className="w-full rounded-sm bg-sunken"
-                  style={{ height: 200 }}
-                  resizeMode="cover"
-                  accessibilityIgnoresInvertColors
-                />
+                  onPress={() => setViewer({ open: true, index: i, images: doc.images ?? [] })}
+                  accessibilityRole="imagebutton"
+                  accessibilityLabel="查看大图"
+                >
+                  <Image
+                    source={{ uri }}
+                    className="w-full rounded-sm bg-sunken"
+                    style={{ height: 200 }}
+                    resizeMode="cover"
+                    accessibilityIgnoresInvertColors
+                  />
+                </Pressable>
               ))}
             </View>
             {doc.images.length > 4 ? (
-              <Text className="mt-2 text-caption text-faint">另有 {doc.images.length - 4} 张未显示</Text>
+              <Text
+                className="mt-2 text-caption text-faint"
+                onPress={() => setViewer({ open: true, index: 0, images: doc.images ?? [] })}
+              >
+                共 {doc.images.length} 张，点开可放大查看
+              </Text>
             ) : null}
           </View>
         ) : null}
@@ -290,6 +313,14 @@ export function DocumentDetailScreen() {
           </View>
         ) : null}
       </ScrollView>
+
+      <ImageViewer
+        visible={viewer.open}
+        images={viewer.images}
+        index={viewer.index}
+        onClose={() => setViewer((prev) => ({ ...prev, open: false }))}
+        onIndexChange={(next) => setViewer((prev) => ({ ...prev, index: next }))}
+      />
 
       {/* 这一屏只有一个动作，所以它值得朱红。 */}
       <View

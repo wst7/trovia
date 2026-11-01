@@ -23,6 +23,7 @@ const TARGETS: { label: string; url: string }[] = [
   { label: 'Medium', url: 'https://medium.com/write-a-catalyst/how-to-write-an-article-in-5-easy-steps-66bf6dcd0eac' },
   { label: 'GitHub', url: 'https://github.com/facebook/react' },
   { label: '维基', url: 'https://zh.wikipedia.org/wiki/%E7%9D%A1%E7%9C%A0' },
+  { label: 'B站视频', url: 'https://www.bilibili.com/video/BV1GJ411x7h7' },
   { label: '阮一峰', url: 'https://www.ruanyifeng.com/blog/2024/01/weekly-issue-287.html' },
 ]
 

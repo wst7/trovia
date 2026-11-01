@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import { Linking, Text, View } from 'react-native'
+import { useEffect, useState } from 'react'
+import { Image, Linking, Pressable, Text, View } from 'react-native'
 
 /**
  * 受限 Markdown 渲染器：标题、段落、列表、引用、代码块、行内代码/粗体/斜体、
@@ -64,8 +65,60 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
   return nodes
 }
 
-export function Markdown({ source }: { source: string }) {
-  return <View>{renderBlocks(source)}</View>
+/** 正文里的图片：宽度撑满，高度按真实比例算，避免长图被裁成一条。 */
+function ArticleImage({ uri, onPress }: { uri: string; onPress?: () => void }) {
+  const [ratio, setRatio] = useState(16 / 10)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    Image.getSize(
+      uri,
+      (width, height) => {
+        if (!cancelled && width > 0 && height > 0) setRatio(width / height)
+      },
+      () => {
+        if (!cancelled) setFailed(true)
+      },
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [uri])
+
+  if (failed) return null
+
+  return (
+    <Pressable
+      onPress={onPress}
+      className="mb-4 overflow-hidden rounded-sm bg-sunken"
+      style={{ width: '100%', aspectRatio: ratio }}
+      accessibilityRole="imagebutton"
+      accessibilityLabel="查看大图"
+    >
+      <Image
+        source={{ uri }}
+        style={{ width: '100%', height: '100%' }}
+        resizeMode="cover"
+        onError={() => setFailed(true)}
+        accessibilityIgnoresInvertColors
+      />
+    </Pressable>
+  )
+}
+
+export function Markdown({
+  source,
+  onImagePress,
+}: {
+  source: string
+  /** 点开图片：把整篇的图片一起传出去，方便左右翻。 */
+  onImagePress?: (url: string, images: string[]) => void
+}) {
+  // 图片一律单独成段：段里既有字又有图时，也要保持原来的先后顺序。
+  const normalized = source.replace(/(!\[[^\]]*\]\([^)\s]+\))/g, '\n\n$1\n\n')
+  const images = [...new Set([...source.matchAll(/!\[[^\]]*\]\(([^)\s]+)\)/g)].map((match) => match[1]))]
+  return <View>{renderBlocks(normalized, onImagePress, images)}</View>
 }
 
 const HEADING_CLASS = [
@@ -77,7 +130,11 @@ const HEADING_CLASS = [
   'mt-4 mb-2 text-body-sm font-semibold text-ink',
 ]
 
-function renderBlocks(source: string): ReactNode[] {
+function renderBlocks(
+  source: string,
+  onImagePress?: (url: string, images: string[]) => void,
+  images: string[] = [],
+): ReactNode[] {
   const lines = source.split(/\r?\n/)
   const blocks: ReactNode[] = []
   const state = {
@@ -158,6 +215,15 @@ function renderBlocks(source: string): ReactNode[] {
     }
 
     const trimmed = line.trim()
+
+    const imageMatch = /^!\[[^\]]*\]\(([^)\s]+)\)$/.exec(trimmed)
+    if (imageMatch) {
+      flushAll()
+      const key = nextKey('img')
+      const uri = imageMatch[1]
+      blocks.push(<ArticleImage key={key} uri={uri} onPress={onImagePress ? () => onImagePress(uri, images) : undefined} />)
+      continue
+    }
     if (trimmed === '') {
       flushAll()
       continue

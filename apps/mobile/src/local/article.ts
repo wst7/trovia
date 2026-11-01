@@ -35,6 +35,12 @@ export interface ExtractedArticle {
 
 type CheerioDoc = ReturnType<typeof load>
 
+/**
+ * 当前正在解析的页面地址，给 <img> 的相对路径用。
+ * 解析是同步的、队列是单飞的，所以用模块变量最省事。
+ */
+let imageBaseUrl = ''
+
 const MAX_HTML_CHARS = 2_000_000
 const FETCH_TIMEOUT_MS = 25_000
 
@@ -257,12 +263,39 @@ function renderInline(node: AnyNode): string {
       return /^https?:\/\//i.test(href) ? `[${text}](${href})` : text
     }
     case 'img': {
-      const alt = node.attribs?.alt?.trim()
+      const alt = node.attribs?.alt?.trim() ?? ''
+      const image = imageMarkdownOf(node.attribs ?? {}, alt)
+      // 段落里夹着的图也让它单独成段：图片在文中的位置比排版连续性重要。
+      if (image) return `\n\n${image}\n\n`
       return alt ? ` ${alt} ` : ' '
     }
     default:
       return inner()
   }
+}
+
+/** 把 <img> 变成 markdown 图片，过滤规则与 collectImages 保持一致。 */
+function imageMarkdownOf(attrs: Record<string, string>, alt: string): string | null {
+  const raw =
+    attrs['data-src'] ??
+    attrs['data-original'] ??
+    attrs['data-actualsrc'] ??
+    attrs['data-lazy-src'] ??
+    attrs['src'] ??
+    ''
+  if (!raw || raw.startsWith('data:')) return null
+  if (IMAGE_SKIP.test(raw) || IMAGE_SKIP.test(attrs['class'] ?? '')) return null
+  const width = Number(attrs['width'] ?? 0)
+  const height = Number(attrs['height'] ?? 0)
+  if ((width > 0 && width <= 64) || (height > 0 && height <= 64)) return null
+  let absolute: string
+  try {
+    absolute = new URL(raw, imageBaseUrl).toString()
+  } catch {
+    return null
+  }
+  if (!/^https?:/i.test(absolute)) return null
+  return `![${alt.replace(/[[\]]/g, '')}](${absolute})`
 }
 
 function inlineText(children: AnyNode[]): string {
@@ -359,8 +392,9 @@ function renderBlock(node: AnyNode): string {
     case 'hr':
       return '\n\n---\n\n'
     case 'img': {
-      const alt = node.attribs?.alt?.trim()
-      return alt ? `\n\n${alt}\n\n` : ''
+      const alt = node.attribs?.alt?.trim() ?? ''
+      const image = imageMarkdownOf(node.attribs ?? {}, alt)
+      return image ? `\n\n${image}\n\n` : ''
     }
     case 'figcaption': {
       const text = inlineText(node.children)
@@ -414,6 +448,7 @@ function tidyMarkdown(markdown: string, wechat: boolean): string {
 
 function toPlainText(markdown: string): string {
   return markdown
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/^#{1,3}\s+/gm, '')
     .replace(/^>\s?/gm, '')
@@ -619,6 +654,7 @@ export function extractFromHtml(html: string, url: string): ExtractedArticle {
     .join('\n')
     .trim()
 
+  imageBaseUrl = url
   const picked = pickBody($)
   const images = collectImages($, picked.node, url)
   stripNoise($, picked.node, picked.wechat)
