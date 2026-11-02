@@ -6,7 +6,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import { AppTabBar, TAB_BAR_HEIGHT } from '../components/AppTabBar'
+import { TAB_BAR_HEIGHT } from '../components/AppTabBar'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { Divider } from '../ui/Divider'
 import { Screen } from '../ui/Screen'
@@ -277,7 +277,6 @@ export function SettingsScreen() {
           链接与图片由本机解析，图片文字用端侧 OCR 识别，不会上传。
         </Text>
       </ScrollView>
-      <AppTabBar active="settings" />
       <ConfirmDialog
         visible={confirmingClear}
         title="清空全部收藏？"

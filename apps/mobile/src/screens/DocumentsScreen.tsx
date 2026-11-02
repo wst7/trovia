@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { DocumentSummary, ParseStatus } from '@xunji/shared'
 import { errorMessage, STATUS_TEXT } from '@xunji/shared'
 
-import { AppTabBar, TAB_BAR_HEIGHT } from '../components/AppTabBar'
+import { TAB_BAR_HEIGHT } from '../components/AppTabBar'
 import { RecentRow } from '../components/RecordRow'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { subscribeChange } from '../local/bus'
@@ -350,8 +350,6 @@ export function DocumentsScreen() {
           onCancel={() => setConfirmingDelete(false)}
         />
       ) : null}
-
-      <AppTabBar active="documents" />
     </Screen>
   )
 }

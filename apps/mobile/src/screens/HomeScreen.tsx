@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { DocumentSummary, ParseStatus, SearchResult } from '@xunji/shared'
 import { errorMessage, STATUS_TEXT } from '@xunji/shared'
 
-import { AppTabBar, TAB_BAR_HEIGHT } from '../components/AppTabBar'
+import { TAB_BAR_HEIGHT } from '../components/AppTabBar'
 import { Composer } from '../components/Composer'
 import type { SaveResult } from '../components/Composer'
 import { RecentRow, ResultRow } from '../components/RecordRow'
@@ -314,7 +314,6 @@ export function HomeScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-      <AppTabBar active="home" />
     </Screen>
   )
 }

@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react'
 import { Ionicons } from '@expo/vector-icons'
-import { useRouter } from 'expo-router'
+import { usePathname, useRouter } from 'expo-router'
 import { Pressable, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -26,8 +26,15 @@ const TABS: {
  * 底部导航：一条发丝线 + 三组图标与字。
  * 没有胶囊底色、没有指示器——选中只表现为「墨色 vs 极淡墨」。
  */
-export function AppTabBar({ active }: { active: TabKey }) {
+export function AppTabBar() {
   const router = useRouter()
+  const pathname = usePathname()
+  // 由导航器统一渲染，所以当前 Tab 从路径推断，页面不用再传。
+  const active: TabKey = pathname.startsWith('/documents')
+    ? 'documents'
+    : pathname.startsWith('/settings')
+      ? 'settings'
+      : 'home'
   const insets = useSafeAreaInsets()
   const p = usePalette()
 
