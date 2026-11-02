@@ -347,12 +347,27 @@ export async function savePartial(id: string, article: ExtractedArticle): Promis
   )
 }
 
+/**
+ * 抓取失败。
+ *
+ * 已经有正文的条目（之前整理成功过）不降级：重抓失败只是「这次没拿到新的」，
+ * 用户手上的内容还在，把状态打成「失败」会让他以为内容坏了。
+ * 错误码照样记下来，排障和「为什么这次没更新」都用得上。
+ */
 export async function markFailed(id: string, errorCode: string): Promise<void> {
   const db = await getDb()
   const now = nowIso()
   await db.runAsync(
-    `UPDATE documents SET parse_status = 'failed', parse_stage = NULL,
-       parse_error_code = ?, last_parsed_at = ?, updated_at = ? WHERE id = ?`,
+    `UPDATE documents SET
+       parse_status = CASE
+         WHEN plain_text IS NOT NULL AND length(plain_text) >= 200 THEN 'completed'
+         ELSE 'failed'
+       END,
+       parse_stage = NULL,
+       parse_error_code = ?,
+       last_parsed_at = ?,
+       updated_at = ?
+     WHERE id = ?`,
     errorCode,
     now,
     now,
