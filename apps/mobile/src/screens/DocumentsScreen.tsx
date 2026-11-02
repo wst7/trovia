@@ -253,6 +253,12 @@ export function DocumentsScreen() {
               </View>
             ) : null}
 
+            {failedOnly ? (
+              <Text className="mt-2 text-caption text-faint">
+                站点拒绝读取的条目只能留下标题和链接，重试没有意义，所以它们没有重试入口。
+              </Text>
+            ) : null}
+
             <View className="mt-5">
               <SearchInput
                 value={keywordInput}
@@ -291,7 +297,7 @@ export function DocumentsScreen() {
               selecting={selecting}
               selected={selected.has(item.id)}
               onRetry={
-                failedOnly
+                failedOnly && repo.isRetryableError(item.parse_error_code)
                   ? () => {
                       void (async () => {
                         await repo.markForRetry(item.id)

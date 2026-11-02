@@ -11,6 +11,7 @@ import type {
 import type { ExtractedArticle } from './article'
 import { passesCoverage } from './coverage'
 import { getDb } from './db'
+import { RETRYABLE_CODES } from './retry'
 import { SEMANTIC_MIN_SCORE, cosine, embedTexts, loadEmbedConfig, loadVectors } from './embed'
 import type { Completer } from './intent'
 import { resolveIntent } from './intent'
@@ -455,7 +456,7 @@ export interface DocumentStats {
  * 被站点明确拒绝（FETCH_BLOCKED）、只能在 App 内打开、正文要靠脚本渲染的，
  * 重试一百次也是同一个结果，不该出现在「重试」按钮里。
  */
-const RETRYABLE_CODES = ['FETCH_FAILED', 'INTERNAL_ERROR', 'PARSE_INCOMPLETE']
+export { isRetryableError, RETRYABLE_CODES } from './retry'
 
 export async function countRetryableFailed(): Promise<number> {
   const db = await getDb()
