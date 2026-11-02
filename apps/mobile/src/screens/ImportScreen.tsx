@@ -4,6 +4,7 @@ import { ScrollView, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { FORMAT_LABELS } from '../local/import/parse'
+import { addedRange } from '../local/import/parse'
 import { pickAndParse, runImport } from '../local/import/service'
 import type { ImportProgress, ImportSummary, PickedFile } from '../local/import/service'
 import { processPendingQueue } from '../local/pipeline'
@@ -22,9 +23,13 @@ export function ImportScreen() {
   const router = useRouter()
   const { toast } = useToast()
   const insets = useSafeAreaInsets()
+
   const p = usePalette()
 
   const [picked, setPicked] = useState<PickedFile | null>(null)
+
+  const importedRange = addedRange(picked?.items ?? [])
+
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState<ImportProgress | null>(null)
   const [summary, setSummary] = useState<ImportSummary | null>(null)
@@ -112,6 +117,11 @@ export function ImportScreen() {
               <Line label="识别到" value={`${picked.items.length} 条链接`} color={p.ink} />
               <Line label="已经收藏过" value={`${picked.existing} 条`} color={p.muted} />
               <Line label="本次会新增" value={`${picked.fresh.length} 条`} color={p.accent} />
+              {importedRange ? (
+                // 带时间的导出（Pocket、书签）会把原收藏时间带进来；先说清楚，
+                // 免得用户以为几百条老收藏全变成「今天」。
+                <Line label="收藏时间" value={importedRange} color={p.muted} />
+              ) : null}
               {picked.skipped.length > 0 ? (
                 <Line label="跳过" value={`${picked.skipped.length} 行`} color={p.warn} />
               ) : null}

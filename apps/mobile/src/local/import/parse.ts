@@ -206,6 +206,22 @@ function parseCsv(content: string, skipped: ImportParseResult['skipped']): Impor
   return items
 }
 
+/**
+ * 这批导入项的时间跨度，用来在预览里说清楚「2019-01 至 2025-01」。
+ * 没有时间的导出（纯文本、部分书签）返回 null，不要显示成「今天」。
+ */
+export function addedRange(items: ImportItem[]): string | null {
+  const times = items.map((item) => item.addedAt).filter((value): value is number => typeof value === 'number')
+  if (times.length === 0) return null
+  const format = (value: number) => {
+    const date = new Date(value)
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+  }
+  const earliest = format(Math.min(...times))
+  const latest = format(Math.max(...times))
+  return earliest === latest ? earliest : `${earliest} 至 ${latest}`
+}
+
 /** 纯文本：一行一个链接，允许「链接 标题」或 Markdown 链接。 */
 function parseUrls(content: string, skipped: ImportParseResult['skipped']): ImportItem[] {
   const items: ImportItem[] = []

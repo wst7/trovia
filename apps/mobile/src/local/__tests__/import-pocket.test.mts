@@ -8,7 +8,7 @@
  * 跑法：npx tsx apps/mobile/src/local/__tests__/import-pocket.test.mts
  */
 import assert from 'node:assert/strict'
-import { parseImport } from '../import/parse.ts'
+import { addedRange, parseImport } from '../import/parse.ts'
 
 const csv = [
   'title,given_url,resolved_url,time_added,status,tags',
@@ -35,4 +35,11 @@ const simpleParsed = parseImport(simple)
 assert.equal(simpleParsed.items.length, 1)
 assert.equal(simpleParsed.items[0].addedAt, null, '没有时间列时不该编一个时间出来')
 
-console.log('Pocket CSV：8 项断言全部通过')
+// 预览里的时间跨度：两行分别是 2020-01 与 2020-09（按本机时区显示），而不是「今天」
+assert.equal(addedRange(parsed.items), '2020-01 至 2020-09')
+
+// 没有时间列的导出不能编出一个日期来
+assert.equal(addedRange(simpleParsed.items), null, '纯 url/title 的文件没有时间跨度')
+assert.equal(addedRange([]), null, '空列表也不能崩')
+
+console.log('Pocket CSV：11 项断言全部通过')
