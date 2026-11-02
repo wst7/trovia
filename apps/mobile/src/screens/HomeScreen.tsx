@@ -48,6 +48,8 @@ export function HomeScreen() {
   const [results, setResults] = useState<SearchResult[] | null>(null)
   // 引擎对这次查询的理解，例如「昨天保存的」；直接显示，用户才知道我按什么找的。
   const [interpretation, setInterpretation] = useState<string | null>(null)
+  // 抓取失败/被站点拦下的条目没有正文，只能按标题命中——搜索结果里要说清楚。
+  const bodylessCount = (results ?? []).filter((item) => item.parse_status === 'failed').length
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
   const [lastQuery, setLastQuery] = useState('')
@@ -208,6 +210,11 @@ export function HomeScreen() {
                 </Text>
                 <TextButton label="清除" onPress={clearSearch} tone="muted" />
               </View>
+              {!searching && (results?.length ?? 0) > 0 && bodylessCount > 0 ? (
+                <Text className="mt-1 text-caption text-faint">
+                  其中 {bodylessCount} 条只存了标题和链接：当时站点没让读正文，所以它们只能按标题匹配。
+                </Text>
+              ) : null}
               <View className="mt-1">{composer}</View>
 
               {searchError ? (
