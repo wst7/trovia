@@ -22,7 +22,6 @@ import { useToast } from '../providers/ToastProvider'
 import { Button, IconButton } from '../ui/Button'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { Divider } from '../ui/Divider'
-import { serifFamily } from '../ui/fonts'
 import { GUTTER, Screen } from '../ui/Screen'
 import { usePalette } from '../ui/palette'
 
@@ -241,10 +240,8 @@ export function DocumentDetailScreen() {
           </Text>
         ) : null}
 
-        <Text
-          className="mt-2 text-[27px] font-semibold leading-[36px] text-ink"
-          style={{ fontFamily: serifFamily }}
-        >
+        {/* 标题用无衬线：中文衬线在大字号下笔画对比太强，读起来像印刷品而不是 App。 */}
+        <Text className="mt-2 text-[26px] font-semibold leading-[35px] tracking-[-0.3px] text-ink">
           {doc.title || doc.url}
         </Text>
 

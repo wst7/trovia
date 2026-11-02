@@ -41,6 +41,17 @@ export function SyncScreen() {
   const [password, setPassword] = useState('')
   const [folder, setFolder] = useState('trovia')
   const [lastAt, setLastAt] = useState<string | null>(null)
+  const effectiveUrl = (() => {
+    const base = baseUrl.trim().replace(/\/+$/, '')
+    const sub = folder.trim().replace(/^\/+|\/+$/g, '')
+    if (!base) return null
+    // 地址里已经带了目录名（常见的手滑），提示出来比默默拼两遍好。
+    return sub && !base.endsWith(`/${sub}`) ? `${base}/${sub}` : base
+  })()
+  const folderLooksDuplicated = Boolean(
+    baseUrl.trim() && folder.trim() && baseUrl.trim().replace(/\/+$/, '').endsWith(`/${folder.trim()}`),
+  )
+
   const [busy, setBusy] = useState<'test' | 'sync' | null>(null)
   const [result, setResult] = useState<string | null>(null)
 
@@ -122,6 +133,17 @@ export function SyncScreen() {
           <Text className="mt-2 text-body-sm text-muted">
             内容写进你自己的网盘，我们不经过任何服务器。坚果云、群晖、Nextcloud 这类支持 WebDAV 的都可以。
           </Text>
+
+          {/* 地址和目录是拼起来的，填错时界面必须自己说出来：把最终会访问的
+              地址显示出来，比让人对着两个输入框猜要省事得多。 */}
+          {effectiveUrl ? (
+            <Text className="mt-4 text-caption text-faint">实际会访问：{effectiveUrl}/docs/</Text>
+          ) : null}
+          {folderLooksDuplicated ? (
+            <Text className="mt-1 text-caption text-warn">
+              地址里已经带了「{folder.trim()}」，目录又填了一次。地址一般填到 /dav 为止。
+            </Text>
+          ) : null}
 
           <View className="mt-8 gap-6">
             <TextField

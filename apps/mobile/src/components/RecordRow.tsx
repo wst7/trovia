@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Image, Pressable, Text, View } from 'react-native'
 import type { DocumentSummary, ParseStatus, SearchResult } from '@xunji/shared'
 import { domainOf, formatRelativeDate } from '@xunji/shared'
@@ -81,6 +82,9 @@ export function RecentRow({
   onRetry?: () => void
 }) {
   const p = usePalette()
+  // 有些站点的 favicon 地址能打开但内容是空的（0 字节/透明图），会留下一个空框。
+  // 加载失败就退回首字母，左列至少还是「有东西」的。
+  const [imageBroken, setImageBroken] = useState(false)
   // 缩略图优先级：本机文件 > 远程地址 > 不显示（很多站点没有正文图）。
   // 缩略图优先级：本机文件 > 远程地址 > 站点首字母占位
   const thumbnail = (item.image_files ?? []).find((file) => Boolean(file)) ?? (item.images ?? [])[0]
@@ -103,10 +107,15 @@ export function RecentRow({
             className="items-center justify-center overflow-hidden rounded-sm border border-line bg-sunken"
             style={{ width: 34, height: 34 }}
           >
-            {thumbnail ? (
+            {thumbnail && !imageBroken ? (
               // 图标内缩到 24：favicon 自带品牌底色，铺满 34 会比字母占位重得多，
               // 一列里两种重量交替出现，扫视时会跳。
-              <Image source={{ uri: thumbnail }} style={{ width: 24, height: 24 }} resizeMode="cover" />
+              <Image
+                source={{ uri: thumbnail }}
+                style={{ width: 24, height: 24 }}
+                resizeMode="cover"
+                onError={() => setImageBroken(true)}
+              />
             ) : (
               <Text className="text-caption font-medium text-faint">{initialOf(item)}</Text>
             )}
@@ -119,7 +128,7 @@ export function RecentRow({
             />
           ) : null}
           <View className="flex-1">
-            <Text className="text-[15px] font-medium leading-[21px] text-ink" numberOfLines={1}>
+            <Text className="text-[15px] font-medium leading-[21px] text-ink" numberOfLines={2}>
               {titleOf(item)}
             </Text>
             <View className="mt-1 flex-row items-center justify-between gap-2">

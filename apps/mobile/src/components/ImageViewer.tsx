@@ -11,6 +11,8 @@ import {
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import { saveImageToLibrary } from '../local/save-image'
+
 /**
  * 全屏看图：双指缩放、放大后拖动、双击放大/还原、左右切换。
  *
@@ -34,6 +36,7 @@ export function ImageViewer({ visible, images, index, onClose, onIndexChange }: 
   const window = Dimensions.get('window')
   const [size, setSize] = useState({ width: window.width, height: window.height })
   const [loading, setLoading] = useState(true)
+
 
   const scale = useRef(new Animated.Value(1)).current
   const translateX = useRef(new Animated.Value(0)).current
@@ -68,6 +71,27 @@ export function ImageViewer({ visible, images, index, onClose, onIndexChange }: 
   }, [visible, index, reset])
 
   const current = images[index] ?? images[0]
+
+  const [saving, setSaving] = useState(false)
+  /** 存图结果只在这个浮层里说一句，不弹系统对话框。 */
+  const [note, setNote] = useState<string | null>(null)
+
+  const handleSave = useCallback(async () => {
+    if (!current || saving) return
+    setSaving(true)
+    const result = await saveImageToLibrary(current)
+    setSaving(false)
+    setNote(
+      result.ok
+        ? '已存到相册'
+        : result.reason === 'permission'
+          ? '没有相册权限，去系统设置里允许后再试'
+          : result.reason === 'unavailable'
+            ? '这台设备不支持保存'
+            : '保存失败，图片可能已经失效',
+    )
+    setTimeout(() => setNote(null), 2600)
+  }, [current, saving])
 
   const clampTranslate = useCallback(
     (value: number, scaleValue: number, max: number) => {
@@ -223,6 +247,29 @@ export function ImageViewer({ visible, images, index, onClose, onIndexChange }: 
         >
           <Text className="text-body text-white">✕</Text>
         </Pressable>
+
+        <Pressable
+          onPress={() => void handleSave()}
+          disabled={saving}
+          className="absolute left-4 h-11 items-center justify-center rounded-full bg-black/55 px-4"
+          style={{ top: insets.top + 8, opacity: saving ? 0.5 : 1 }}
+          accessibilityRole="button"
+          accessibilityLabel="保存这张图片到相册"
+        >
+          <Text className="text-caption text-white">{saving ? '保存中…' : '保存'}</Text>
+        </Pressable>
+
+        {note ? (
+          <View
+            pointerEvents="none"
+            className="absolute left-0 right-0 items-center"
+            style={{ bottom: insets.bottom + 32 }}
+          >
+            <View className="rounded-full bg-black/70 px-3 py-1.5">
+              <Text className="text-caption text-white">{note}</Text>
+            </View>
+          </View>
+        ) : null}
       </View>
     </Modal>
   )

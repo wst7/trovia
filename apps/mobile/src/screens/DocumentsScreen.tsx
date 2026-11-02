@@ -233,7 +233,7 @@ export function DocumentsScreen() {
               </View>
             ) : (
               <View className="mt-4 flex-row items-baseline gap-2">
-                <Text className="text-display font-semibold text-ink">
+                <Text className="text-[24px] font-semibold leading-[30px] tracking-[-0.3px] text-ink">
                   {loading ? '—' : total}
                 </Text>
                 <Text className="text-body-sm text-muted">{unit}</Text>

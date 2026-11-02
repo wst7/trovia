@@ -16,7 +16,6 @@ import { useLocalRevision } from '../local/useLocalRevision'
 import { useToast } from '../providers/ToastProvider'
 import { TextButton } from '../ui/Button'
 import { Divider } from '../ui/Divider'
-import { serifFamily } from '../ui/fonts'
 import { GUTTER, Screen } from '../ui/Screen'
 import { usePalette } from '../ui/palette'
 
@@ -299,10 +298,7 @@ export function HomeScreen() {
             <>
               {/* 首页只有一句话要有重量：它是这个 App 唯一的产品说明。 */}
               <View className="mt-6">
-                <Text
-                  className="text-[32px] font-semibold leading-[40px] text-ink"
-                  style={{ fontFamily: serifFamily }}
-                >
+                <Text className="text-[30px] font-semibold leading-[38px] tracking-[-0.4px] text-ink">
                   想找点什么？
                 </Text>
                 <Text className="mt-3 text-body-sm text-muted">

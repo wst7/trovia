@@ -56,6 +56,18 @@ const config: ExpoConfig = {
   plugins: [
     'expo-router',
     [
+      'expo-media-library',
+      {
+        // 只用来往相册里写：不读用户的照片，也不要位置信息。
+        photosPermission: 'Trovia 需要访问相册，才能把正文里的图片保存下来。',
+        savePhotosPermission: 'Trovia 把正文图片存到你的相册。',
+        // 只要「往相册写图片」这一项，不要音乐/视频权限——弹窗问「访问音乐和音频」
+        // 会让用户怀疑这个 App 要干什么。
+        granularPermissions: ['photo'],
+        isAccessMediaLocationEnabled: false,
+      },
+    ],
+    [
       'expo-splash-screen',
       {
         backgroundColor: LIGHT_SURFACE,
