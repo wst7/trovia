@@ -117,98 +117,110 @@ async function baseRevs(): Promise<Map<string, number>> {
 async function applyRemote(records: SyncRecord[]): Promise<void> {
   const db = await getDb()
   for (const record of records) {
-    const payload = record.payload ?? {}
-    const existing = await db.getFirstAsync<{ updated_at: string; deleted_at: string | null }>(
-      'SELECT updated_at, deleted_at FROM documents WHERE id = ?',
-      record.id,
-    )
-
-    // 墓碑：本机有就跟着删，没有就什么都不做（不留空壳）。
-    if (record.deleted_at) {
-      if (!existing || existing.deleted_at) continue
-      await db.runAsync(
-        'UPDATE documents SET deleted_at = ?, updated_at = ?, rev = ? WHERE id = ?',
-        record.deleted_at,
-        record.updated_at,
-        record.rev,
-        record.id,
-      )
-      continue
-    }
-
-    if (existing) {
-      // 远端更旧就不动；相等也不动，避免把本机正在整理的正文覆盖掉。
-      if (existing.updated_at >= record.updated_at) continue
-      await db.runAsync(
-        `UPDATE documents SET
-           url = COALESCE(?, url), canonical_url = COALESCE(?, canonical_url), title = ?, site_name = ?,
-           source_type = COALESCE(?, source_type), author = ?, published_at = ?, description = ?,
-           summary_short = ?, summary_long = ?, keywords = ?, topics = ?, language = ?,
-           content_markdown = ?, plain_text = ?, images = ?,
-           search_text = COALESCE(?, search_text),
-           updated_at = ?, deleted_at = NULL, rev = ?
-         WHERE id = ?`,
-        stringOf(payload, 'url'),
-        stringOf(payload, 'canonical_url'),
-        stringOf(payload, 'title'),
-        stringOf(payload, 'site_name'),
-        stringOf(payload, 'source_type'),
-        stringOf(payload, 'author'),
-        stringOf(payload, 'published_at'),
-        stringOf(payload, 'description'),
-        stringOf(payload, 'summary_short'),
-        stringOf(payload, 'summary_long'),
-        arrayAsJson(payload, 'keywords'),
-        arrayAsJson(payload, 'topics'),
-        stringOf(payload, 'language'),
-        stringOf(payload, 'content_markdown'),
-        stringOf(payload, 'plain_text'),
-        arrayAsJson(payload, 'images'),
-        stringOf(payload, 'plain_text'),
-        record.updated_at,
-        record.rev,
-        record.id,
-      )
-      continue
-    }
-
-    // 本机没有：整条插入。可能撞「同一链接只保留一条」的唯一索引——
-    // 那是同一篇文章在两台设备上各自收藏过，跳过就好，不能让整轮同步失败。
     try {
-      await db.runAsync(
-        `INSERT INTO documents (
-           id, url, canonical_url, title, site_name, source_type, author, published_at, description,
-           summary_short, summary_long, keywords, topics, language, content_markdown, plain_text,
-           images, image_files, search_text, parse_status, parse_stage, parse_error_code,
-           saved_at, last_parsed_at, updated_at, rev, deleted_at, metadata
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '[]', ?, 'completed', NULL, NULL, ?, NULL, ?, ?, NULL, ?)`,
-        record.id,
-        stringOf(payload, 'url') ?? '',
-        stringOf(payload, 'canonical_url') ?? '',
-        stringOf(payload, 'title'),
-        stringOf(payload, 'site_name'),
-        stringOf(payload, 'source_type') ?? 'web',
-        stringOf(payload, 'author'),
-        stringOf(payload, 'published_at'),
-        stringOf(payload, 'description'),
-        stringOf(payload, 'summary_short'),
-        stringOf(payload, 'summary_long'),
-        arrayAsJson(payload, 'keywords'),
-        arrayAsJson(payload, 'topics'),
-        stringOf(payload, 'language'),
-        stringOf(payload, 'content_markdown'),
-        stringOf(payload, 'plain_text'),
-        arrayAsJson(payload, 'images'),
-        stringOf(payload, 'plain_text') ?? '',
-        stringOf(payload, 'saved_at') ?? record.updated_at,
-        record.updated_at,
-        record.rev,
-        stringOf(payload, 'metadata') ?? '{}',
-      )
+      await applyOne(db, record)
     } catch {
-      // 唯一索引冲突或字段约束：跳过这一条，其他记录照常落库。
+      // 单条落库失败（唯一索引、字段约束）不影响其他记录：
+      // 冲突副本和原条目共用同一个链接是很正常的情况。
+      //
+      // 但必须把本地 rev 对齐到远端：引擎假定「applyRemote 之后本地 rev == 远端 rev」，
+      // 不对齐的话这条会永远满足 rev > 基准，每一轮都被重新拉一次，永远收不敛。
+      try {
+        await db.runAsync('UPDATE documents SET rev = ? WHERE id = ?', record.rev, record.id)
+      } catch {
+        // 连对齐都失败就放弃这一条，至少别影响其他记录。
+      }
     }
   }
+}
+
+async function applyOne(db: Awaited<ReturnType<typeof getDb>>, record: SyncRecord): Promise<void> {
+  const payload = record.payload ?? {}
+  const existing = await db.getFirstAsync<{ updated_at: string; deleted_at: string | null }>(
+    'SELECT updated_at, deleted_at FROM documents WHERE id = ?',
+    record.id,
+  )
+
+  // 墓碑：本机有就跟着删，没有就什么都不做（不留空壳）。
+  if (record.deleted_at) {
+    if (!existing || existing.deleted_at) return
+    await db.runAsync(
+      'UPDATE documents SET deleted_at = ?, updated_at = ?, rev = ? WHERE id = ?',
+      record.deleted_at,
+      record.updated_at,
+      record.rev,
+      record.id,
+    )
+    return
+  }
+
+  if (existing) {
+    // 远端更旧或一样新就不动，避免把本机正在整理的正文覆盖掉。
+    if (existing.updated_at >= record.updated_at) return
+    // 刻意不改 url / canonical_url：条目身份由 id 决定，改链接只会撞上
+    // 「同一链接只保留一条」的唯一索引，把整轮同步打断。
+    await db.runAsync(
+      `UPDATE documents SET
+         title = ?, site_name = ?,
+         source_type = COALESCE(?, source_type), author = ?, published_at = ?, description = ?,
+         summary_short = ?, summary_long = ?, keywords = ?, topics = ?, language = ?,
+         content_markdown = ?, plain_text = ?, images = ?,
+         search_text = COALESCE(?, search_text),
+         updated_at = ?, deleted_at = NULL, rev = ?
+       WHERE id = ?`,
+      stringOf(payload, 'title'),
+      stringOf(payload, 'site_name'),
+      stringOf(payload, 'source_type'),
+      stringOf(payload, 'author'),
+      stringOf(payload, 'published_at'),
+      stringOf(payload, 'description'),
+      stringOf(payload, 'summary_short'),
+      stringOf(payload, 'summary_long'),
+      arrayAsJson(payload, 'keywords'),
+      arrayAsJson(payload, 'topics'),
+      stringOf(payload, 'language'),
+      stringOf(payload, 'content_markdown'),
+      stringOf(payload, 'plain_text'),
+      arrayAsJson(payload, 'images'),
+      stringOf(payload, 'plain_text'),
+      record.updated_at,
+      record.rev,
+      record.id,
+    )
+    return
+  }
+
+  // 本机没有：整条插入。
+  await db.runAsync(
+    `INSERT INTO documents (
+       id, url, canonical_url, title, site_name, source_type, author, published_at, description,
+       summary_short, summary_long, keywords, topics, language, content_markdown, plain_text,
+       images, image_files, search_text, parse_status, parse_stage, parse_error_code,
+       saved_at, last_parsed_at, updated_at, rev, deleted_at, metadata
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '[]', ?, 'completed', NULL, NULL, ?, NULL, ?, ?, NULL, ?)`,
+    record.id,
+    stringOf(payload, 'url') ?? '',
+    stringOf(payload, 'canonical_url') ?? '',
+    stringOf(payload, 'title'),
+    stringOf(payload, 'site_name'),
+    stringOf(payload, 'source_type') ?? 'web',
+    stringOf(payload, 'author'),
+    stringOf(payload, 'published_at'),
+    stringOf(payload, 'description'),
+    stringOf(payload, 'summary_short'),
+    stringOf(payload, 'summary_long'),
+    arrayAsJson(payload, 'keywords'),
+    arrayAsJson(payload, 'topics'),
+    stringOf(payload, 'language'),
+    stringOf(payload, 'content_markdown'),
+    stringOf(payload, 'plain_text'),
+    arrayAsJson(payload, 'images'),
+    stringOf(payload, 'plain_text') ?? '',
+    stringOf(payload, 'saved_at') ?? record.updated_at,
+    record.updated_at,
+    record.rev,
+    stringOf(payload, 'metadata') ?? '{}',
+  )
 }
 
 async function markSynced(records: SyncRecord[], syncedAt: string): Promise<void> {

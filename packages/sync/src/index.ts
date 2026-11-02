@@ -215,9 +215,10 @@ export async function syncOnce(options: SyncOptions): Promise<SyncReport> {
   }
 
   if (applied.length > 0) await store.applyRemote(applied)
-  // 即使这次什么都没推进也要标记一次：界面上的「上次同步」应该是「上次尝试」，
-  // 否则用户会以为同步没生效。
-  await store.markSynced(pushedRecords, syncedAt)
+  // 拉下来的记录也要记基准 rev：否则下一轮「本地 rev > 0 且远端 rev > 0」会被判成
+  // 两端都改过——真机上表现为「本地删了一条从别的设备同步来的文章，它又变成冲突副本冒回来」。
+  // 即使这次什么都没推进也要标记一次：界面上的「上次同步」应该是「上次尝试」。
+  await store.markSynced([...pushedRecords, ...applied], syncedAt)
 
   return { pushed, pulled, deleted, conflicts, conflictNames, syncedAt }
 }

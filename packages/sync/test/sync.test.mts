@@ -54,10 +54,14 @@ class MemoryStore implements LocalStore {
     return new Map(this.base)
   }
 
+  /**
+   * 刻意不在这里写基准 rev：真实实现（App 的 sync-store）只负责落库，
+   * 基准由 markSynced 记录。测试替身如果自作聪明，就会把真实 bug 遮住——
+   * 「拉取后本地删除，结果又冒出冲突副本」就是这么漏掉的。
+   */
   async applyRemote(records: SyncRecord[]) {
     for (const record of records) {
       this.docs.set(record.id, record)
-      this.base.set(record.id, record.rev)
       this.dirty.delete(record.id)
     }
   }
@@ -151,6 +155,31 @@ async function run() {
   assert.equal(idle.pulled, 0, '没有改动时不该有任何取回')
   assert.equal(idle.pushed, 0, '没有改动时不该有任何上传')
   console.log('✓ 无改动时同步是空转（pulled 0 / pushed 0）')
+
+  // 6. 拉取之后本地删除：墓碑必须传上去，不能被判成冲突而复活
+  phone.put({ ...doc('doc-delete-after-pull', '会被删除的那篇', '2026-01-01T00:10:00.000Z') })
+  await pullAll(phone, 'device-phone')
+  await pullAll(laptop, 'device-laptop')
+  assert.ok(laptop.docs.has('doc-delete-after-pull'), '第二台设备应该先拿到这条')
+
+  laptop.put({
+    ...doc('doc-delete-after-pull', '会被删除的那篇', '2026-01-01T00:20:00.000Z'),
+    deleted_at: '2026-01-01T00:20:00.000Z',
+  })
+  const delReport = await pullAll(laptop, 'device-laptop')
+  assert.equal(delReport.conflicts, 0, '删除不该被判成冲突')
+  assert.equal(delReport.deleted, 0, '本机自己删的，不该再「取回删除」')
+  const remoteAfterDelete = [...cloud.files.values()].map((body) => JSON.parse(body) as SyncRecord)
+  assert.ok(
+    remoteAfterDelete.some((record) => record.id === 'doc-delete-after-pull' && record.deleted_at),
+    '远端应该有这条的墓碑',
+  )
+  assert.equal(
+    [...laptop.docs.values()].filter((record) => record.payload.title && String(record.payload.title).includes('冲突副本')).length,
+    0,
+    '本机不该多出一份冲突副本',
+  )
+  console.log('✓ 拉取后本地删除：墓碑上传，不产生冲突副本')
 
   console.log(`\n全部通过：云端 ${cloud.files.size} 个文件，累计 ${cloud.writes} 次写入`)
 }

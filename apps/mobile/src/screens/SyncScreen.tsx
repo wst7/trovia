@@ -11,6 +11,21 @@ import { GUTTER, Screen } from '../ui/Screen'
 import { TextField } from '../ui/TextField'
 
 /**
+ * 同步失败要说清楚是哪一类错。
+ * 「稍后再试」对着一堆不同原因，用户只能干等；分清楚之后每个人都知道该改哪一项。
+ */
+function describeSyncError(error: unknown): string {
+  if (error instanceof SyncNotConfigured) return '还没填好同步账户。'
+
+  const message = error instanceof Error ? error.message : String(error)
+  if (/401|unauthor/i.test(message)) return '网盘拒绝了这组账号密码。坚果云要用「应用密码」。'
+  if (/403/.test(message)) return '这个账号没有该目录的写入权限。'
+  if (/404/.test(message)) return '地址不对：路径要找得到 WebDAV 根目录。'
+  if (/abort|timeout|network|fetch/i.test(message)) return '连不上网盘，检查网络或服务器地址。'
+  return `同步没有完成：${message.slice(0, 80)}`
+}
+
+/**
  * 同步设置：填自己的网盘，不注册账号。
  *
  * 抄的是「WebDAV 就行」这条真实需求：用户手上的坚果云、群晖、Nextcloud
@@ -65,9 +80,7 @@ export function SyncScreen() {
       toast('连上了，目录可读写。', { type: 'success' })
       setResult('连接正常')
     } catch (error) {
-      toast(error instanceof SyncNotConfigured ? '还没填好同步账户。' : '连不上，检查地址、应用密码和目录权限。', {
-        type: 'error',
-      })
+      toast(describeSyncError(error), { type: 'error' })
       setResult(null)
     } finally {
       setBusy(null)
@@ -85,7 +98,9 @@ export function SyncScreen() {
       toast(line, { type: 'success' })
       setLastAt(await lastSyncAt())
     } catch (error) {
-      toast(error instanceof SyncNotConfigured ? '还没填好同步账户。' : '同步没有完成，稍后再试。', { type: 'error' })
+      const reason = describeSyncError(error)
+      toast(reason, { type: 'error' })
+      setResult(reason)
     } finally {
       setBusy(null)
     }
