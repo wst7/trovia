@@ -2,6 +2,9 @@ import { Pressable, Text, View } from 'react-native'
 import type { DocumentSummary, ParseStatus, SearchResult } from '@xunji/shared'
 import { domainOf, formatRelativeDate } from '@xunji/shared'
 
+import { Ionicons } from '@expo/vector-icons'
+
+import { usePalette } from '../ui/palette'
 import { LiveStatusMark } from './LiveStatusMark'
 
 /**
@@ -51,37 +54,60 @@ function metaOf(item: DocumentSummary | SearchResult, showDate: boolean): string
 export function RecentRow({
   item,
   onPress,
+  onLongPress,
   onTerminal,
   showDate = true,
+  selected,
+  selecting = false,
 }: {
   item: DocumentSummary
   onPress: () => void
+  onLongPress?: () => void
   onTerminal?: (status: ParseStatus) => void
   /** 列表已经按天分组时传 false，避免日期重复。 */
   showDate?: boolean
+  /** 多选模式下的选中状态；undefined 表示不在多选模式。 */
+  selected?: boolean
+  selecting?: boolean
 }) {
+  const p = usePalette()
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={320}
       accessibilityRole="button"
-      accessibilityLabel={item.title || item.url}
+      accessibilityState={selecting ? { selected: Boolean(selected) } : undefined}
+      accessibilityLabel={selected ? `${item.title || item.url}，已选中` : item.title || item.url}
       className="min-h-[60px] justify-center py-3"
     >
       {({ pressed }) => (
-        <View style={{ opacity: pressed ? 0.55 : 1 }}>
-          <Text className="text-body font-medium text-ink" numberOfLines={2}>
-            {titleOf(item)}
-          </Text>
-          <View className="mt-1 flex-row items-center gap-2">
-            <Text className="flex-shrink text-caption text-muted" numberOfLines={1}>
-              {metaOf(item, showDate)}
-            </Text>
-            <LiveStatusMark
-              docId={item.id}
-              status={item.parse_status}
-              errorCode={item.parse_error_code}
-              onTerminal={onTerminal}
+        // 结构固定：勾选圈只是「有没有」而不是「换一层父节点」。
+        // 切换多选时改变树形状会让 Fabric 重新挂载原生视图，
+        // 直接崩在 child already has a parent。
+        <View style={{ opacity: pressed ? 0.55 : 1 }} className="flex-row items-center gap-3">
+          {selecting ? (
+            <Ionicons
+              name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+              size={22}
+              color={selected ? p.accent : p.faint}
             />
+          ) : null}
+          <View className="flex-1">
+            <Text className="text-body font-medium text-ink" numberOfLines={2}>
+              {titleOf(item)}
+            </Text>
+            <View className="mt-1 flex-row items-center gap-2">
+              <Text className="flex-shrink text-caption text-muted" numberOfLines={1}>
+                {metaOf(item, showDate)}
+              </Text>
+              <LiveStatusMark
+                docId={item.id}
+                status={item.parse_status}
+                errorCode={item.parse_error_code}
+                onTerminal={onTerminal}
+              />
+            </View>
           </View>
         </View>
       )}

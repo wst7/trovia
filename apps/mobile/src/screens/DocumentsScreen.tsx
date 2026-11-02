@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useFocusEffect, useRouter } from 'expo-router'
-import { ActivityIndicator, FlatList, RefreshControl, Text, View } from 'react-native'
+import { ActivityIndicator, FlatList, Keyboard, RefreshControl, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { DocumentSummary, ParseStatus } from '@xunji/shared'
 import { errorMessage, STATUS_TEXT } from '@xunji/shared'
@@ -13,7 +13,8 @@ import { dayLabel } from '../local/dates'
 import { processPendingQueue } from '../local/pipeline'
 import * as repo from '../local/repo'
 import { useToast } from '../providers/ToastProvider'
-import { TextButton } from '../ui/Button'
+import { Button, TextButton } from '../ui/Button'
+import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { Divider } from '../ui/Divider'
 import { GUTTER, Screen } from '../ui/Screen'
 import { SearchInput } from '../ui/SearchInput'
@@ -37,6 +38,9 @@ export function DocumentsScreen() {
   const [error, setError] = useState<string | null>(null)
   const [retryable, setRetryable] = useState(0)
   const [retrying, setRetrying] = useState(false)
+  const [selecting, setSelecting] = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   const keyword = useDebouncedValue(keywordInput.trim(), 300)
   const requestSeq = useRef(0)
@@ -106,6 +110,42 @@ export function DocumentsScreen() {
     })
   }, [])
 
+  function enterSelection(id: string) {
+    // 键盘会盖住底部操作条，长按进多选时先收起来。
+    Keyboard.dismiss()
+    setSelecting(true)
+    setSelected(new Set([id]))
+  }
+
+  function toggleSelected(id: string) {
+    setSelected((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function exitSelection() {
+    Keyboard.dismiss()
+    setSelecting(false)
+    setSelected(new Set())
+  }
+
+  async function deleteSelected() {
+    const ids = [...selected]
+    setConfirmingDelete(false)
+    exitSelection()
+    try {
+      for (const id of ids) await repo.deleteDocument(id)
+      toast(ids.length === 1 ? '已删除。' : `已删除 ${ids.length} 条。`, { type: 'success' })
+    } catch {
+      toast('删除没有全部完成，剩下的还在列表里。', { type: 'error' })
+    } finally {
+      reload()
+    }
+  }
+
   async function handleRetryFailed() {
     if (retrying) return
     setRetrying(true)
@@ -162,12 +202,26 @@ export function DocumentsScreen() {
         }
         ListHeaderComponent={
           <View>
-            <View className="mt-4 flex-row items-baseline gap-2">
-              <Text className="text-heading font-semibold text-ink">
-                {loading ? '—' : total}
-              </Text>
-              <Text className="text-body-sm text-muted">{unit}</Text>
-            </View>
+            {selecting ? (
+              <View className="mt-4 flex-row items-center justify-between">
+                <Text className="text-heading font-semibold text-ink">已选 {selected.size} 条</Text>
+                <View className="flex-row items-center gap-4">
+                  <TextButton
+                    label={selected.size === items.length ? '取消全选' : '全选本页'}
+                    onPress={() => setSelected(selected.size === items.length ? new Set() : new Set(items.map((item) => item.id)))}
+                    tone="muted"
+                  />
+                  <TextButton label="完成" onPress={exitSelection} />
+                </View>
+              </View>
+            ) : (
+              <View className="mt-4 flex-row items-baseline gap-2">
+                <Text className="text-heading font-semibold text-ink">
+                  {loading ? '—' : total}
+                </Text>
+                <Text className="text-body-sm text-muted">{unit}</Text>
+              </View>
+            )}
 
             {retryable > 0 ? (
               <View className="mt-3 flex-row items-center justify-between">
@@ -207,9 +261,15 @@ export function DocumentsScreen() {
             ) : null}
             <RecentRow
               item={item}
-              onPress={() => router.push(`/documents/${item.id}`)}
+              onPress={() => {
+                if (selecting) toggleSelected(item.id)
+                else router.push(`/documents/${item.id}`)
+              }}
+              onLongPress={() => (selecting ? toggleSelected(item.id) : enterSelection(item.id))}
               onTerminal={handleTerminal}
               showDate={false}
+              selecting={selecting}
+              selected={selected.has(item.id)}
             />
             <Divider />
           </View>
@@ -261,6 +321,36 @@ export function DocumentsScreen() {
           if (hasMore && !loading && !loadingMore) void load(page + 1, 'append')
         }}
       />
+      {selecting ? (
+        <View
+          className="absolute left-0 right-0 flex-row items-center justify-between border-t border-line bg-surface px-5"
+          style={{ bottom: TAB_BAR_HEIGHT + insets.bottom, height: 64 }}
+        >
+          <Text className="text-body-sm text-muted">
+            {selected.size > 0 ? `将删除 ${selected.size} 条` : '点一行来选中'}
+          </Text>
+          <Button
+            label="删除"
+            variant="destructive"
+            size="sm"
+            disabled={selected.size === 0}
+            onPress={() => setConfirmingDelete(true)}
+          />
+        </View>
+      ) : null}
+
+      {confirmingDelete ? (
+        <ConfirmDialog
+          visible
+          title={selected.size === 1 ? '删除这 1 条收藏？' : `删除这 ${selected.size} 条收藏？`}
+          message="删除后无法恢复，其它设备下次同步时也会跟着删除。"
+          confirmLabel="删除"
+          destructive
+          onConfirm={() => void deleteSelected()}
+          onCancel={() => setConfirmingDelete(false)}
+        />
+      ) : null}
+
       <AppTabBar active="documents" />
     </Screen>
   )
