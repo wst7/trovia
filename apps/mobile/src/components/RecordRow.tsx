@@ -1,4 +1,4 @@
-import { Pressable, Text, View } from 'react-native'
+import { Image, Pressable, Text, View } from 'react-native'
 import type { DocumentSummary, ParseStatus, SearchResult } from '@xunji/shared'
 import { domainOf, formatRelativeDate } from '@xunji/shared'
 
@@ -21,6 +21,13 @@ function urlTitleAndHost(url: string): { title: string; host: string } {
   } catch {
     return { title: url, host: '' }
   }
+}
+
+/** 没有缩略图时的占位字：站点域名首字母，读起来像一排字母索引，不像缺失。 */
+function initialOf(item: DocumentSummary | SearchResult): string {
+  const host = domainOf(item.url) ?? ''
+  const first = host.replace(/^www\./, '').slice(0, 1)
+  return first ? first.toUpperCase() : '·'
 }
 
 function titleOf(item: DocumentSummary | SearchResult): string {
@@ -71,6 +78,9 @@ export function RecentRow({
   selecting?: boolean
 }) {
   const p = usePalette()
+  // 缩略图优先级：本机文件 > 远程地址 > 不显示（很多站点没有正文图）。
+  // 缩略图优先级：本机文件 > 远程地址 > 站点首字母占位
+  const thumbnail = (item.image_files ?? []).find((file) => Boolean(file)) ?? (item.images ?? [])[0]
   return (
     <Pressable
       onPress={onPress}
@@ -79,13 +89,31 @@ export function RecentRow({
       accessibilityRole="button"
       accessibilityState={selecting ? { selected: Boolean(selected) } : undefined}
       accessibilityLabel={selected ? `${item.title || item.url}，已选中` : item.title || item.url}
-      className="min-h-[60px] justify-center py-3"
+      className="rounded-md border border-line bg-surface px-3 py-3"
     >
       {({ pressed }) => (
         // 结构固定：勾选圈只是「有没有」而不是「换一层父节点」。
         // 切换多选时改变树形状会让 Fabric 重新挂载原生视图，
         // 直接崩在 child already has a parent。
         <View style={{ opacity: pressed ? 0.55 : 1 }} className="flex-row items-center gap-3">
+          {thumbnail ? (
+            // 固定 44×44 让左列成一条线。圆角直接给 Image：
+            // 用 overflow-hidden 的容器包一层会触发 Fabric 的
+            // 「The specified child already has a parent」崩溃（ReactClippingViewManager）。
+            <Image
+              source={{ uri: thumbnail }}
+              // 透明底图标（很多站点 favicon 就是）要压在浅灰上，才和字母占位同一重量。
+              style={{ width: 44, height: 44, borderRadius: 8, backgroundColor: p.sunken }}
+              resizeMode="cover"
+            />
+          ) : (
+            <View
+              className="items-center justify-center rounded-sm border border-line bg-sunken"
+              style={{ width: 44, height: 44 }}
+            >
+              <Text className="text-body-sm font-medium text-faint">{initialOf(item)}</Text>
+            </View>
+          )}
           {selecting ? (
             <Ionicons
               name={selected ? 'checkmark-circle' : 'ellipse-outline'}

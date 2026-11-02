@@ -11,7 +11,7 @@
  */
 
 :root {
-  --canvas: 251 250 247; /* #fbfaf7 纸白 */
+  --canvas: 246 245 241; /* #f6f5f1 纸灰：白色卡片才抬得起来 */
   --surface: 255 255 255; /* #ffffff 抬起的表面（输入框、浮层） */
   --sunken: 244 243 239; /* #f4f3ef 下沉表面（分组、骨架） */
   --line: 232 230 225; /* #e8e6e1 发丝线 */
@@ -28,7 +28,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --canvas: 18 18 17;
+    --canvas: 16 16 15;
     --surface: 27 27 25;
     --sunken: 12 12 11;
     --line: 43 43 40;

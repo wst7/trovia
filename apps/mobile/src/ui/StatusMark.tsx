@@ -43,7 +43,7 @@ export function StatusMark({
       {withLabel && inFlight ? (
         <Text className="text-caption text-muted">整理中</Text>
       ) : withLabel && (partial || failed) ? (
-        <Text className={cx('text-[11px]', failed ? 'text-danger/85' : 'text-warn/85')} numberOfLines={1}>
+        <Text className="text-[11px] text-muted" numberOfLines={1}>
           {statusText(status, errorCode)}
         </Text>
       ) : null}

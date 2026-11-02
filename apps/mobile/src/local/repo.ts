@@ -63,6 +63,8 @@ function toSummary(row: DocumentRow): DocumentSummary {
     parse_status: row.parse_status as ParseStatus,
     parse_error_code: row.parse_error_code,
     saved_at: row.saved_at,
+    images: parseJsonArray(row.images ?? '[]'),
+    image_files: parseJsonArray(row.image_files ?? '[]'),
   }
 }
 

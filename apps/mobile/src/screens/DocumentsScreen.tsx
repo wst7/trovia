@@ -15,7 +15,6 @@ import * as repo from '../local/repo'
 import { useToast } from '../providers/ToastProvider'
 import { Button, TextButton } from '../ui/Button'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
-import { Divider } from '../ui/Divider'
 import { GUTTER, Screen } from '../ui/Screen'
 import { SearchInput } from '../ui/SearchInput'
 import { usePalette } from '../ui/palette'
@@ -188,6 +187,10 @@ export function DocumentsScreen() {
         contentContainerStyle={{ paddingHorizontal: GUTTER, paddingBottom: bottomPad }}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
+        // Android 默认开着 removeClippedSubviews，单元格会被包进 clipping view；
+        // 列表里一旦有 Image（缩略图）并触发重渲染，Fabric 就会抛
+        // 「The specified child already has a parent」直接崩掉进程。
+        removeClippedSubviews={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -225,17 +228,18 @@ export function DocumentsScreen() {
 
             {retryable > 0 ? (
               <View className="mt-3 flex-row items-center justify-between">
-                <Text className="flex-1 text-caption text-muted">
-                  {retryable} 条没整理成功，多数是当时没能连上站点
+                <Text className="flex-1 text-body-sm text-muted">
+                  {retryable} 条没能整理（含在 {total} 条里）
                 </Text>
                 <TextButton
-                  label={retrying ? '正在排队…' : '重试'}
+                  label={retrying ? '正在排队…' : '重试全部'}
                   onPress={() => void handleRetryFailed()}
+                  tone="muted"
                 />
               </View>
             ) : null}
 
-            <View className="mt-6">
+            <View className="mt-5">
               <SearchInput
                 value={keywordInput}
                 onChangeText={setKeywordInput}
@@ -255,7 +259,7 @@ export function DocumentsScreen() {
           const label = dayLabel(item.saved_at)
           const previous = index > 0 ? dayLabel(items[index - 1].saved_at) : null
           return (
-          <View>
+          <View className="mb-2">
             {label && label !== previous ? (
               <Text className="mt-5 mb-2 text-caption font-medium text-faint">{label}</Text>
             ) : null}
@@ -271,7 +275,6 @@ export function DocumentsScreen() {
               selecting={selecting}
               selected={selected.has(item.id)}
             />
-            <Divider />
           </View>
           )
         }}

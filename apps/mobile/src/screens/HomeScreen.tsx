@@ -51,6 +51,7 @@ export function HomeScreen() {
   const [searchError, setSearchError] = useState<string | null>(null)
   const [lastQuery, setLastQuery] = useState('')
   const [recent, setRecent] = useState<DocumentSummary[]>([])
+  const [stats, setStats] = useState<repo.DocumentStats | null>(null)
   const [writing, setWriting] = useState(false)
 
   const inResults = lastQuery.length > 0
@@ -67,10 +68,14 @@ export function HomeScreen() {
   useEffect(() => {
     if (inResults) return
     let cancelled = false
-    void repo
-      .listDocuments({ page: 1, pageSize: RECENT_LIMIT, keyword: '' })
-      .then((res) => {
-        if (!cancelled) setRecent(res.items)
+    void Promise.all([
+      repo.listDocuments({ page: 1, pageSize: RECENT_LIMIT, keyword: '' }),
+      repo.documentStats(),
+    ])
+      .then(([res, nextStats]) => {
+        if (cancelled) return
+        setRecent(res.items)
+        setStats(nextStats)
       })
       .catch(() => undefined)
     return () => {
@@ -285,19 +290,31 @@ export function HomeScreen() {
 
               <View className="mt-6">{composer}</View>
 
+              {stats ? (
+                <View className="mt-8 flex-row items-baseline gap-2">
+                  <Text className="text-body-sm text-muted">已存 {stats.total}</Text>
+                  {stats.processing > 0 ? (
+                    <Text className="text-body-sm text-muted">· {stats.processing} 条整理中</Text>
+                  ) : null}
+                  {stats.failed > 0 ? (
+                    <Text className="text-body-sm text-muted">· {stats.failed} 条没读完</Text>
+                  ) : null}
+                </View>
+              ) : null}
+
               {recent.length > 0 ? (
                 <View className="mt-10">
                   <View className="flex-row items-center justify-between">
                     <Text className="text-body font-semibold text-ink">最近收藏</Text>
                   </View>
                   <View className="mt-1">
-                    {recent.map((item, index) => (
-                      <View key={item.id}>
-                        {index > 0 ? <Divider /> : null}
+                    {recent.map((item) => (
+                      <View key={item.id} className="mb-2">
                         <RecentRow
                           item={item}
                           onPress={() => router.push(`/documents/${item.id}`)}
                           onTerminal={handleTerminal}
+                          showDate={false}
                         />
                       </View>
                     ))}

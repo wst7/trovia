@@ -254,7 +254,10 @@ export function DocumentDetailScreen() {
         ) : null}
 
         {summary && !summaryRepeatsBody ? (
-          <View className="mt-6 rounded-md bg-sunken p-4">
+          <View
+            className="mt-6 rounded-md border border-line bg-surface p-4"
+            style={{ shadowColor: p.ink, shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
+          >
             <Text className="text-[11px] font-semibold tracking-[1px] text-faint">摘要</Text>
             {summaryShort ? (
               <Text className="mt-2 text-body text-ink">{summaryShort}</Text>

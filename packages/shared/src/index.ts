@@ -45,6 +45,9 @@ export interface DocumentSummary {
   parse_status: ParseStatus
   parse_error_code: string | null
   saved_at: string
+  /** 列表缩略图用：正文里的图片地址，与本地文件按下标对齐。 */
+  images?: string[]
+  image_files?: string[]
 }
 
 /** Detail：Summary 全字段 + 正文与元数据 */
