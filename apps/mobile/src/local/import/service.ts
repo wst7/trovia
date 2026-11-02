@@ -84,7 +84,7 @@ export async function runImport(
   for (let index = 0; index < items.length; index += 1) {
     const item = items[index]
     try {
-      const result = await repo.createDocument(item.url, item.title)
+      const result = await repo.createDocument(item.url, item.title, item.addedAt)
       if (result.duplicate) duplicate += 1
       else created += 1
     } catch {

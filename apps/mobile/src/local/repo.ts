@@ -97,6 +97,8 @@ function toDetail(row: DocumentRow): DocumentDetail {
 export async function createDocument(
   rawUrl: string,
   titleHint?: string | null,
+  /** 导入时带上原收藏时间：2019 年存的书签不该全都变成「今天」。 */
+  savedAt?: number | null,
 ): Promise<{ id: string; duplicate: boolean }> {
   const url = normalizeUrl(rawUrl)
   if (!url) throw new Error('INVALID_URL')
@@ -121,6 +123,11 @@ export async function createDocument(
 
   const id = newId()
   const now = nowIso()
+  // 导入文件里的时间可能很旧；一直往前推一点总比全挤在今天好，所以只在合理范围内采用。
+  const saved =
+    savedAt && Number.isFinite(savedAt) && savedAt > 0 && savedAt <= Date.now()
+      ? new Date(savedAt).toISOString()
+      : now
   await db.runAsync(
     `INSERT INTO documents (id, url, canonical_url, source_type, title, parse_status, parse_stage, saved_at, updated_at)
      VALUES (?, ?, ?, ?, ?, 'pending', 'fetch', ?, ?)`,
@@ -129,7 +136,7 @@ export async function createDocument(
     url,
     sourceTypeOf(url),
     hint,
-    now,
+    saved,
     now,
   )
   return { id, duplicate: false }

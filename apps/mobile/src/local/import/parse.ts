@@ -159,12 +159,31 @@ function splitCsvLine(line: string): string[] {
   return cells
 }
 
+/** Pocket 的 time_added 是 Unix 秒，其他导出多半是 ISO 日期；认不出来就当没有。 */
+function parseAddedAt(raw: string | undefined): number | null {
+  const value = (raw ?? '').trim()
+  if (!value) return null
+  // Pocket 的 time_added 是 Unix 秒
+  if (/^\d{9,11}$/.test(value)) {
+    const seconds = Number(value)
+    return Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : null
+  }
+  const parsed = Date.parse(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
 function parseCsv(content: string, skipped: ImportParseResult['skipped']): ImportItem[] {
   const lines = content.split(/\r?\n/).filter((line) => line.trim().length > 0)
   if (lines.length === 0) return []
   const header = splitCsvLine(lines[0]).map((cell) => cell.trim().toLowerCase())
-  const urlIndex = header.findIndex((cell) => cell === 'url' || cell === 'link' || cell === 'href')
-  const titleIndex = header.findIndex((cell) => cell === 'title' || cell === 'name')
+  // 各家的列名不一样：Pocket 用 given_url/given_title，Raindrop 用 url，
+  // Instapaper 的 CSV 直接是 URL / Title，统一按别名找。
+  const pick = (...names: string[]) => header.findIndex((cell) => names.includes(cell))
+  const urlIndex = pick('url', 'link', 'href', 'given_url', '地址', '链接')
+  // Pocket 同时给 given_url（短链）和 resolved_url（真实地址），优先用后者。
+  const resolvedIndex = pick('resolved_url')
+  const titleIndex = pick('title', 'name', 'given_title', '标题')
+  const addedIndex = pick('time_added', 'added', 'created', 'saved', '时间', '收藏时间')
   if (urlIndex < 0) {
     skipped.push({ line: lines[0].slice(0, 60), reason: 'CSV 里找不到 url 列' })
     return []
@@ -173,13 +192,16 @@ function parseCsv(content: string, skipped: ImportParseResult['skipped']): Impor
   const items: ImportItem[] = []
   for (const line of lines.slice(1)) {
     const cells = splitCsvLine(line)
-    const url = normalizeUrl(cells[urlIndex] ?? '')
+    const title = titleIndex >= 0 ? (cells[titleIndex] ?? '').trim() : ''
+    const rawUrl = (cells[resolvedIndex >= 0 ? resolvedIndex : -1] ?? '').trim() || (cells[urlIndex] ?? '')
+    const url = normalizeUrl(rawUrl)
     if (!url) {
-      if ((cells[urlIndex] ?? '').trim()) skipped.push({ line: (cells[urlIndex] ?? '').slice(0, 80), reason: '不是可收藏的链接' })
+      // 有标题却没链接，多半是导出时漏了；空行则不算异常，不打扰用户。
+      if (rawUrl.trim()) skipped.push({ line: rawUrl.slice(0, 80), reason: '不是可收藏的链接' })
+      else if (title) skipped.push({ line: title.slice(0, 60), reason: '这一行没有链接' })
       continue
     }
-    const title = titleIndex >= 0 ? (cells[titleIndex] ?? '').trim() : ''
-    items.push({ url, title: title || null, addedAt: null })
+    items.push({ url, title: title || null, addedAt: parseAddedAt(cells[addedIndex ?? -1]) })
   }
   return items
 }
