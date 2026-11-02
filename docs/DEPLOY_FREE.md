@@ -52,7 +52,7 @@
 仓库根目录的 `render.yaml` 已经把服务、镜像路径、健康检查和环境变量写好了。
 
 1. Render → **New** → **Blueprint** → 选这个仓库 → 它会读到 `render.yaml`。
-   也可以直接打开一键链接：<https://render.com/deploy?repo=https://github.com/wst7/xunji>（登录后即进入同一流程）。
+   也可以直接打开一键链接：<https://render.com/deploy?repo=https://github.com/wst7/trovia>（登录后即进入同一流程）。
 2. 唯一需要你填的是 `DATABASE_URL`（粘贴第 1 步的连接串）。
 3. Apply，等首次构建（`npm ci` + 前端构建 + `pip install`，约 5–10 分钟）。
 

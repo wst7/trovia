@@ -25,7 +25,7 @@
 
 ## 前置条件
 
-1. GitHub 仓库 `https://github.com/wst7/xunji` 存在、分支为 `main`，且 Northflank 能读取它（公开仓库，或在该账号内链接 GitHub 集成并授权。
+1. GitHub 仓库 `https://github.com/wst7/trovia` 存在、分支为 `main`，且 Northflank 能读取它（公开仓库，或在该账号内链接 GitHub 集成并授权。
    **从模板创建的构建服务使用 Northflank 账号里已链接的 GitHub 凭据**）。
 2. 代码已推送。`northflank.json`、`backend/`、`apps/web/` 都在同一个 commit 里。
 3. 仓库里没有 `.env`（`.gitignore` 与 `.dockerignore` 都已排除）。

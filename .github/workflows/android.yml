@@ -71,14 +71,21 @@ jobs:
       - name: 重命名产物
         run: |
           src=$(ls apps/mobile/android/app/build/outputs/apk/release/*.apk | head -n1)
-          out="xunji-${GITHUB_SHA::7}-arm64.apk"
+          # 文件名跟着产品走：打 tag 时用版本号（trovia-0.7.1-arm64.apk），
+          # 手动触发时用提交短哈希，避免同一个名字覆盖掉不同的构建。
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="${GITHUB_SHA::7}"
+          fi
+          out="trovia-${version}-arm64.apk"
           cp "$src" "$out"
           echo "APK: $out ($(du -h "$out" | cut -f1))"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: xunji-apk-${{ github.sha }}
-          path: xunji-*-arm64.apk
+          name: trovia-apk-${{ github.sha }}
+          path: trovia-*-arm64.apk
           if-no-files-found: error
           retention-days: 30
 
@@ -87,4 +94,4 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" xunji-*-arm64.apk --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" trovia-*-arm64.apk --generate-notes

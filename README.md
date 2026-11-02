@@ -4,7 +4,7 @@
 
 把链接丢进来，它读完、整理好、存在你自己手机上；以后用一句模糊的描述就能翻回来。
 
-[下载 Android 版](https://github.com/wst7/xunji/releases/latest) · [看看它长什么样](https://wst7.github.io/xunji/)
+[下载 Android 版](https://github.com/wst7/trovia/releases/latest) · [看看它长什么样](https://wst7.github.io/trovia/)
 
 ## 能做什么
 
@@ -21,7 +21,7 @@
 
 ## 安装
 
-**Android**：到 [Releases](https://github.com/wst7/xunji/releases/latest) 下载 `xunji-*-arm64.apk`。调试密钥签名，自己装没问题，上架不行。
+**Android**：到 [Releases](https://github.com/wst7/trovia/releases/latest) 下载 `trovia-*-arm64.apk`。调试密钥签名，自己装没问题，上架不行。
 
 **iPhone**：没有现成安装包，需要 Xcode 或 EAS 自建。
 

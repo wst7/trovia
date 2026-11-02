@@ -40,8 +40,8 @@ jobs:
       - name: Build landing
         run: npm run build -w @xunji/landing
         env:
-          XUNJI_APP_URL: https://github.com/wst7/xunji/releases/latest
-          XUNJI_SITE_URL: https://wst7.github.io/xunji
+          XUNJI_APP_URL: https://github.com/wst7/trovia/releases/latest
+          XUNJI_SITE_URL: https://wst7.github.io/trovia
 
       - uses: actions/upload-pages-artifact@v3
         with:
