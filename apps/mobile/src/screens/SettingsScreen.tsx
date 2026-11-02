@@ -1,12 +1,13 @@
 import Constants from 'expo-constants'
 import { Ionicons } from '@expo/vector-icons'
 import type { ComponentProps, ReactNode } from 'react'
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { TAB_BAR_HEIGHT } from '../components/AppTabBar'
+import { countReprocessTargets, reprocessAll } from '../local/rebulk'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { Divider } from '../ui/Divider'
 import { Screen } from '../ui/Screen'
@@ -124,6 +125,31 @@ export function SettingsScreen() {
   const [llmLabel, setLlmLabel] = useState('读取中…')
   const [exporting, setExporting] = useState(false)
   const [syncLabel, setSyncLabel] = useState('未配置')
+  // 整库重抓：可中断的批处理，进度写在行副标题上。
+  const [rebulk, setRebulk] = useState<{ done: number; total: number; current: string | null } | null>(null)
+  const stopRebulk = useRef(false)
+
+  const handleReprocessAll = () => {
+    if (rebulk) {
+      stopRebulk.current = true
+      return
+    }
+    stopRebulk.current = false
+    void (async () => {
+      const total = await countReprocessTargets()
+      setRebulk({ done: 0, total, current: null })
+      const result = await reprocessAll(
+        (progress) => setRebulk(progress),
+        () => stopRebulk.current,
+      )
+      setRebulk(null)
+      toast(
+        result.stopped ? `已停止，重新整理了 ${result.processed} 条。` : `重新整理完成，共 ${result.processed} 条。`,
+        { type: 'success' },
+      )
+    })()
+  }
+
   const [confirmingClear, setConfirmingClear] = useState(false)
 
   const bottomPad = insets.bottom + TAB_BAR_HEIGHT + 24
@@ -249,6 +275,18 @@ export function SettingsScreen() {
               value={stats ? `${stats.total} 条` : undefined}
               onPress={() => void handleExport()}
               accessibilityLabel="导出全部收藏"
+            />
+            <Row
+              icon="refresh-outline"
+              title={rebulk ? '停止重新整理' : '重新整理全部正文'}
+              subtitle={
+                rebulk
+                  ? `已完成 ${rebulk.done}/${rebulk.total}${rebulk.current ? ` · ${rebulk.current.slice(0, 18)}` : ''}`
+                  : '重新抓取每篇正文，取回其中较新的那版'
+              }
+              value={rebulk ? '进行中' : undefined}
+              onPress={handleReprocessAll}
+              accessibilityLabel={rebulk ? '停止重新整理' : '重新整理全部正文'}
             />
             <Row
               icon="trash-outline"
