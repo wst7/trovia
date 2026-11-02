@@ -6,6 +6,13 @@
  */
 import * as MediaLibrary from 'expo-media-library/legacy'
 
+/** 相册里的文件名：Trovia-20261102-234501.png，按时间一眼能认出来。 */
+function cleanName(extension: string, now = new Date()): string {
+  const pad = (value: number) => String(value).padStart(2, '0')
+  const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+  return `Trovia-${stamp}.${extension}`
+}
+
 type FileSystemModule = typeof import('expo-file-system/legacy')
 
 function fs(): FileSystemModule | null {
@@ -36,7 +43,7 @@ export async function saveImageToLibrary(uri: string): Promise<SaveResult> {
       // 正文图片落盘时用的是 .img 后缀（我们自己起的名字）。相册按扩展名判断类型，
       // 「.img」会被当成未知格式直接失败，所以先复制成带图片后缀的临时文件。
       const extension = /\.(png|jpe?g|webp|gif|avif)$/i.exec(uri)?.[1]?.toLowerCase() ?? 'jpg'
-      const copy = `${module.cacheDirectory ?? ''}trovia-save-${Date.now()}.${extension}`
+      const copy = `${module.cacheDirectory ?? ''}${cleanName(extension)}`
       await module.copyAsync({ from: uri, to: copy })
       try {
         await MediaLibrary.saveToLibraryAsync(copy)
@@ -48,7 +55,7 @@ export async function saveImageToLibrary(uri: string): Promise<SaveResult> {
 
     // 扩展名决定 MediaStore 认不认这个文件：远程地址里没有后缀时默认按 jpg 存。
     const remoteExtension = /\.(png|jpe?g|webp|gif|avif)(?:[?#]|$)/i.exec(uri)?.[1]?.toLowerCase() ?? 'jpg'
-    const target = `${module.cacheDirectory ?? ''}trovia-save-${Date.now()}.${remoteExtension}`
+    const target = `${module.cacheDirectory ?? ''}${cleanName(remoteExtension)}`
     const downloaded = await module.downloadAsync(uri, target)
     if (downloaded.status !== 200) {
       await module.deleteAsync(target, { idempotent: true }).catch(() => undefined)
