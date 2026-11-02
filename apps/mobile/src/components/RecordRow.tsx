@@ -152,16 +152,32 @@ export function RecentRow({
  * 搜索结果的一行：多一段「为什么找到它」。
  * 匹配理由只由真实命中证据拼出，不给它加图标或色块——证据本身够轻。
  */
+/** 把查询词在文本里标出来（大小写不敏感，中文按子串）。 */
+function highlight(text: string, terms: string[]): [...(string | { hit: string })[]] {
+  if (!text || terms.length === 0) return [text]
+  const escaped = terms
+    .filter((term) => term.length >= 2)
+    .map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .sort((a, b) => b.length - a.length)
+  if (escaped.length === 0) return [text]
+  const re = new RegExp(`(${escaped.join('|')})`, 'gi')
+  // split 带捕获组时，命中项固定落在奇数下标——这比再 test 一遍可靠。
+  return text.split(re).map((part, index) => (index % 2 === 1 ? { hit: part } : part))
+}
+
 export function ResultRow({
   item,
   onPress,
   onTerminal,
   showDate = true,
+  terms = [],
 }: {
   item: SearchResult
   onPress: () => void
   onTerminal?: (status: ParseStatus) => void
   showDate?: boolean
+  /** 当前查询的词，用来在结果里标出命中位置。 */
+  terms?: string[]
 }) {
   return (
     <Pressable
@@ -172,8 +188,16 @@ export function ResultRow({
     >
       {({ pressed }) => (
         <View style={{ opacity: pressed ? 0.55 : 1 }}>
-          <Text className="text-heading font-semibold text-ink" numberOfLines={2}>
-            {item.title || item.url}
+          <Text className="text-[15px] font-medium leading-[21px] text-ink" numberOfLines={2}>
+            {highlight(item.title || item.url, terms).map((part, i) =>
+              typeof part === 'string' ? (
+                <Text key={i}>{part}</Text>
+              ) : (
+                <Text key={i} className="font-semibold text-accent">
+                  {part.hit}
+                </Text>
+              ),
+            )}
           </Text>
           <View className="mt-1 flex-row items-center gap-2">
             <Text className="flex-shrink text-caption text-muted" numberOfLines={1}>
@@ -197,8 +221,16 @@ export function ResultRow({
             {item.match_reason}
           </Text>
           {item.matched_excerpt ? (
-            <Text className="mt-1 text-caption italic text-muted" numberOfLines={2}>
-              {item.matched_excerpt}
+            <Text className="mt-1 text-caption text-muted" numberOfLines={2}>
+              {highlight(item.matched_excerpt, terms).map((part, i) =>
+                typeof part === 'string' ? (
+                  <Text key={i}>{part}</Text>
+                ) : (
+                  <Text key={i} className="text-ink">
+                    {part.hit}
+                  </Text>
+                ),
+              )}
             </Text>
           ) : null}
         </View>

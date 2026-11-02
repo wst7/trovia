@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { ActivityIndicator, KeyboardAvoidingView, ScrollView, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { DocumentSummary, ParseStatus, SearchResult } from '@xunji/shared'
 import { errorMessage, STATUS_TEXT } from '@xunji/shared'
+import { queryTerms } from '../local/terms'
 
 import { TAB_BAR_HEIGHT } from '../components/AppTabBar'
 import { Composer } from '../components/Composer'
@@ -53,6 +54,8 @@ export function HomeScreen() {
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
   const [lastQuery, setLastQuery] = useState('')
+  // 结果里要标出「为什么这条算命中」，词来自用户输入本身，不用模型的解释。
+  const highlightTerms = useMemo(() => queryTerms(lastQuery), [lastQuery])
   const [recent, setRecent] = useState<DocumentSummary[]>([])
   const [stats, setStats] = useState<repo.DocumentStats | null>(null)
   const [writing, setWriting] = useState(false)
@@ -263,6 +266,7 @@ export function HomeScreen() {
                         {index > 0 ? <Divider /> : null}
                         <ResultRow
                           item={item}
+                          terms={highlightTerms}
                           onPress={() => router.push(`/documents/${item.document_id}`)}
                           onTerminal={handleTerminal}
                         />
@@ -280,6 +284,7 @@ export function HomeScreen() {
                             {index > 0 ? <Divider /> : null}
                             <ResultRow
                               item={item}
+                              terms={highlightTerms}
                               onPress={() => router.push(`/documents/${item.document_id}`)}
                               onTerminal={handleTerminal}
                             />
