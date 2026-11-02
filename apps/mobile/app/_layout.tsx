@@ -87,7 +87,7 @@ function RootNavigator() {
       <ClipboardPrompt enabled={ready} />
       {!ready && (
         <View className="absolute inset-0 items-center justify-center gap-2 bg-canvas">
-          <Text className="text-title font-semibold text-ink">寻迹</Text>
+          <Text className="text-title font-semibold text-ink">Trovia</Text>
           <Text className="text-caption text-muted">Save anything. Find it by memory.</Text>
         </View>
       )}
