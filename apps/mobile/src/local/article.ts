@@ -1,7 +1,7 @@
 import { load } from 'cheerio/slim'
 import type { AnyNode, Element } from 'domhandler'
 
-import { scrubAppPrompts, trimMarkdownEdges } from './noise'
+import { scrubAppPrompts, stripNoiseLines, trimMarkdownEdges } from './noise'
 import { publishedDateOf } from './published'
 import { hostOf, oneLine } from './util'
 
@@ -719,6 +719,8 @@ export function extractFromHtml(html: string, url: string): ExtractedArticle {
 
   // 放在最后一步：中途的「描述兜底」可能把整段 meta 文本塞进 markdown，
   // 那些文本里也带着「登录打开应用」这类提示语。
+  // 两头之外还有整行噪声（评分条、徽章、广告标签），这类在整篇范围按行删。
+  markdown = stripNoiseLines(markdown)
   const cleaned = scrubAppPrompts(markdown)
   if (cleaned !== markdown) {
     markdown = cleaned

@@ -86,6 +86,46 @@ export function scrubAppPrompts(markdown: string): string {
     .trim()
 }
 
+/**
+ * 正文中间那类「广告壳」行。
+ *
+ * 只能在行级做，而且必须高置信：这些行本身就是整行噪声（评分条、徽章、
+ * 广告标签），而不是「句子里提到了 advertising」。所以既有白名单词，也有
+ * 长度上限，长度超了就说明是有上下文的正文，留着。
+ */
+const ADGEBRA_LINE =
+  /^(?:advertising|advertisement|sponsored(?: by\b.*)?|scanned by\b.*|.*\bsafe web\b.*|share(?: this)?|tweet|copy link|read more|see more|show more|\d+\s*(?:comments?|reviews?|views?)|★★★★★.*)$/i
+
+/** 评分条 + 评价数：`★★★★★ 4.8/5 · 55,196 reviews` 这类。 */
+const RATING_LINE = /^[★☆]{3,}\s*[\d.]+\s*\/\s*5(?:\s*[·|]?\s*[\d,]+\s*(?:reviews?|ratings?|votes?))?/i
+
+function isAdgebraLine(line: string): boolean {
+  // 链接壳只留文字：[Scanned by Norton](…) → Scanned by Norton
+  const bare = line
+    .replace(/^(?:#{1,6}\s+|[-*]\s+|>\s*)/, '')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\*\*/g, '')
+    .trim()
+  if (!bare || bare.length > 60) return false
+  const compact = bare.replace(/\s+/g, ' ')
+  return RATING_LINE.test(compact) || ADGEBRA_LINE.test(compact)
+}
+
+/** 整篇范围内删掉高置信的广告/徽章行（两头的清理交给 trimMarkdownEdges）。 */
+export function stripNoiseLines(markdown: string): string {
+  const out: string[] = []
+  let inFence = false
+  for (const line of markdown.split('\n')) {
+    if (/^```/.test(line.trim())) {
+      inFence = !inFence
+      out.push(line)
+      continue
+    }
+    if (inFence || !isAdgebraLine(line)) out.push(line)
+  }
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
 export function trimMarkdownEdges(markdown: string, title: string | null): string {
   const lines = markdown.split('\n')
   if (lines.length === 0) return markdown
