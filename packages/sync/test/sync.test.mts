@@ -144,6 +144,14 @@ async function run() {
   assert.equal(phone.docs.size, before, '空跑同步不应再产生副本')
   console.log('✓ 重复同步收敛，不产生副本风暴')
 
+  // 5b. 没改动时不能把远端整库重拉一遍。
+  // 只有 listDirty() 时，引擎分不清「本机没有」和「本机有但没改」，
+  // 曾因此每轮都重新拉取所有记录（真机上 312 条全被算成「取回」）。
+  const idle = await pullAll(phone, 'device-phone')
+  assert.equal(idle.pulled, 0, '没有改动时不该有任何取回')
+  assert.equal(idle.pushed, 0, '没有改动时不该有任何上传')
+  console.log('✓ 无改动时同步是空转（pulled 0 / pushed 0）')
+
   console.log(`\n全部通过：云端 ${cloud.files.size} 个文件，累计 ${cloud.writes} 次写入`)
 }
 

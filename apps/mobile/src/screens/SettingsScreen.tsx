@@ -192,10 +192,11 @@ export function SettingsScreen() {
           <SectionLabel>同步</SectionLabel>
           <Group>
             <Row
-              icon="cloud-offline-outline"
-              title="多端同步"
-              subtitle="暂未开启，后续版本接入"
-              value="未开启"
+              icon="cloud-outline"
+              title="WebDAV 同步"
+              subtitle="写进你自己的网盘，不经过我们的服务器"
+              onPress={() => router.push('/settings/sync')}
+              accessibilityLabel="WebDAV 同步"
             />
             <Row
               icon="phone-portrait-outline"

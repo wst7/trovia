@@ -17,6 +17,10 @@
  *   xunji/devices/<device_id>.json  设备最后同步时间，仅用于排障
  */
 
+export { WebDavTarget } from './webdav'
+// LocalDirTarget 依赖 node:fs，只在桌面/测试里用，不从入口导出，
+// 否则移动端一引 @xunji/sync 就会把 node 内置模块带进 RN 的类型检查。
+
 export interface SyncTarget {
   /** 列出某个前缀下的文件；path 是相对根目录的路径，如 `docs/abc.json`。 */
   list(prefix: string): Promise<SyncEntry[]>
@@ -165,8 +169,16 @@ export async function syncOnce(options: SyncOptions): Promise<SyncReport> {
       continue
     }
 
-    // 只在远端：拉下来（墓碑交给 store 处理删除）。
+    // 只在远端：分两种情况。
+    // 一是本机真的没有这条（拉取）；二是本机有、但自上次同步后没改过——
+    // 这种不会出现在 listDirty 里，只能靠基准 rev 认出来，否则每轮都会把整库重拉一遍。
     if (!local && remote) {
+      const base = baseRevs.get(id) ?? 0
+      if (base > 0) {
+        if (remote.rev > base) pull(remote)
+        // 相同 rev 说明两端一致，什么都不用做。
+        continue
+      }
       pull(remote)
       continue
     }
@@ -203,7 +215,9 @@ export async function syncOnce(options: SyncOptions): Promise<SyncReport> {
   }
 
   if (applied.length > 0) await store.applyRemote(applied)
-  if (pushedRecords.length > 0) await store.markSynced(pushedRecords, syncedAt)
+  // 即使这次什么都没推进也要标记一次：界面上的「上次同步」应该是「上次尝试」，
+  // 否则用户会以为同步没生效。
+  await store.markSynced(pushedRecords, syncedAt)
 
   return { pushed, pulled, deleted, conflicts, conflictNames, syncedAt }
 }

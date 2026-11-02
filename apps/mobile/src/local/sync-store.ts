@@ -1,0 +1,228 @@
+/**
+ * 同步引擎在本机的落地：把 SQLite 里的收藏喂给 LocalStore。
+ *
+ * 三个容易踩的点，都在这里一次性处理掉：
+ *
+ * 1. **rev 由触发器维护**。db.ts 里 documents_rev_bump 会在每次 UPDATE 且 rev 未变时
+ *    自动 +1，所以所有写路径（解析、状态流转、删除）都不用自己改 rev。
+ *    代价是「落地远端记录」时必须显式写 rev = 远端 rev，否则本地又变成「改过」，
+ *    下一轮就会把刚拉下来的内容原样推回去，来回同步永不收敛。
+ *
+ * 2. **墓碑也要进 dirty**。已删除的条目如果不推上去，另一台设备会把它当「远端没有」而复活。
+ *
+ * 3. **不同步 image_files**。那是本机文件路径（documentDirectory 下的绝对路径），
+ *    传到别的设备上是废字符串；图片本身按正文里的远程地址在新设备重新下载。
+ */
+import type { LocalStore, SyncRecord } from '@xunji/sync'
+
+import { getDb } from './db'
+
+/** 参与同步的字段：用户内容 + 元信息，不含本机路径与索引。 */
+const PAYLOAD_FIELDS = [
+  'url',
+  'canonical_url',
+  'title',
+  'site_name',
+  'source_type',
+  'author',
+  'published_at',
+  'description',
+  'summary_short',
+  'summary_long',
+  'keywords',
+  'topics',
+  'language',
+  'content_markdown',
+  'plain_text',
+  'images',
+  'saved_at',
+  'metadata',
+] as const
+
+const JSON_FIELDS = new Set(['keywords', 'topics', 'images'])
+const MAX_BODY_BYTES = 2 * 1024 * 1024
+
+interface SyncRow {
+  id: string
+  updated_at: string
+  deleted_at: string | null
+  rev: number
+  [key: string]: unknown
+}
+
+function parseJson(value: unknown): unknown {
+  if (typeof value !== 'string' || value.length === 0) return null
+  try {
+    return JSON.parse(value)
+  } catch {
+    return null
+  }
+}
+
+function truncateBody(markdown: unknown): unknown {
+  if (typeof markdown !== 'string' || markdown.length <= MAX_BODY_BYTES) return markdown
+  // 按字符截断即可，2MB 的正文已经是极端情况，不需要精确字节对齐。
+  return `${markdown.slice(0, MAX_BODY_BYTES)}\n\n（正文过长，同步时已截断）`
+}
+
+function toRecord(row: SyncRow): SyncRecord {
+  const payload: Record<string, unknown> = {}
+  for (const field of PAYLOAD_FIELDS) {
+    const value = row[field]
+    if (field === 'content_markdown') {
+      payload[field] = truncateBody(value)
+      continue
+    }
+    payload[field] = JSON_FIELDS.has(field) ? (parseJson(value) ?? []) : field === 'metadata' ? (parseJson(value) ?? {}) : value
+  }
+  return {
+    id: row.id,
+    updated_at: row.updated_at,
+    deleted_at: row.deleted_at ?? null,
+    rev: typeof row.rev === 'number' ? row.rev : 1,
+    payload,
+  }
+}
+
+function stringOf(payload: Record<string, unknown>, key: string): string | null {
+  const value = payload[key]
+  if (value === null || value === undefined) return null
+  return typeof value === 'string' ? value : JSON.stringify(value)
+}
+
+function arrayAsJson(payload: Record<string, unknown>, key: string): string {
+  const value = payload[key]
+  if (Array.isArray(value)) return JSON.stringify(value)
+  if (typeof value === 'string' && value.trim().startsWith('[')) return value
+  return '[]'
+}
+
+async function listDirty(): Promise<SyncRecord[]> {
+  const db = await getDb()
+  const rows = await db.getAllAsync<SyncRow>(
+    `SELECT d.* FROM documents d
+      WHERE d.rev > COALESCE((SELECT b.rev FROM sync_base b WHERE b.doc_id = d.id), 0)
+      ORDER BY d.updated_at ASC
+      LIMIT 500`,
+  )
+  return rows.map(toRecord)
+}
+
+async function baseRevs(): Promise<Map<string, number>> {
+  const db = await getDb()
+  const rows = await db.getAllAsync<{ doc_id: string; rev: number }>('SELECT doc_id, rev FROM sync_base')
+  return new Map(rows.map((row) => [row.doc_id, row.rev]))
+}
+
+async function applyRemote(records: SyncRecord[]): Promise<void> {
+  const db = await getDb()
+  for (const record of records) {
+    const payload = record.payload ?? {}
+    const existing = await db.getFirstAsync<{ updated_at: string; deleted_at: string | null }>(
+      'SELECT updated_at, deleted_at FROM documents WHERE id = ?',
+      record.id,
+    )
+
+    // 墓碑：本机有就跟着删，没有就什么都不做（不留空壳）。
+    if (record.deleted_at) {
+      if (!existing || existing.deleted_at) continue
+      await db.runAsync(
+        'UPDATE documents SET deleted_at = ?, updated_at = ?, rev = ? WHERE id = ?',
+        record.deleted_at,
+        record.updated_at,
+        record.rev,
+        record.id,
+      )
+      continue
+    }
+
+    if (existing) {
+      // 远端更旧就不动；相等也不动，避免把本机正在整理的正文覆盖掉。
+      if (existing.updated_at >= record.updated_at) continue
+      await db.runAsync(
+        `UPDATE documents SET
+           url = COALESCE(?, url), canonical_url = COALESCE(?, canonical_url), title = ?, site_name = ?,
+           source_type = COALESCE(?, source_type), author = ?, published_at = ?, description = ?,
+           summary_short = ?, summary_long = ?, keywords = ?, topics = ?, language = ?,
+           content_markdown = ?, plain_text = ?, images = ?,
+           search_text = COALESCE(?, search_text),
+           updated_at = ?, deleted_at = NULL, rev = ?
+         WHERE id = ?`,
+        stringOf(payload, 'url'),
+        stringOf(payload, 'canonical_url'),
+        stringOf(payload, 'title'),
+        stringOf(payload, 'site_name'),
+        stringOf(payload, 'source_type'),
+        stringOf(payload, 'author'),
+        stringOf(payload, 'published_at'),
+        stringOf(payload, 'description'),
+        stringOf(payload, 'summary_short'),
+        stringOf(payload, 'summary_long'),
+        arrayAsJson(payload, 'keywords'),
+        arrayAsJson(payload, 'topics'),
+        stringOf(payload, 'language'),
+        stringOf(payload, 'content_markdown'),
+        stringOf(payload, 'plain_text'),
+        arrayAsJson(payload, 'images'),
+        stringOf(payload, 'plain_text'),
+        record.updated_at,
+        record.rev,
+        record.id,
+      )
+      continue
+    }
+
+    // 本机没有：整条插入。可能撞「同一链接只保留一条」的唯一索引——
+    // 那是同一篇文章在两台设备上各自收藏过，跳过就好，不能让整轮同步失败。
+    try {
+      await db.runAsync(
+        `INSERT INTO documents (
+           id, url, canonical_url, title, site_name, source_type, author, published_at, description,
+           summary_short, summary_long, keywords, topics, language, content_markdown, plain_text,
+           images, image_files, search_text, parse_status, parse_stage, parse_error_code,
+           saved_at, last_parsed_at, updated_at, rev, deleted_at, metadata
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '[]', ?, 'completed', NULL, NULL, ?, NULL, ?, ?, NULL, ?)`,
+        record.id,
+        stringOf(payload, 'url') ?? '',
+        stringOf(payload, 'canonical_url') ?? '',
+        stringOf(payload, 'title'),
+        stringOf(payload, 'site_name'),
+        stringOf(payload, 'source_type') ?? 'web',
+        stringOf(payload, 'author'),
+        stringOf(payload, 'published_at'),
+        stringOf(payload, 'description'),
+        stringOf(payload, 'summary_short'),
+        stringOf(payload, 'summary_long'),
+        arrayAsJson(payload, 'keywords'),
+        arrayAsJson(payload, 'topics'),
+        stringOf(payload, 'language'),
+        stringOf(payload, 'content_markdown'),
+        stringOf(payload, 'plain_text'),
+        arrayAsJson(payload, 'images'),
+        stringOf(payload, 'plain_text') ?? '',
+        stringOf(payload, 'saved_at') ?? record.updated_at,
+        record.updated_at,
+        record.rev,
+        stringOf(payload, 'metadata') ?? '{}',
+      )
+    } catch {
+      // 唯一索引冲突或字段约束：跳过这一条，其他记录照常落库。
+    }
+  }
+}
+
+async function markSynced(records: SyncRecord[], syncedAt: string): Promise<void> {
+  const db = await getDb()
+  for (const record of records) {
+    await db.runAsync(
+      'INSERT OR REPLACE INTO sync_base (doc_id, rev) VALUES (?, ?)',
+      record.id,
+      record.rev,
+    )
+  }
+  await db.runAsync("INSERT OR REPLACE INTO settings (key, value) VALUES ('sync_last_at', ?)", syncedAt)
+}
+
+export function createSyncStore(): LocalStore {
+  return { listDirty, baseRevs, applyRemote, markSynced }
+}

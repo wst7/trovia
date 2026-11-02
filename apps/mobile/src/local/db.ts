@@ -46,6 +46,8 @@ CREATE TABLE IF NOT EXISTS documents (
   saved_at          TEXT NOT NULL,
   last_parsed_at    TEXT,
   updated_at        TEXT NOT NULL,
+  -- 每次写入 +1，同步用它区分「没变」和「两端都改了」。
+  rev               INTEGER NOT NULL DEFAULT 1,
   deleted_at        TEXT,
   metadata          TEXT NOT NULL DEFAULT '{}'
 );
@@ -66,6 +68,12 @@ CREATE TABLE IF NOT EXISTS doc_vectors (
   updated_at   TEXT NOT NULL
 );
 
+-- 每台设备记住「上次同步时这条是哪个 rev」，三方比较的基准。
+CREATE TABLE IF NOT EXISTS sync_base (
+  doc_id TEXT PRIMARY KEY NOT NULL,
+  rev    INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS settings (
   key   TEXT PRIMARY KEY NOT NULL,
   value TEXT NOT NULL
@@ -77,6 +85,21 @@ CREATE TABLE IF NOT EXISTS settings (
   if (!columns.some((column) => column.name === 'images')) {
     await db.runAsync("ALTER TABLE documents ADD COLUMN images TEXT NOT NULL DEFAULT '[]'")
   }
+  // 同步用的 rev：老库补列，并用触发器在每次 UPDATE 时自增，
+  // 这样所有写路径（解析、状态、删除）都不用各自记得改 rev。
+  if (!columns.some((column) => column.name === 'rev')) {
+    await db.runAsync('ALTER TABLE documents ADD COLUMN rev INTEGER NOT NULL DEFAULT 1')
+  }
+  await db.runAsync(`
+    CREATE TRIGGER IF NOT EXISTS documents_rev_bump
+    AFTER UPDATE ON documents
+    FOR EACH ROW
+    WHEN NEW.rev = OLD.rev
+    BEGIN
+      UPDATE documents SET rev = OLD.rev + 1 WHERE id = OLD.id;
+    END;
+  `)
+
   // 图片落盘后的本地路径，与 images 按下标对齐；空字符串表示这张没存下来。
   if (!columns.some((column) => column.name === 'image_files')) {
     await db.runAsync("ALTER TABLE documents ADD COLUMN image_files TEXT NOT NULL DEFAULT '[]'")
