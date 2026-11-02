@@ -22,3 +22,21 @@ export function dayLabel(iso: string, now: Date = new Date()): string {
   if (date.getFullYear() === now.getFullYear()) return `${date.getMonth() + 1}月${date.getDate()}日`
   return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`
 }
+
+/**
+ * 「多久以前」：同步状态这类地方要的是跨度，不是日期。
+ * 一小时内说分钟，当天说小时，再往前交给 dayLabel。
+ */
+export function relativeTime(iso: string, now: Date = new Date()): string {
+  const at = new Date(iso)
+  if (Number.isNaN(at.getTime())) return ''
+
+  const minutes = Math.floor((now.getTime() - at.getTime()) / 60_000)
+  if (minutes < 1) return '刚刚'
+  if (minutes < 60) return `${minutes} 分钟前`
+
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24 && startOfDay(now) === startOfDay(at)) return `${hours} 小时前`
+
+  return dayLabel(iso, now)
+}

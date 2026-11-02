@@ -8,6 +8,7 @@ import { useColorScheme } from 'react-native'
 
 import '../global.css'
 
+import { maybeAutoSync } from '../src/local/auto-sync'
 import { ClipboardPrompt } from '../src/components/ClipboardPrompt'
 import { getDb } from '../src/local/db'
 import { processPendingQueue } from '../src/local/pipeline'
@@ -57,10 +58,13 @@ function RootNavigator() {
         if (!cancelled) setReady(true)
       }
       void processPendingQueue()
+      void maybeAutoSync()
     })()
 
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void processPendingQueue()
+      if (state !== 'active') return
+      void processPendingQueue()
+      void maybeAutoSync()
     })
     return () => {
       cancelled = true

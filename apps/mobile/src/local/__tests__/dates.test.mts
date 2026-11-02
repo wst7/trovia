@@ -3,7 +3,7 @@
  * 跑法：npx tsx apps/mobile/src/local/__tests__/dates.test.mts
  */
 import assert from 'node:assert/strict'
-import { dayLabel } from '../dates.ts'
+import { dayLabel, relativeTime } from '../dates.ts'
 
 const now = new Date('2026-11-02T10:00:00+08:00')
 
@@ -21,3 +21,11 @@ const a = dayLabel('2026-11-01T09:00:00+08:00', now)
 const b = dayLabel('2026-11-01T21:00:00+08:00', now)
 assert.equal(a, b)
 console.log('✓ 同一天不同时间标签一致')
+
+// 同步状态里的「多久以前」
+assert.equal(relativeTime('2026-11-02T09:59:40+08:00', now), '刚刚')
+assert.equal(relativeTime('2026-11-02T09:35:00+08:00', now), '25 分钟前')
+assert.equal(relativeTime('2026-11-02T06:00:00+08:00', now), '4 小时前')
+assert.equal(relativeTime('2026-11-01T20:00:00+08:00', now), '昨天', '跨天不说小时')
+assert.equal(relativeTime('2026-10-20T10:00:00+08:00', now), '10月20日')
+console.log('✓ 相对时间：刚刚/分钟/小时/昨天/日期')

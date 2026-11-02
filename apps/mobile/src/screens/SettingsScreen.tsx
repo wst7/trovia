@@ -12,7 +12,10 @@ import { Divider } from '../ui/Divider'
 import { Screen } from '../ui/Screen'
 import { usePalette } from '../ui/palette'
 import { emitChange } from '../local/bus'
+import { isSyncConfigured } from '../local/auto-sync'
 import { clearAllDocuments } from '../local/db'
+import { relativeTime } from '../local/dates'
+import { lastSyncAt } from '../local/sync-config'
 import { writeExport } from '../local/exporter'
 import { listAllForExport } from '../local/repo'
 import { loadLlmState } from '../local/llm'
@@ -120,15 +123,22 @@ export function SettingsScreen() {
   const [stats, setStats] = useState<DocumentStats | null>(null)
   const [llmLabel, setLlmLabel] = useState('读取中…')
   const [exporting, setExporting] = useState(false)
+  const [syncLabel, setSyncLabel] = useState('未配置')
   const [confirmingClear, setConfirmingClear] = useState(false)
 
   const bottomPad = insets.bottom + TAB_BAR_HEIGHT + 24
 
   const reload = useCallback(async () => {
     try {
-      const [nextStats, llm] = await Promise.all([repo.documentStats(), loadLlmState()])
+      const [nextStats, llm, configured, syncedAt] = await Promise.all([
+        repo.documentStats(),
+        loadLlmState(),
+        isSyncConfigured(),
+        lastSyncAt(),
+      ])
       setStats(nextStats)
       setLlmLabel(llm.enabled ? `已开启 · ${llm.model || '未命名模型'}` : '关闭')
+      setSyncLabel(!configured ? '未配置' : syncedAt ? `${relativeTime(syncedAt)}同步` : '等待首次同步')
     } catch {
       // 读本地库失败时保持上一次的值，不打断用户。
     }
@@ -195,6 +205,7 @@ export function SettingsScreen() {
               icon="cloud-outline"
               title="WebDAV 同步"
               subtitle="写进你自己的网盘，不经过我们的服务器"
+              value={syncLabel}
               onPress={() => router.push('/settings/sync')}
               accessibilityLabel="WebDAV 同步"
             />
