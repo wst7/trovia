@@ -159,7 +159,8 @@ export function LlmSettingsScreen() {
           <Text className="text-title font-semibold text-ink">大模型</Text>
           <Text className="mt-2 text-body-sm text-muted">
             可选。打开后新收藏会交给你自己的模型写摘要与关键词；关闭时从原文离线抽取，不上传任何内容。
-            搜索时只把这一句话发给模型，不会发送你的收藏内容。
+            搜索时会把那句话发给模型理解意图；语义检索还要把正文片段发去算向量——这一项可以在下面单独关掉。
+            请求都直接发往你填的地址，我们不中转，也没有存这样的服务器。
           </Text>
 
           <View className="mt-6 flex-row items-center gap-3">
@@ -181,6 +182,7 @@ export function LlmSettingsScreen() {
               <Text className="text-body-sm text-ink">用模型理解搜索意图</Text>
               <Text className="mt-1 text-caption text-muted">
                 把「上次存的那篇讲睡眠的」这类话翻译成时间与关键词；不打开时只用本地规则。
+                打开后，你输入的搜索词会发给上面那个地址；内容本身不会被发出去。
               </Text>
             </View>
             <Switch
@@ -198,6 +200,8 @@ export function LlmSettingsScreen() {
               <Text className="text-body-sm text-ink">语义补充检索</Text>
               <Text className="mt-1 text-caption text-muted">
                 字面没找到时，用向量找意思相近的内容，单独列在下面，不参与主排序。
+                打开后要为每篇正文建向量，第一次会把正文片段逐篇发给上面填的地址算一遍，比较慢；
+                关掉只影响「意思相近」，按字面搜索完全不受影响。
               </Text>
             </View>
             <Switch
