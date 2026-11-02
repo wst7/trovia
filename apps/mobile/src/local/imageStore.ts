@@ -73,11 +73,17 @@ export async function cacheImages(docId: string, urls: string[], referer: string
     const target = `${dir}${nameOf(index, url)}`
     try {
       const existing = await module.getInfoAsync(target)
+      // 「文件存在」不等于「图片可用」：404 也会写下一个 0 字节的空壳。
+      // 空壳必须删掉重下，否则这一张永远是白图，而且永远不会重试。
       if (existing.exists) {
-        out.push(target)
-        continue
+        const existingSize = 'size' in existing ? Number(existing.size ?? 0) : 0
+        if (existingSize > 0) {
+          out.push(target)
+          continue
+        }
+        await module.deleteAsync(target, { idempotent: true }).catch(() => undefined)
       }
-    } catch {
+    } catch (error) {
       // 查不到就当不存在，继续下载
     }
 
@@ -91,6 +97,13 @@ export async function cacheImages(docId: string, urls: string[], referer: string
       }
       const info = await module.getInfoAsync(target)
       const size = info.exists && 'size' in info ? Number(info.size ?? 0) : 0
+      // 0 字节说明这次没下到真东西（404 页面、空响应）。删掉，否则 getInfoAsync 下次
+      // 会认为「已经存过」，这个位置永远是一张空白图，再也不重试。
+      if (size === 0) {
+        await module.deleteAsync(target, { idempotent: true }).catch(() => undefined)
+        out.push('')
+        continue
+      }
       if (size > MAX_BYTES) {
         await module.deleteAsync(target, { idempotent: true })
         out.push('')
@@ -105,6 +118,24 @@ export async function cacheImages(docId: string, urls: string[], referer: string
 }
 
 /** 删除这篇收藏的图片目录；删除收藏时调用，避免文件残留。 */
+/** 磁盘上真实可用的张数：0 字节或文件不存在都不算。 */
+export async function usableImageCount(files: string[]): Promise<number> {
+  const module = fs()
+  if (!module) return 0
+  let count = 0
+  for (const file of files) {
+    if (!file) continue
+    try {
+      // legacy 的 getInfoAsync 不接受 { size: true } 的类型；返回值里本来就带 size。
+      const info = await module.getInfoAsync(file)
+      if (info.exists && 'size' in info && Number(info.size ?? 0) > 0) count += 1
+    } catch {
+      // 查不到就当没有
+    }
+  }
+  return count
+}
+
 export async function removeImages(docId: string): Promise<void> {
   const module = fs()
   const dir = dirOf(docId)

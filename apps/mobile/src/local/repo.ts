@@ -366,6 +366,31 @@ export async function markForRetry(id: string): Promise<void> {
  * 删除写墓碑而不是物理删除：本机不再显示，但保留更新与删除时间，
  * 以后接入多端同步时可以直接传播这次删除。
  */
+/**
+ * 有图片地址的收藏（按最近更新排序）。
+ *
+ * 要不要补图不能只看数据库里的 image_files 字段：字段写着路径、文件却可能已经
+ * 被删掉或者是 0 字节（404 响应也会写一个空文件）。真正的判断在 image-hydrate 里，
+ * 这里只负责把候选捞出来。
+ */
+export async function listWithImages(limit = 20): Promise<{ id: string; url: string; images: string[]; imageFiles: string[] }[]> {
+  const db = await getDb()
+  const rows = await db.getAllAsync<{ id: string; url: string; images: string; image_files: string }>(
+    `SELECT id, url, images, image_files FROM documents
+      WHERE deleted_at IS NULL AND images <> '[]'
+      ORDER BY updated_at DESC LIMIT ?`,
+    limit,
+  )
+  return rows
+    .map((row) => ({
+      id: row.id,
+      url: row.url,
+      images: parseJsonArray(row.images),
+      imageFiles: parseJsonArray(row.image_files ?? '[]'),
+    }))
+    .filter((row) => row.images.length > 0)
+}
+
 /** 导入去重用：本机已有的全部链接。 */
 export async function listUrls(): Promise<string[]> {
   const db = await getDb()

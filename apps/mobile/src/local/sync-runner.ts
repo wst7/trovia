@@ -8,6 +8,7 @@ import { syncOnce } from '@xunji/sync'
 import type { SyncReport } from '@xunji/sync'
 import { WebDavTarget } from '@xunji/sync/webdav'
 
+import { hydrateImages } from './image-hydrate'
 import { deviceId, loadConfig, loadPassword } from './sync-config'
 import type { WebDavConfig } from './sync-config'
 import { createSyncStore } from './sync-store'
@@ -47,12 +48,18 @@ export async function syncNow(): Promise<SyncReport> {
   const target = await targetOf(config)
   await target.ensureDir('docs')
 
-  return syncOnce({
+  const report = await syncOnce({
     target,
     store: createSyncStore(),
     deviceId: await deviceId(),
     now: () => new Date().toISOString(),
   })
+
+  // 拉下来的条目只有图片地址。补图放在同步之后、不阻塞结果：
+  // 用户先看到列表，图片在后台一张张补进本机。
+  if (report.pulled > 0) void hydrateImages().catch(() => undefined)
+
+  return report
 }
 
 /** 报告变成一句人话，界面和 Toast 共用。 */
