@@ -289,6 +289,18 @@ export function DocumentsScreen() {
               showDate={false}
               selecting={selecting}
               selected={selected.has(item.id)}
+              onRetry={
+                failedOnly
+                  ? () => {
+                      void (async () => {
+                        await repo.markForRetry(item.id)
+                        void processPendingQueue()
+                        toast('已重新排队这一条。', { type: 'success' })
+                        reload()
+                      })()
+                    }
+                  : undefined
+              }
             />
           </View>
           )

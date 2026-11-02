@@ -66,6 +66,7 @@ export function RecentRow({
   showDate = true,
   selected,
   selecting = false,
+  onRetry,
 }: {
   item: DocumentSummary
   onPress: () => void
@@ -76,6 +77,8 @@ export function RecentRow({
   /** 多选模式下的选中状态；undefined 表示不在多选模式。 */
   selected?: boolean
   selecting?: boolean
+  /** 单条重试：只有「没能整理」筛选里才给，其它场景不该出现这个入口。 */
+  onRetry?: () => void
 }) {
   const p = usePalette()
   // 缩略图优先级：本机文件 > 远程地址 > 不显示（很多站点没有正文图）。
@@ -135,6 +138,12 @@ export function RecentRow({
                 errorCode={item.parse_error_code}
                 onTerminal={onTerminal}
               />
+              {onRetry ? (
+                <Pressable onPress={onRetry} hitSlop={10} accessibilityRole="button" accessibilityLabel="重试这一条">
+                  {/* 行内重试不用强调色：一屏七个红字，强调色就失效了。 */}
+                  <Text className="text-caption text-ink">重试</Text>
+                </Pressable>
+              ) : null}
             </View>
           </View>
         </View>
