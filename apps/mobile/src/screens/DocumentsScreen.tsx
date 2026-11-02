@@ -35,11 +35,12 @@ export function DocumentsScreen() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [retryable, setRetryable] = useState(0)
+  const [failed, setFailed] = useState(0)
   const [retrying, setRetrying] = useState(false)
   const [selecting, setSelecting] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [failedOnly, setFailedOnly] = useState(false)
 
   const keyword = useDebouncedValue(keywordInput.trim(), 300)
   const requestSeq = useRef(0)
@@ -53,13 +54,21 @@ export function DocumentsScreen() {
       else setLoadingMore(true)
 
       try {
-        const res = await repo.listDocuments({ page: nextPage, pageSize: PAGE_SIZE, keyword })
+        const res = await repo.listDocuments({
+          page: nextPage,
+          pageSize: PAGE_SIZE,
+          keyword,
+          failedOnly,
+        })
         if (seq !== requestSeq.current) return
         setItems((current) => (mode === 'replace' ? res.items : [...current, ...res.items]))
         setTotal(res.total)
         setPage(nextPage)
         setError(null)
-        void repo.countRetryableFailed().then(setRetryable).catch(() => undefined)
+        void repo
+          .documentStats()
+          .then((stats) => setFailed(stats.failed))
+          .catch(() => undefined)
       } catch (e) {
         if (seq !== requestSeq.current) return
         setError(errorMessage(e, '加载收藏列表失败，请稍后重试。'))
@@ -71,7 +80,7 @@ export function DocumentsScreen() {
         }
       }
     },
-    [keyword],
+    [keyword, failedOnly],
   )
 
   useEffect(() => {
@@ -155,7 +164,13 @@ export function DocumentsScreen() {
         return
       }
       setRetrying(false)
-      toast(`已重新排队 ${count} 条，正在后台整理。`, { type: 'success' })
+      const skipped = Math.max(0, failed - count)
+      toast(
+        skipped > 0
+          ? `已重新排队 ${count} 条；另外 ${skipped} 条被站点拒绝，重试没有意义。`
+          : `已重新排队 ${count} 条，正在后台整理。`,
+        { type: 'success' },
+      )
       reload()
       void processPendingQueue()
     } catch {
@@ -177,7 +192,7 @@ export function DocumentsScreen() {
   }
 
   const hasMore = items.length < total
-  const unit = loading ? '正在加载…' : keyword ? '条匹配' : '条内容'
+  const unit = loading ? '正在加载…' : keyword || failedOnly ? '条匹配' : '条内容'
 
   return (
     <Screen>
@@ -226,10 +241,10 @@ export function DocumentsScreen() {
               </View>
             )}
 
-            {retryable > 0 ? (
+            {failed > 0 ? (
               <View className="mt-3 flex-row items-center justify-between">
-                <Text className="flex-1 text-body-sm text-muted">
-                  {retryable} 条没能整理（含在 {total} 条里）
+                <Text className="flex-1 text-body-sm text-muted" onPress={() => setFailedOnly((on) => !on)}>
+                  {failedOnly ? '只看没能整理的，点这里回到全部' : `${failed} 条没能整理（含在 ${total} 条里）`}
                 </Text>
                 <TextButton
                   label={retrying ? '正在排队…' : '重试全部'}
@@ -286,7 +301,7 @@ export function DocumentsScreen() {
           ) : error ? undefined : (
             <View className="mt-10">
               <Text className="text-body text-ink">
-                {keyword ? '没有匹配的收藏。' : '还没有收藏。'}
+                {failedOnly ? '没有没能整理的内容。' : keyword ? '没有匹配的收藏。' : '还没有收藏。'}
               </Text>
               <Text className="mt-1 text-body-sm text-muted">
                 {keyword

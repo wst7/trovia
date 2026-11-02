@@ -160,6 +160,8 @@ export async function listDocuments(options: {
   page: number
   pageSize: number
   keyword?: string
+  /** 只看没能整理的条目：失败汇总点进去就是它。 */
+  failedOnly?: boolean
 }): Promise<{ items: DocumentSummary[]; total: number }> {
   const db = await getDb()
   const keyword = options.keyword?.trim() ?? ''
@@ -167,10 +169,14 @@ export async function listDocuments(options: {
   const pageSize = Math.max(1, options.pageSize)
   const offset = (page - 1) * pageSize
 
-  const where = keyword
-    ? 'deleted_at IS NULL AND (title LIKE ? OR summary_short LIKE ? OR search_text LIKE ?)'
-    : 'deleted_at IS NULL'
-  const params: (string | number)[] = keyword ? [`%${keyword}%`, `%${keyword}%`, `%${keyword}%`] : []
+  const clauses: string[] = ['deleted_at IS NULL']
+  const params: (string | number)[] = []
+  if (options.failedOnly) clauses.push("parse_status = 'failed'")
+  if (keyword) {
+    clauses.push('(title LIKE ? OR summary_short LIKE ? OR search_text LIKE ?)')
+    params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`)
+  }
+  const where = clauses.join(' AND ')
 
   const totalRow = await db.getFirstAsync<{ total: number }>(
     `SELECT COUNT(*) AS total FROM documents WHERE ${where}`,
