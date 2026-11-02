@@ -10,6 +10,7 @@ import {
 } from '@xunji/shared'
 
 import { ImageViewer } from '../components/ImageViewer'
+import { removeImages } from '../local/imageStore'
 import { LiveStatusMark } from '../components/LiveStatusMark'
 import { Markdown } from '../components/Markdown'
 import { processPendingQueue } from '../local/pipeline'
@@ -116,6 +117,7 @@ export function DocumentDetailScreen() {
     setDeleting(true)
     try {
       await repo.deleteDocument(id)
+      await removeImages(id)
       toast('已删除这篇收藏。')
       if (router.canGoBack()) router.back()
       else router.replace('/documents')
@@ -181,6 +183,15 @@ export function DocumentDetailScreen() {
   }
 
   const bodySource = doc.content_markdown ?? doc.plain_text ?? ''
+  // 图片落盘后同一张图有两个地址：本地文件优先，远程只作兜底。
+  const localByRemote = new Map<string, string>()
+  const remoteImages = doc.images ?? []
+  const localFiles = doc.image_files ?? []
+  remoteImages.forEach((remote, index) => {
+    const local = localFiles[index]
+    if (local) localByRemote.set(remote, local)
+  })
+  const resolveImage = (url: string) => localByRemote.get(url) ?? url
   // 被站点拒绝时重试没有意义（再点一次还是 403），别给用户假动作。
   const blockedBySite = doc?.parse_error_code === 'FETCH_BLOCKED' || doc?.parse_error_code === 'APP_ONLY_LINK'
   const canReprocess = status === 'partial' || (status === 'failed' && !blockedBySite)
@@ -268,6 +279,7 @@ export function DocumentDetailScreen() {
             {bodySource ? (
               <Markdown
                 source={bodySource}
+                resolveImage={resolveImage}
                 onImagePress={(url, images) =>
                   setViewer({ open: true, index: Math.max(0, images.indexOf(url)), images })
                 }
@@ -282,15 +294,17 @@ export function DocumentDetailScreen() {
           <View className="mt-8">
             <Text className="text-[11px] font-semibold tracking-[1px] text-faint">图片</Text>
             <View className="mt-3 gap-2">
-              {doc.images.slice(0, 4).map((uri, i) => (
+              {remoteImages.slice(0, 4).map((uri, i) => (
                 <Pressable
                   key={uri}
-                  onPress={() => setViewer({ open: true, index: i, images: doc.images ?? [] })}
+                  onPress={() =>
+                    setViewer({ open: true, index: i, images: remoteImages.map((remote) => resolveImage(remote)) })
+                  }
                   accessibilityRole="imagebutton"
                   accessibilityLabel="查看大图"
                 >
                   <Image
-                    source={{ uri }}
+                    source={{ uri: resolveImage(uri) }}
                     className="w-full rounded-sm bg-sunken"
                     style={{ height: 200 }}
                     resizeMode="cover"
@@ -302,7 +316,7 @@ export function DocumentDetailScreen() {
             {doc.images.length > 4 ? (
               <Text
                 className="mt-2 text-caption text-faint"
-                onPress={() => setViewer({ open: true, index: 0, images: doc.images ?? [] })}
+                onPress={() => setViewer({ open: true, index: 0, images: remoteImages.map((remote) => resolveImage(remote)) })}
               >
                 共 {doc.images.length} 张，点开可放大查看
               </Text>

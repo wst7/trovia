@@ -110,15 +110,19 @@ function ArticleImage({ uri, onPress }: { uri: string; onPress?: () => void }) {
 export function Markdown({
   source,
   onImagePress,
+  resolveImage,
 }: {
   source: string
   /** 点开图片：把整篇的图片一起传出去，方便左右翻。 */
   onImagePress?: (url: string, images: string[]) => void
+  /** 远程地址 → 本地文件；图片落盘后详情页靠它离线显示。 */
+  resolveImage?: (url: string) => string
 }) {
   // 图片一律单独成段：段里既有字又有图时，也要保持原来的先后顺序。
   const normalized = source.replace(/(!\[[^\]]*\]\([^)\s]+\))/g, '\n\n$1\n\n')
   const images = [...new Set([...source.matchAll(/!\[[^\]]*\]\(([^)\s]+)\)/g)].map((match) => match[1]))]
-  return <View>{renderBlocks(normalized, onImagePress, images)}</View>
+  const resolved = images.map((url) => resolveImage?.(url) ?? url)
+  return <View>{renderBlocks(normalized, onImagePress, resolved, resolveImage)}</View>
 }
 
 const HEADING_CLASS = [
@@ -134,6 +138,7 @@ function renderBlocks(
   source: string,
   onImagePress?: (url: string, images: string[]) => void,
   images: string[] = [],
+  resolveImage?: (url: string) => string,
 ): ReactNode[] {
   const lines = source.split(/\r?\n/)
   const blocks: ReactNode[] = []
@@ -220,7 +225,8 @@ function renderBlocks(
     if (imageMatch) {
       flushAll()
       const key = nextKey('img')
-      const uri = imageMatch[1]
+      const remote = imageMatch[1]
+      const uri = resolveImage?.(remote) ?? remote
       blocks.push(<ArticleImage key={key} uri={uri} onPress={onImagePress ? () => onImagePress(uri, images) : undefined} />)
       continue
     }

@@ -1,5 +1,6 @@
 import { fetchArticle } from './article'
 import { buildVectors } from './embed'
+import { cacheImages } from './imageStore'
 import { emitChange } from './bus'
 import { summarizeWithLlm } from './llm'
 import { isOcrAvailable, ocrImages } from './ocr'
@@ -38,6 +39,20 @@ export async function processPendingQueue(): Promise<void> {
     emitChange()
     // 语义索引在解析之后慢慢补，失败不打扰用户，下次再试。
     void buildVectors(6).catch(() => undefined)
+  }
+}
+
+/**
+ * 把正文图下载到本地。失败不影响正文：本地没存下来的位置留空，
+ * 详情页会退回远程地址。
+ */
+async function storeImages(id: string, images: string[], referer: string): Promise<void> {
+  if (images.length === 0) return
+  try {
+    const files = await cacheImages(id, images, referer)
+    if (files.some((file) => file.length > 0)) await repo.setImageFiles(id, files)
+  } catch {
+    // 图片是增强项，存不下来也不能让解析失败
   }
 }
 
@@ -82,6 +97,7 @@ async function processOne(id: string, url: string): Promise<void> {
   // 和原来的后端语义一致：正文太短只算部分成功，元信息照常保留。
   if (article.plainText.length < 120) {
     await repo.savePartial(id, article)
+    await storeImages(id, article.images, url)
     emitChange()
     return
   }
@@ -104,5 +120,6 @@ async function processOne(id: string, url: string): Promise<void> {
   }
 
   await repo.saveParsed(id, article, summary, oneLine(summary, 160), keywords)
+  await storeImages(id, article.images, url)
   emitChange()
 }

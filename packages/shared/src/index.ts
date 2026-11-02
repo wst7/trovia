@@ -61,6 +61,8 @@ export interface DocumentDetail extends DocumentSummary {
   plain_text: string | null
   /** 正文里的图片地址（本机解析时抓取；后端解析的条目可能没有这个字段）。 */
   images?: string[]
+  /** 与 images 等长的本地文件路径；空字符串表示这张没落盘。 */
+  image_files?: string[]
   metadata: Record<string, unknown>
   last_parsed_at: string | null
   parse_stage: ParseStage | null

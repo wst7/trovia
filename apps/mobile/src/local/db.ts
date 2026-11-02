@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS documents (
   content_markdown  TEXT,
   plain_text        TEXT,
   images            TEXT NOT NULL DEFAULT '[]',
+  image_files       TEXT NOT NULL DEFAULT '[]',
   search_text       TEXT NOT NULL DEFAULT '',
   parse_status      TEXT NOT NULL DEFAULT 'pending',
   parse_stage       TEXT,
@@ -75,6 +76,10 @@ CREATE TABLE IF NOT EXISTS settings (
   const columns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(documents)')
   if (!columns.some((column) => column.name === 'images')) {
     await db.runAsync("ALTER TABLE documents ADD COLUMN images TEXT NOT NULL DEFAULT '[]'")
+  }
+  // 图片落盘后的本地路径，与 images 按下标对齐；空字符串表示这张没存下来。
+  if (!columns.some((column) => column.name === 'image_files')) {
+    await db.runAsync("ALTER TABLE documents ADD COLUMN image_files TEXT NOT NULL DEFAULT '[]'")
   }
 
   // 上次进程在抓取/解析中途被杀掉时，这些行会一直停在非终态。

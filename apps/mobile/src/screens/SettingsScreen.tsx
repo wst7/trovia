@@ -13,6 +13,8 @@ import { Screen } from '../ui/Screen'
 import { usePalette } from '../ui/palette'
 import { emitChange } from '../local/bus'
 import { clearAllDocuments } from '../local/db'
+import { writeExport } from '../local/exporter'
+import { listAllForExport } from '../local/repo'
 import { loadLlmState } from '../local/llm'
 import * as repo from '../local/repo'
 import type { DocumentStats } from '../local/repo'
@@ -117,6 +119,7 @@ export function SettingsScreen() {
 
   const [stats, setStats] = useState<DocumentStats | null>(null)
   const [llmLabel, setLlmLabel] = useState('读取中…')
+  const [exporting, setExporting] = useState(false)
   const [confirmingClear, setConfirmingClear] = useState(false)
 
   const bottomPad = insets.bottom + TAB_BAR_HEIGHT + 24
@@ -136,6 +139,32 @@ export function SettingsScreen() {
       void reload()
     }, [reload, revision]),
   )
+
+  async function handleExport() {
+    if (exporting) return
+    setExporting(true)
+    try {
+      const docs = await listAllForExport()
+      if (docs.length === 0) {
+        toast('还没有可以导出的收藏。', { type: 'warning' })
+        return
+      }
+      const result = await writeExport(docs)
+      if (!result) {
+        toast('这台设备上暂时无法写入文件。', { type: 'error' })
+        return
+      }
+      const Sharing = await import('expo-sharing')
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(result.jsonPath, { mimeType: 'application/json', dialogTitle: '导出收藏' })
+      }
+      toast(`已导出 ${docs.length} 条，JSON 与 Markdown 都写好了。`, { type: 'success' })
+    } catch {
+      toast('导出失败，请稍后重试。', { type: 'error' })
+    } finally {
+      setExporting(false)
+    }
+  }
 
   async function handleClear() {
     try {
@@ -194,6 +223,14 @@ export function SettingsScreen() {
         <View className="mb-6">
           <SectionLabel>数据</SectionLabel>
           <Group>
+            <Row
+              icon="download-outline"
+              title="导出全部收藏"
+              subtitle={exporting ? '正在写入文件…' : 'JSON 备份 + 可读 Markdown，随时带走'}
+              value={stats ? `${stats.total} 条` : undefined}
+              onPress={() => void handleExport()}
+              accessibilityLabel="导出全部收藏"
+            />
             <Row
               icon="trash-outline"
               title="清空全部收藏"

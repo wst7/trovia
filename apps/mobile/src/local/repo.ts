@@ -36,6 +36,7 @@ interface DocumentRow {
   content_markdown: string | null
   plain_text: string | null
   images: string | null
+  image_files: string | null
   search_text: string
   parse_status: string
   parse_stage: string | null
@@ -75,6 +76,7 @@ function toDetail(row: DocumentRow): DocumentDetail {
     content_markdown: row.content_markdown,
     plain_text: row.plain_text,
     images: parseJsonArray(row.images ?? '[]'),
+    image_files: parseJsonArray(row.image_files ?? '[]'),
     metadata: parseJsonObject(row.metadata),
     last_parsed_at: row.last_parsed_at,
     parse_stage: row.parse_stage as ParseStage | null,
@@ -360,6 +362,21 @@ export async function markForRetry(id: string): Promise<void> {
  * 删除写墓碑而不是物理删除：本机不再显示，但保留更新与删除时间，
  * 以后接入多端同步时可以直接传播这次删除。
  */
+/** 导出用：全部有效收藏（含正文与图片路径），按收藏时间正序。 */
+export async function listAllForExport(): Promise<DocumentDetail[]> {
+  const db = await getDb()
+  const rows = await db.getAllAsync<DocumentRow>(
+    'SELECT * FROM documents WHERE deleted_at IS NULL ORDER BY saved_at ASC',
+  )
+  return rows.map(toDetail)
+}
+
+/** 图片落盘后回写本地路径，与 images 按下标对齐。 */
+export async function setImageFiles(id: string, files: string[]): Promise<void> {
+  const db = await getDb()
+  await db.runAsync('UPDATE documents SET image_files = ? WHERE id = ?', JSON.stringify(files), id)
+}
+
 export async function deleteDocument(id: string): Promise<void> {
   const db = await getDb()
   const now = nowIso()
