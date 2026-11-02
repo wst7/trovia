@@ -66,7 +66,7 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
 }
 
 /** 正文里的图片：宽度撑满，高度按真实比例算，避免长图被裁成一条。 */
-function ArticleImage({ uri, onPress }: { uri: string; onPress?: () => void }) {
+function ArticleImage({ uri, alt, onPress }: { uri: string; alt?: string; onPress?: () => void }) {
   const [ratio, setRatio] = useState(16 / 10)
   const [failed, setFailed] = useState(false)
 
@@ -88,7 +88,20 @@ function ArticleImage({ uri, onPress }: { uri: string; onPress?: () => void }) {
 
   if (failed) return null
 
+  // alt 常常是文件名（IMG_2043.png）或「图片」两个字，那种当图注只是噪声。
+  const caption = (alt ?? '').trim()
+  // CSDN 这类站点把「最新推荐文章于 2026-10-12 发布」整句塞进 alt，
+  // 显示出来就是一条和图片毫无关系的噪声，还可能和页头的时间重复。
+  const captionIsNoise =
+    caption.length < 4 ||
+    caption.length > 80 ||
+    /(?:发布|发表于|发布于|更新时间|版权|侵权|扫码)/.test(caption) ||
+    /\d{4}\s*[-/年]\s*\d{1,2}\s*[-/月]\s*\d{1,2}/.test(caption) ||
+    /^(?:图片|图像|image|photo|screenshot)$/i.test(caption) ||
+    /^[\w-]+\.(?:png|jpe?g|gif|webp|avif)$/i.test(caption)
+
   return (
+    <View className="mb-4">
     <Pressable
       onPress={onPress}
       className="mb-4 overflow-hidden rounded-sm bg-sunken"
@@ -104,6 +117,12 @@ function ArticleImage({ uri, onPress }: { uri: string; onPress?: () => void }) {
         accessibilityIgnoresInvertColors
       />
     </Pressable>
+    {!captionIsNoise ? (
+      <Text className="mt-2 text-caption text-faint" numberOfLines={2}>
+        {caption}
+      </Text>
+    ) : null}
+    </View>
   )
 }
 
@@ -161,7 +180,8 @@ function renderBlocks(
     if (state.paragraph.length === 0) return
     const key = nextKey('p')
     blocks.push(
-      <Text key={key} className="mb-4 text-body text-ink" style={{ lineHeight: 27 }}>
+      // 长文阅读：行距比界面文案松一档，段间留白也比列表大，眼睛才不会粘行。
+      <Text key={key} className="mb-4 text-ink" style={{ fontSize: 16.5, lineHeight: 30 }}>
         {renderInline(state.paragraph.join(' '), key)}
       </Text>,
     )
@@ -221,13 +241,21 @@ function renderBlocks(
 
     const trimmed = line.trim()
 
-    const imageMatch = /^!\[[^\]]*\]\(([^)\s]+)\)$/.exec(trimmed)
+    const imageMatch = /^!\[([^\]]*)\]\(([^)\s]+)\)$/.exec(trimmed)
     if (imageMatch) {
       flushAll()
       const key = nextKey('img')
-      const remote = imageMatch[1]
+      const alt = imageMatch[1]
+      const remote = imageMatch[2]
       const uri = resolveImage?.(remote) ?? remote
-      blocks.push(<ArticleImage key={key} uri={uri} onPress={onImagePress ? () => onImagePress(uri, images) : undefined} />)
+      blocks.push(
+        <ArticleImage
+          key={key}
+          uri={uri}
+          alt={alt}
+          onPress={onImagePress ? () => onImagePress(uri, images) : undefined}
+        />,
+      )
       continue
     }
     if (trimmed === '') {

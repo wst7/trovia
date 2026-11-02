@@ -96,6 +96,9 @@ export function scrubAppPrompts(markdown: string): string {
 const ADGEBRA_LINE =
   /^(?:advertising|advertisement|sponsored(?: by\b.*)?|scanned by\b.*|.*\bsafe web\b.*|share(?: this)?|tweet|copy link|read more|see more|show more|\d+\s*(?:comments?|reviews?|views?)|★★★★★.*)$/i
 
+/** 站点自己的推荐栏回显：`最新推荐文章于 2026-10-12 14:14:03 发布`。 */
+const SITE_RECO_LINE = /^(?:最新推荐|推荐阅读|相关推荐|热门推荐|猜你喜欢).{0,40}(?:发布|更新)/
+
 /** 评分条 + 评价数：`★★★★★ 4.8/5 · 55,196 reviews` 这类。 */
 const RATING_LINE = /^[★☆]{3,}\s*[\d.]+\s*\/\s*5(?:\s*[·|]?\s*[\d,]+\s*(?:reviews?|ratings?|votes?))?/i
 
@@ -108,7 +111,7 @@ function isAdgebraLine(line: string): boolean {
     .trim()
   if (!bare || bare.length > 60) return false
   const compact = bare.replace(/\s+/g, ' ')
-  return RATING_LINE.test(compact) || ADGEBRA_LINE.test(compact)
+  return RATING_LINE.test(compact) || ADGEBRA_LINE.test(compact) || SITE_RECO_LINE.test(compact)
 }
 
 /** 整篇范围内删掉高置信的广告/徽章行（两头的清理交给 trimMarkdownEdges）。 */

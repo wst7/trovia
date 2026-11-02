@@ -46,4 +46,9 @@ assert.equal(stripNoiseLines(linked).trim(), '', '带列表前缀/链接壳的�
 const stars = '★★★★☆ 4.4/5 · 202 reviews'
 assert.equal(stripNoiseLines(stars), '', '四星半的评分条同样属于噪声')
 
-console.log('stripNoiseLines：5 项断言全部通过')
+// 6. 站点推荐栏回显（CSDN 的「最新推荐文章于 … 发布」）
+const reco = ['最新推荐文章于 2026-10-12 14:14:03 发布', '', '正文第一段。'].join('\n')
+assert.equal(stripNoiseLines(reco).includes('最新推荐'), false, '推荐栏回显应当删掉')
+assert.equal(stripNoiseLines(reco).includes('正文第一段'), true, '正文要留着')
+
+console.log('stripNoiseLines：6 项断言全部通过')
