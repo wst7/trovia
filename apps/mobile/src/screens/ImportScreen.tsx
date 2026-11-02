@@ -63,7 +63,7 @@ export function ImportScreen() {
     setBusy(true)
     setProgress({ done: 0, total: picked.fresh.length })
     try {
-      const result = await runImport(picked.fresh, setProgress)
+      const result = await runImport(picked.fresh, setProgress, picked.name)
       setSummary(result)
       setPicked(null)
       void processPendingQueue()

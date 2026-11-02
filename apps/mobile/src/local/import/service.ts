@@ -76,6 +76,8 @@ export interface ImportSummary {
 export async function runImport(
   items: ImportItem[],
   onProgress?: (progress: ImportProgress) => void,
+  /** 文件名，写进每条收藏的 metadata，详情页能说明「这条是从哪个文件来的」。 */
+  fileName?: string,
 ): Promise<ImportSummary> {
   let created = 0
   let duplicate = 0
@@ -84,7 +86,13 @@ export async function runImport(
   for (let index = 0; index < items.length; index += 1) {
     const item = items[index]
     try {
-      const result = await repo.createDocument(item.url, item.title, item.addedAt)
+      const result = await repo.createDocument(
+        item.url,
+        item.title,
+        item.addedAt,
+        fileName ? `从 ${fileName} 导入` : null,
+        typeof item.addedAt === 'number',
+      )
       if (result.duplicate) duplicate += 1
       else created += 1
     } catch {

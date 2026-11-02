@@ -206,6 +206,9 @@ export function DocumentDetailScreen() {
   const summaryLong = rawLong && rawLong !== summaryShort && rawLong !== rawShort ? rawLong : null
   const summary = summaryShort ?? summaryLong
   // 抽取式摘要对短文就等于全文：这时候摘要块只是把原文又说一遍，直接不显示。
+  // 导入进来的条目要能说明来历：用户看到 2019 年的时间，得知道那不是 App 记错了。
+  const origin = typeof doc.metadata?.origin === 'string' ? doc.metadata.origin : null
+  const savedFromFile = doc.metadata?.savedAtFromFile === true
   const summaryRepeatsBody = Boolean(summary && bodySource && flat(bodySource).includes(flat(summary)))
   // 长摘要常常是短摘要的完整版，两句一起显示等于同一段话印两遍。
   const summaryShortText = doc.summary_short?.trim() ?? ''
@@ -244,6 +247,13 @@ export function DocumentDetailScreen() {
         <Text className="mt-2 text-[26px] font-semibold leading-[35px] tracking-[-0.3px] text-ink">
           {doc.title || doc.url}
         </Text>
+
+        {origin ? (
+          <Text className="mt-2 text-caption text-faint">
+            {origin}
+            {savedFromFile ? '，收藏时间取自文件' : ''}
+          </Text>
+        ) : null}
 
         <Text className="mt-2 text-caption text-muted">
           {doc.author ? `${doc.author} · ` : ''}

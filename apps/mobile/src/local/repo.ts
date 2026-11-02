@@ -99,6 +99,10 @@ export async function createDocument(
   titleHint?: string | null,
   /** 导入时带上原收藏时间：2019 年存的书签不该全都变成「今天」。 */
   savedAt?: number | null,
+  /** 来源，例如「从 pocket.csv 导入」；写进 metadata，详情页会如实说明。 */
+  origin?: string | null,
+  /** 收藏时间是否取自导入文件（没有时间列的文件不该这么声称）。 */
+  savedAtFromFile?: boolean,
 ): Promise<{ id: string; duplicate: boolean }> {
   const url = normalizeUrl(rawUrl)
   if (!url) throw new Error('INVALID_URL')
@@ -129,8 +133,8 @@ export async function createDocument(
       ? new Date(savedAt).toISOString()
       : now
   await db.runAsync(
-    `INSERT INTO documents (id, url, canonical_url, source_type, title, parse_status, parse_stage, saved_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, 'pending', 'fetch', ?, ?)`,
+    `INSERT INTO documents (id, url, canonical_url, source_type, title, parse_status, parse_stage, saved_at, updated_at, metadata)
+     VALUES (?, ?, ?, ?, ?, 'pending', 'fetch', ?, ?, ?)`,
     id,
     url,
     url,
@@ -138,6 +142,7 @@ export async function createDocument(
     hint,
     saved,
     now,
+    JSON.stringify(origin ? { origin, savedAtFromFile: Boolean(savedAtFromFile) } : {}),
   )
   return { id, duplicate: false }
 }
