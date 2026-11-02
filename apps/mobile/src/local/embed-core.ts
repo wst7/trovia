@@ -18,7 +18,16 @@ const TIMEOUT_MS = 12_000
  *     所以下限只负责挡掉明显无关的，真正的噪声靠下面的相对差距控制；
  *   - 相对差距：只保留与最高分相差不超过 margin 的，避免为凑数带进噪声。
  */
-export const SEMANTIC_MIN_SCORE = 0.3
+/**
+ * 语义命中的绝对下限。
+ *
+ * 这个数不是拍的，是在真机上用 309 条真实收藏量出来的（qwen3-embedding）：
+ *   真实命中「延时队列」的最高分 0.47
+ *   无匹配的「量子纠缠」0.42、「明天会下雨」0.41、「zzzz没…」0.41
+ * 0.30 会让后面这类查询稳定拿到五条「意思相近」，比说「没找到」更伤信任；
+ * 0.45 把噪声挡在外面，同时留住真正的语义命中。换 embedding 模型后要重测。
+ */
+export const SEMANTIC_MIN_SCORE = 0.45
 export const SEMANTIC_RELATIVE_MARGIN = 0.05
 
 export function embeddingEndpoint(baseUrl: string): string {

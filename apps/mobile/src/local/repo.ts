@@ -17,7 +17,10 @@ import { resolveIntent } from './intent'
 import { chat, loadLlmKey, loadLlmState } from './llm'
 import { matchRange, timeOf } from './query'
 import type { DateRange } from './query'
+import { hasContentTerm, queryTerms } from './terms'
 import { newId, normalizeUrl, nowIso, oneLine, parseJsonArray, parseJsonObject, sourceTypeOf } from './util'
+
+export { queryTerms } from './terms'
 
 interface DocumentRow {
   id: string
@@ -475,45 +478,6 @@ export async function documentStats(): Promise<DocumentStats> {
 // 本地检索
 // ---------------------------------------------------------------------------
 
-/** 叙述性的口头语，匹配前先去掉，避免「我记得那篇……」污染关键词。 */
-const FILLER = /(我记得|记得|好像|大概|可能是|应该是|之前|以前|看过|看到过|收藏过|收藏了|帮我找|找一下|找找|那篇|这篇|一篇|一个|那个|这个|关于|讲的|说的|也就是|内容|文章|视频|链接)/g
-
-/**
- * 高频虚词/泛词：它们在几乎每篇文章里都出现，命中它们等于没命中，
- * 只会把「字面结果」灌满，还挡住语义兜底。中文二元组匹配尤其需要这张表。
- */
-const STOP_TERMS = new Set([
-  '怎么', '什么', '如何', '为什', '么会', '可以', '需要', '自己', '我们', '他们', '你们',
-  '这个', '那个', '一个', '一些', '这些', '那些', '就是', '还是', '但是', '因为', '所以',
-  '如果', '已经', '现在', '时候', '时间', '问题', '东西', '事情', '觉得', '认为', '没有',
-  '不是', '真的', '非常', '比较', '一直', '这样', '那样', '很多', '如何', '这些', '关于',
-  '的时', '时候', '有的', '时候', '一种', '是否', '以及', '或者', '然后', '而且', '并且',
-  '这种', '那种', '种东', '个东', '么东', '这玩', '玩意', '有点', '一点', '好像', '感觉',
-])
-
-export function queryTerms(query: string): string[] {
-  const cleaned = query
-    .toLowerCase()
-    .replace(FILLER, ' ')
-    .replace(/[，。！？、,.!?;；:："'“”‘’（）()[\]【】《》<>]/g, ' ')
-  const terms = new Set<string>()
-
-  for (const word of cleaned.match(/[a-z0-9][a-z0-9.+#_-]*/g) ?? []) {
-    if (word.length >= 2) terms.add(word)
-  }
-  for (const run of cleaned.match(/[一-鿿]+/g) ?? []) {
-    if (run.length <= 2) {
-      terms.add(run)
-    } else {
-      // 中文没有分词：用二元组换取召回，长词额外保留整词以提高精度。
-      for (let i = 0; i < run.length - 1; i += 1) terms.add(run.slice(i, i + 2))
-      if (run.length <= 6) terms.add(run)
-    }
-  }
-  // 去掉泛词与单字：单字（的/了/是）在中文里几乎必然命中，只会制造噪声。
-  return [...terms].filter((term) => !STOP_TERMS.has(term) && term.length >= 2).slice(0, 24)
-}
-
 function excerptAround(text: string, terms: string[]): string | null {
   const lower = text.toLowerCase()
   let best: { index: number; term: string } | null = null
@@ -735,8 +699,9 @@ export async function searchDocuments(query: string, limit = 20): Promise<Search
   }))
 
   // 字面不够好才补语义；时间条件是硬过滤，语义只在同一天里找没有意义。
+  // 另外，句子里没有实词时不做语义兜底：否则「zzzz没有这种东西」也会拿到几条「意思相近」。
   let extra: SearchResult[] = []
-  if (!dateOnly && results.length < LITERAL_ENOUGH) {
+  if (!dateOnly && hasContentTerm(parsed.text) && results.length < LITERAL_ENOUGH) {
     const shown = new Set(results.map((item) => item.document_id))
     extra = await semanticMatches(parsed.text || query, shown, SEMANTIC_LIMIT)
   }
