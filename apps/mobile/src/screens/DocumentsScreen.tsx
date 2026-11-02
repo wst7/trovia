@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useFocusEffect, useRouter } from 'expo-router'
-import { ActivityIndicator, FlatList, Keyboard, RefreshControl, Text, View } from 'react-native'
+import { ActivityIndicator, FlatList, Keyboard, Pressable, RefreshControl, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { DocumentSummary, ParseStatus } from '@xunji/shared'
-import { errorMessage, STATUS_TEXT } from '@xunji/shared'
+import { errorMessage, STATUS_TEXT, domainOf } from '@xunji/shared'
 
 import { TAB_BAR_HEIGHT } from '../components/AppTabBar'
 import { RecentRow } from '../components/RecordRow'
@@ -41,6 +41,15 @@ export function DocumentsScreen() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [failedOnly, setFailedOnly] = useState(false)
+  // 313 条时按日期找还行，再多就得换一条线索：按站点分组能直接跳到「那篇少数派」。
+  const [groupBy, setGroupBy] = useState<'day' | 'site'>('day')
+  // 按站点分组时先排序：日期顺序下同一个站点散落在各处，组标题会重复出现。
+  const displayItems =
+    groupBy === 'site'
+      ? [...items].sort((a, b) =>
+          (a.site_name || domainOf(a.url)).localeCompare(b.site_name || domainOf(b.url), 'zh'),
+        )
+      : items
 
   const keyword = useDebouncedValue(keywordInput.trim(), 300)
   const requestSeq = useRef(0)
@@ -197,7 +206,7 @@ export function DocumentsScreen() {
   return (
     <Screen>
       <FlatList
-        data={items}
+        data={displayItems}
         keyExtractor={(doc) => doc.id}
         contentContainerStyle={{ paddingHorizontal: GUTTER, paddingBottom: bottomPad }}
         keyboardShouldPersistTaps="handled"
@@ -236,7 +245,28 @@ export function DocumentsScreen() {
                 <Text className="text-[24px] font-semibold leading-[30px] tracking-[-0.3px] text-ink">
                   {loading ? '—' : total}
                 </Text>
-                <Text className="text-body-sm text-muted">{unit}</Text>
+                <Text className="flex-1 text-body-sm text-muted">{unit}</Text>
+                <View className="flex-row items-center gap-3">
+                  {(['day', 'site'] as const).map((mode) => (
+                    <Pressable
+                      key={mode}
+                      onPress={() => setGroupBy(mode)}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={mode === 'day' ? '按日期分组' : '按网站分组'}
+                    >
+                      <Text
+                        className={
+                          groupBy === mode
+                            ? 'text-caption font-medium text-ink underline'
+                            : 'text-caption text-faint'
+                        }
+                      >
+                        {mode === 'day' ? '日期' : '网站'}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
               </View>
             )}
 
@@ -276,13 +306,20 @@ export function DocumentsScreen() {
           </View>
         }
         renderItem={({ item, index }) => {
-          const label = dayLabel(item.saved_at)
-          const previous = index > 0 ? dayLabel(items[index - 1].saved_at) : null
+          const groupOf = (doc: { saved_at: string; site_name: string | null; url: string }) =>
+            groupBy === 'day' ? dayLabel(doc.saved_at) : (doc.site_name || domainOf(doc.url))
+          const label = groupOf(item)
+          const previous = index > 0 ? groupOf(displayItems[index - 1]) : null
+          // 组里有多少条，写在组标题后面：按站点分组时这个数字比标题本身有用。
+          const groupSize = displayItems.filter((doc) => groupOf(doc) === label).length
           return (
           <View className="mb-2">
             {label && label !== previous ? (
               <View className={index === 0 ? 'mb-1' : 'mb-1 mt-6 border-t border-line pt-4'}>
-                <Text className="text-caption font-medium text-faint">{label}</Text>
+                <Text className="text-caption font-medium text-faint">
+                  {label}
+                  {groupBy === 'site' && groupSize > 0 ? `  ${groupSize}` : ''}
+                </Text>
               </View>
             ) : null}
             <RecentRow
