@@ -92,28 +92,25 @@ export function RecentRow({
       accessibilityRole="button"
       accessibilityState={selecting ? { selected: Boolean(selected) } : undefined}
       accessibilityLabel={selected ? `${item.title || item.url}，已选中` : item.title || item.url}
-      className="rounded-md border border-line bg-surface px-3 py-3"
+      className="py-3"
     >
       {({ pressed }) => (
         // 勾选圈用「有没有」表达，不换父节点：切换多选时保持树的形状不变。
         <View style={{ opacity: pressed ? 0.55 : 1 }} className="flex-row items-center gap-3">
-          {thumbnail ? (
-            // 固定 44×44 让左列成一条线。圆角直接给 Image，不套 overflow-hidden 容器：
-            // 少一层原生视图，滚动时的 mount 开销也更小。
-            <Image
-              source={{ uri: thumbnail }}
-              // 透明底图标（很多站点 favicon 就是）要压在浅灰上，才和字母占位同一重量。
-              style={{ width: 44, height: 44, borderRadius: 8, backgroundColor: p.sunken }}
-              resizeMode="cover"
-            />
-          ) : (
-            <View
-              className="items-center justify-center rounded-sm border border-line bg-sunken"
-              style={{ width: 44, height: 44 }}
-            >
-              <Text className="text-body-sm font-medium text-faint">{initialOf(item)}</Text>
-            </View>
-          )}
+          {/* 真图标和字母占位共用同一个 34×34 容器：favicon 有方有横，
+              不套容器时左列看着「直」但重量不齐，扫视时会跳。 */}
+          <View
+            className="items-center justify-center overflow-hidden rounded-sm border border-line bg-sunken"
+            style={{ width: 34, height: 34 }}
+          >
+            {thumbnail ? (
+              // 图标内缩到 24：favicon 自带品牌底色，铺满 34 会比字母占位重得多，
+              // 一列里两种重量交替出现，扫视时会跳。
+              <Image source={{ uri: thumbnail }} style={{ width: 24, height: 24 }} resizeMode="cover" />
+            ) : (
+              <Text className="text-caption font-medium text-faint">{initialOf(item)}</Text>
+            )}
+          </View>
           {selecting ? (
             <Ionicons
               name={selected ? 'checkmark-circle' : 'ellipse-outline'}
@@ -122,25 +119,27 @@ export function RecentRow({
             />
           ) : null}
           <View className="flex-1">
-            <Text className="text-body font-medium text-ink" numberOfLines={2}>
+            <Text className="text-[15px] font-medium leading-[21px] text-ink" numberOfLines={1}>
               {titleOf(item)}
             </Text>
-            <View className="mt-1 flex-row items-center gap-2">
-              <Text className="flex-shrink text-caption text-muted" numberOfLines={1}>
+            <View className="mt-1 flex-row items-center justify-between gap-2">
+              <Text className="flex-1 text-caption text-muted" numberOfLines={1}>
                 {metaOf(item, showDate)}
               </Text>
-              <LiveStatusMark
-                docId={item.id}
-                status={item.parse_status}
-                errorCode={item.parse_error_code}
-                onTerminal={onTerminal}
-              />
-              {onRetry ? (
-                <Pressable onPress={onRetry} hitSlop={10} accessibilityRole="button" accessibilityLabel="重试这一条">
-                  {/* 行内重试不用强调色：一屏七个红字，强调色就失效了。 */}
-                  <Text className="text-caption text-ink">重试</Text>
-                </Pressable>
-              ) : null}
+              <View className="flex-row items-center gap-2">
+                <LiveStatusMark
+                  docId={item.id}
+                  status={item.parse_status}
+                  errorCode={item.parse_error_code}
+                  onTerminal={onTerminal}
+                />
+                {onRetry ? (
+                  <Pressable onPress={onRetry} hitSlop={10} accessibilityRole="button" accessibilityLabel="重试这一条">
+                    {/* 行内重试不用强调色：一屏七个红字，强调色就失效了。 */}
+                    <Text className="text-caption text-ink">重试</Text>
+                  </Pressable>
+                ) : null}
+              </View>
             </View>
           </View>
         </View>

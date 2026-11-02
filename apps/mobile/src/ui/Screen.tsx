@@ -15,4 +15,4 @@ export function Screen({ children }: { children: ReactNode }) {
 }
 
 /** 页面左右 gutter：16dp。 */
-export const GUTTER = 16
+export const GUTTER = 22

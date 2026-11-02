@@ -22,6 +22,7 @@ import { useToast } from '../providers/ToastProvider'
 import { Button, IconButton } from '../ui/Button'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { Divider } from '../ui/Divider'
+import { serifFamily } from '../ui/fonts'
 import { GUTTER, Screen } from '../ui/Screen'
 import { usePalette } from '../ui/palette'
 
@@ -207,6 +208,20 @@ export function DocumentDetailScreen() {
   const summary = summaryShort ?? summaryLong
   // 抽取式摘要对短文就等于全文：这时候摘要块只是把原文又说一遍，直接不显示。
   const summaryRepeatsBody = Boolean(summary && bodySource && flat(bodySource).includes(flat(summary)))
+  // 长摘要常常是短摘要的完整版，两句一起显示等于同一段话印两遍。
+  const summaryShortText = doc.summary_short?.trim() ?? ''
+  const summaryLongText = doc.summary_long?.trim() ?? ''
+  // 短摘要常是长摘要截断到 120 字再加省略号，所以不能直接 includes 比较：
+  // 比前 40 个字（去掉省略号）就够了，同一句话的开头不会撞车。
+  const head = (text: string) => flat(text).replace(/[.…]+$/, '').slice(0, 40)
+  const longRepeatsShort = Boolean(
+    summaryShortText &&
+      summaryLongText &&
+      (head(summaryLongText).startsWith(head(summaryShortText)) ||
+        head(summaryShortText).startsWith(head(summaryLongText))),
+  )
+  const showShort = Boolean(summaryShortText) && !longRepeatsShort
+  const showLong = Boolean(summaryLongText)
 
   return (
     <Screen>
@@ -226,7 +241,12 @@ export function DocumentDetailScreen() {
           </Text>
         ) : null}
 
-        <Text className="mt-2 text-title font-semibold text-ink">{doc.title || doc.url}</Text>
+        <Text
+          className="mt-2 text-[27px] font-semibold leading-[36px] text-ink"
+          style={{ fontFamily: serifFamily }}
+        >
+          {doc.title || doc.url}
+        </Text>
 
         <Text className="mt-2 text-caption text-muted">
           {doc.author ? `${doc.author} · ` : ''}
@@ -264,12 +284,12 @@ export function DocumentDetailScreen() {
         ) : null}
 
         {summary && !summaryRepeatsBody ? (
-          <View className="mt-6 rounded-md border border-line bg-surface p-4">
+          <View className="mt-6 border-l-2 border-accent pl-4">
             <Text className="text-[11px] font-semibold tracking-[1px] text-faint">摘要</Text>
-            {summaryShort ? (
-              <Text className="mt-2 text-body text-ink">{summaryShort}</Text>
+            {showShort ? (
+              <Text className="mt-2 text-body text-ink">{summaryShortText}</Text>
             ) : null}
-            {summaryLong ? (
+            {showLong ? (
               <Text className={summaryShort ? 'mt-2 text-body-sm text-muted' : 'mt-2 text-body text-ink'}>
                 {summaryLong}
               </Text>

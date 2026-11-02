@@ -15,6 +15,7 @@ import { useLocalRevision } from '../local/useLocalRevision'
 import { useToast } from '../providers/ToastProvider'
 import { TextButton } from '../ui/Button'
 import { Divider } from '../ui/Divider'
+import { serifFamily } from '../ui/fonts'
 import { GUTTER, Screen } from '../ui/Screen'
 import { usePalette } from '../ui/palette'
 
@@ -284,11 +285,20 @@ export function HomeScreen() {
             </>
           ) : (
             <>
-              <View className="mt-4">
-                <Text className="text-heading font-semibold text-ink">想找点什么？</Text>
+              {/* 首页只有一句话要有重量：它是这个 App 唯一的产品说明。 */}
+              <View className="mt-6">
+                <Text
+                  className="text-[32px] font-semibold leading-[40px] text-ink"
+                  style={{ fontFamily: serifFamily }}
+                >
+                  想找点什么？
+                </Text>
+                <Text className="mt-3 text-body-sm text-muted">
+                  描述你还记得的那句话，或者直接粘一个链接。
+                </Text>
               </View>
 
-              <View className="mt-6">{composer}</View>
+              <View className="mt-7">{composer}</View>
 
               {stats ? (
                 <View className="mt-8 flex-row items-baseline gap-2">

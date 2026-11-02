@@ -44,7 +44,7 @@ export function DocumentsScreen() {
 
   const keyword = useDebouncedValue(keywordInput.trim(), 300)
   const requestSeq = useRef(0)
-  const bottomPad = insets.bottom + TAB_BAR_HEIGHT + 24
+  const bottomPad = insets.bottom + TAB_BAR_HEIGHT + 40
 
   const load = useCallback(
     async (nextPage: number, mode: 'replace' | 'append') => {
@@ -233,7 +233,7 @@ export function DocumentsScreen() {
               </View>
             ) : (
               <View className="mt-4 flex-row items-baseline gap-2">
-                <Text className="text-heading font-semibold text-ink">
+                <Text className="text-display font-semibold text-ink">
                   {loading ? '—' : total}
                 </Text>
                 <Text className="text-body-sm text-muted">{unit}</Text>
@@ -275,7 +275,9 @@ export function DocumentsScreen() {
           return (
           <View className="mb-2">
             {label && label !== previous ? (
-              <Text className="mt-5 mb-2 text-caption font-medium text-faint">{label}</Text>
+              <View className={index === 0 ? 'mb-1' : 'mb-1 mt-6 border-t border-line pt-4'}>
+                <Text className="text-caption font-medium text-faint">{label}</Text>
+              </View>
             ) : null}
             <RecentRow
               item={item}
