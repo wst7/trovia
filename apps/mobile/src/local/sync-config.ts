@@ -6,7 +6,7 @@
  */
 import * as SecureStore from 'expo-secure-store'
 
-import { getDb } from './db'
+import { readSetting, writeSetting } from './settings'
 
 const PASSWORD_KEY = 'trovia.sync.webdav.password'
 
@@ -18,17 +18,6 @@ export interface WebDavConfig {
 }
 
 export const EMPTY_CONFIG: WebDavConfig = { baseUrl: '', username: '', folder: 'trovia' }
-
-async function readSetting(key: string): Promise<string | null> {
-  const db = await getDb()
-  const row = await db.getFirstAsync<{ value: string }>('SELECT value FROM settings WHERE key = ?', key)
-  return row?.value ?? null
-}
-
-async function writeSetting(key: string, value: string): Promise<void> {
-  const db = await getDb()
-  await db.runAsync('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', key, value)
-}
 
 export async function loadConfig(): Promise<WebDavConfig> {
   const raw = await readSetting('sync_webdav')

@@ -9,6 +9,7 @@ import { useColorScheme } from 'react-native'
 import '../global.css'
 
 import { maybeAutoSync } from '../src/local/auto-sync'
+import { maybeRetryFailed } from '../src/local/auto-retry'
 import { hydrateImages } from '../src/local/image-hydrate'
 import { ClipboardPrompt } from '../src/components/ClipboardPrompt'
 import { getDb } from '../src/local/db'
@@ -61,12 +62,14 @@ function RootNavigator() {
       void processPendingQueue()
       void hydrateImages()
       void maybeAutoSync()
+      void maybeRetryFailed()
     })()
 
     const sub = AppState.addEventListener('change', (state) => {
       if (state !== 'active') return
       void processPendingQueue()
       void maybeAutoSync()
+      void maybeRetryFailed()
     })
     return () => {
       cancelled = true
