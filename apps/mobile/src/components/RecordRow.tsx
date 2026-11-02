@@ -95,14 +95,11 @@ export function RecentRow({
       className="rounded-md border border-line bg-surface px-3 py-3"
     >
       {({ pressed }) => (
-        // 结构固定：勾选圈只是「有没有」而不是「换一层父节点」。
-        // 切换多选时改变树形状会让 Fabric 重新挂载原生视图，
-        // 直接崩在 child already has a parent。
+        // 勾选圈用「有没有」表达，不换父节点：切换多选时保持树的形状不变。
         <View style={{ opacity: pressed ? 0.55 : 1 }} className="flex-row items-center gap-3">
           {thumbnail ? (
-            // 固定 44×44 让左列成一条线。圆角直接给 Image：
-            // 用 overflow-hidden 的容器包一层会触发 Fabric 的
-            // 「The specified child already has a parent」崩溃（ReactClippingViewManager）。
+            // 固定 44×44 让左列成一条线。圆角直接给 Image，不套 overflow-hidden 容器：
+            // 少一层原生视图，滚动时的 mount 开销也更小。
             <Image
               source={{ uri: thumbnail }}
               // 透明底图标（很多站点 favicon 就是）要压在浅灰上，才和字母占位同一重量。

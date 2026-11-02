@@ -202,9 +202,8 @@ export function DocumentsScreen() {
         contentContainerStyle={{ paddingHorizontal: GUTTER, paddingBottom: bottomPad }}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
-        // Android 默认开着 removeClippedSubviews，单元格会被包进 clipping view；
-        // 列表里一旦有 Image（缩略图）并触发重渲染，Fabric 就会抛
-        // 「The specified child already has a parent」直接崩掉进程。
+        // 关掉 Android 默认的裁剪：列表很长时它能省内存，但滚动中单元格被反复
+        // 挂载/卸载，实测更卡，且曾让图片缩略图出现空白。崩溃与此无关。
         removeClippedSubviews={false}
         refreshControl={
           <RefreshControl
