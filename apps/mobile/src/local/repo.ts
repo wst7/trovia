@@ -362,6 +362,15 @@ export async function markForRetry(id: string): Promise<void> {
  * 删除写墓碑而不是物理删除：本机不再显示，但保留更新与删除时间，
  * 以后接入多端同步时可以直接传播这次删除。
  */
+/** 导入去重用：本机已有的全部链接。 */
+export async function listUrls(): Promise<string[]> {
+  const db = await getDb()
+  const rows = await db.getAllAsync<{ url: string }>(
+    'SELECT url FROM documents WHERE deleted_at IS NULL',
+  )
+  return rows.map((row) => row.url)
+}
+
 /** 导出用：全部有效收藏（含正文与图片路径），按收藏时间正序。 */
 export async function listAllForExport(): Promise<DocumentDetail[]> {
   const db = await getDb()

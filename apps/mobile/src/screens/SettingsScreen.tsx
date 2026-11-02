@@ -224,6 +224,13 @@ export function SettingsScreen() {
           <SectionLabel>数据</SectionLabel>
           <Group>
             <Row
+              icon="enter-outline"
+              title="导入收藏"
+              subtitle="浏览器书签、CSV 或链接清单"
+              onPress={() => router.push('/settings/import')}
+              accessibilityLabel="导入收藏"
+            />
+            <Row
               icon="download-outline"
               title="导出全部收藏"
               subtitle={exporting ? '正在写入文件…' : 'JSON 备份 + 可读 Markdown，随时带走'}
