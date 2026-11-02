@@ -2,7 +2,6 @@ import type { ReactNode } from 'react'
 import { View } from 'react-native'
 
 import { cx } from './cx'
-import { usePalette } from './palette'
 
 /**
  * 半扁平卡片：自身是纯白表面，靠一层几乎看不见的投影从画布上「抬起」。
@@ -20,17 +19,10 @@ export function Card({
   className?: string
   padded?: boolean
 }) {
-  const p = usePalette()
+  // 层次靠发丝线与留白，不靠阴影：Android 的 elevation 会带出灰边，也破坏「克制」。
   return (
     <View
       className={cx('rounded-md border border-line bg-surface', padded && 'p-3', className)}
-      style={{
-        shadowColor: p.ink,
-        shadowOpacity: 0.05,
-        shadowRadius: 6,
-        shadowOffset: { width: 0, height: 1 },
-        elevation: 1,
-      }}
     >
       {children}
     </View>

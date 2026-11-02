@@ -9,6 +9,9 @@ import {
   formatDate,
 } from '@xunji/shared'
 
+import { relativeTime } from '../local/dates'
+
+const flat = (value: string) => value.replace(/\s+/g, '')
 import { ImageViewer } from '../components/ImageViewer'
 import { removeImages } from '../local/imageStore'
 import { LiveStatusMark } from '../components/LiveStatusMark'
@@ -26,9 +29,6 @@ function bodyFallback(code: string | null): string {
   if (code === 'APP_ONLY_LINK') {
     return '这条内容在飞书 App 里。标题和链接已经保存，点下方「打开原文」可以直接回到飞书查看。'
   }
-  if (code === 'CONTENT_SCRIPT_ONLY') {
-    return '这个链接需要在对应的 App 内打开（比如飞书、微信），正文无法直接读取；链接已保留，点下方「打开原文」可以回到原处。'
-  }
   if (code === 'FETCH_BLOCKED') {
     return '这个站点拒绝本机读取（要求登录、人机验证或屏蔽了非浏览器请求），所以正文读不到。链接和标题已经保留，点下方「打开原文」可以去看。'
   }
@@ -36,7 +36,7 @@ function bodyFallback(code: string | null): string {
     return '这次没连上站点，可能是网络问题。链接已经保存，可以点「重新解析」再试一次。'
   }
   if (code === 'CONTENT_SCRIPT_ONLY') {
-    return '页面只把公开的那部分发给了本机（比如推文正文、标题、时间），回复或需要登录的内容读不到。链接保留着，点下方「打开原文」看完整页面。'
+    return '页面正文由脚本动态渲染，本机只拿到公开的那部分。链接保留着，点下方「打开原文」看完整页面。'
   }
   if (code === 'PARSE_INCOMPLETE') {
     return '只读到了页面的一部分正文，可能是站点分批加载。链接已经保存，可以点「重新解析」再试一次。'
@@ -182,7 +182,11 @@ export function DocumentDetailScreen() {
     )
   }
 
-  const bodySource = doc.content_markdown ?? doc.plain_text ?? ''
+  const rawBody = doc.content_markdown ?? doc.plain_text ?? ''
+  // 抓取失败时站点只给了 <title>，正文就是标题本身。再排一遍等于把标题放大两次，
+  // 读者会以为页面卡住了；这种情况按「没有正文」处理，交给下面的说明文案。
+  const bodyIsJustTitle = flat(rawBody) === flat(doc.title ?? '') || !flat(rawBody)
+  const bodySource = bodyIsJustTitle ? '' : rawBody
   // 图片落盘后同一张图有两个地址：本地文件优先，远程只作兜底。
   const localByRemote = new Map<string, string>()
   const remoteImages = doc.images ?? []
@@ -202,7 +206,6 @@ export function DocumentDetailScreen() {
   const summaryLong = rawLong && rawLong !== summaryShort && rawLong !== rawShort ? rawLong : null
   const summary = summaryShort ?? summaryLong
   // 抽取式摘要对短文就等于全文：这时候摘要块只是把原文又说一遍，直接不显示。
-  const flat = (s: string) => s.replace(/\s+/g, '')
   const summaryRepeatsBody = Boolean(summary && bodySource && flat(bodySource).includes(flat(summary)))
 
   return (
@@ -228,7 +231,7 @@ export function DocumentDetailScreen() {
         <Text className="mt-2 text-caption text-muted">
           {doc.author ? `${doc.author} · ` : ''}
           {doc.published_at ? `${formatDate(doc.published_at)} 发表 · ` : ''}
-          收藏于 {formatDate(doc.saved_at)}
+          收藏于 {relativeTime(doc.saved_at)}
         </Text>
 
 
@@ -244,20 +247,24 @@ export function DocumentDetailScreen() {
               }}
             />
             {canReprocess ? (
-              <TextButton
-                label={reprocessing ? '提交中…' : '重新解析'}
+              <Pressable
                 onPress={() => void handleReprocess()}
                 disabled={reprocessing}
-              />
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="重新解析"
+                className={reprocessing ? 'opacity-40' : undefined}
+              >
+                <Text className="text-caption text-muted underline">
+                  {reprocessing ? '提交中…' : '重新解析'}
+                </Text>
+              </Pressable>
             ) : null}
           </View>
         ) : null}
 
         {summary && !summaryRepeatsBody ? (
-          <View
-            className="mt-6 rounded-md border border-line bg-surface p-4"
-            style={{ shadowColor: p.ink, shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
-          >
+          <View className="mt-6 rounded-md border border-line bg-surface p-4">
             <Text className="text-[11px] font-semibold tracking-[1px] text-faint">摘要</Text>
             {summaryShort ? (
               <Text className="mt-2 text-body text-ink">{summaryShort}</Text>
@@ -332,7 +339,7 @@ export function DocumentDetailScreen() {
             <Divider />
             <Text className="mt-6 text-[11px] font-semibold tracking-[1px] text-faint">相关</Text>
             <View className="mt-1">
-              {related.map((item) => (
+              {related.map((item, index) => (
                 <View key={item.document_id}>
                   <Text
                     className="py-3 text-body-sm text-ink"
@@ -341,7 +348,7 @@ export function DocumentDetailScreen() {
                   >
                     {item.title || item.url}
                   </Text>
-                  <Divider />
+                  {index < related.length - 1 ? <Divider /> : null}
                 </View>
               ))}
             </View>
