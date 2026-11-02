@@ -280,6 +280,23 @@ export function DocumentDetailScreen() {
           </View>
         ) : null}
 
+        {/* 已整理好的条目也给一个「重新整理」：抽取规则会改进，旧条目不该只能靠重装。
+            做成淡墨小字，不抢「打开原文」的位置。 */}
+        {status === 'completed' && !blockedBySite ? (
+          <Pressable
+            onPress={() => void handleReprocess()}
+            disabled={reprocessing}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="重新整理这篇"
+            className={`mt-3 ${reprocessing ? 'opacity-40' : ''}`}
+          >
+            <Text className="text-caption text-faint underline">
+              {reprocessing ? '正在重新整理…' : '重新整理这篇'}
+            </Text>
+          </Pressable>
+        ) : null}
+
         {summary && !summaryRepeatsBody ? (
           <View className="mt-6 border-l-2 border-accent pl-4">
             <Text className="text-[11px] font-semibold tracking-[1px] text-faint">摘要</Text>
