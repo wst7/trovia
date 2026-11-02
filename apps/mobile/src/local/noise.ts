@@ -96,6 +96,23 @@ export function scrubAppPrompts(markdown: string): string {
 const ADGEBRA_LINE =
   /^(?:advertising|advertisement|sponsored(?: by\b.*)?|scanned by\b.*|.*\bsafe web\b.*|share(?: this)?|tweet|copy link|read more|see more|show more|\d+\s*(?:comments?|reviews?|views?)|★★★★★.*)$/i
 
+/** 站点的统计条与徽章文案：`阅读量5.7k`、`收藏 15`、`点赞 3`、标题尾巴的「原创」。 */
+const SITE_STAT_LINE =
+  /^(?:(?:阅读量|阅读数|浏览|浏览量|收藏|点赞|评论|分享)\s*[:：]?\s*[\d.]+\s*[kw万]?|\d+\s*(?:赞|评论|收藏)|码龄\s*\d+\s*年|关注|已关注|粉丝\s*\d+)$|\s原创$/
+
+/** 站点自己的图标/头像图片：它们在正文里没有信息量，只会占一大块空白。 */
+const SITE_ICON_IMAGE =
+  /^!\[[^\]]*\]\(([^)\s]+)\)$/
+
+function isIconImage(line: string): boolean {
+  const match = SITE_ICON_IMAGE.exec(line.trim())
+  if (!match) return false
+  const url = match[1] ?? ''
+  return /(?:\/release\/|\/mobile\/img\/|\/static\/(?:img|images)\/(?:icon|logo|sprite)|avatar|\bicon[-_]|\blogo[-_]|placeholder)/i.test(
+    url,
+  )
+}
+
 /** 站点自己的推荐栏回显：`最新推荐文章于 2026-10-12 14:14:03 发布`。 */
 const SITE_RECO_LINE = /^(?:最新推荐|推荐阅读|相关推荐|热门推荐|猜你喜欢).{0,40}(?:发布|更新)/
 
@@ -111,21 +128,41 @@ function isAdgebraLine(line: string): boolean {
     .trim()
   if (!bare || bare.length > 60) return false
   const compact = bare.replace(/\s+/g, ' ')
-  return RATING_LINE.test(compact) || ADGEBRA_LINE.test(compact) || SITE_RECO_LINE.test(compact)
+  return (
+    RATING_LINE.test(compact) ||
+    ADGEBRA_LINE.test(compact) ||
+    SITE_RECO_LINE.test(compact) ||
+    SITE_STAT_LINE.test(compact)
+  )
 }
 
 /** 整篇范围内删掉高置信的广告/徽章行（两头的清理交给 trimMarkdownEdges）。 */
 export function stripNoiseLines(markdown: string): string {
-  const out: string[] = []
+  const lines = markdown.split('\n')
+  const dropped = new Array<boolean>(lines.length).fill(false)
+
   let inFence = false
-  for (const line of markdown.split('\n')) {
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i]
     if (/^```/.test(line.trim())) {
       inFence = !inFence
-      out.push(line)
       continue
     }
-    if (inFence || !isAdgebraLine(line)) out.push(line)
+    if (!inFence && (isAdgebraLine(line) || isIconImage(line))) dropped[i] = true
   }
+
+  // 作者名紧挨着「码龄 8 年 / 关注」：那一行本身没法和正文区分，
+  // 但「短、无标点、后面跟着站点信息」这个组合足够确定。
+  for (let i = 0; i + 1 < lines.length; i += 1) {
+    if (dropped[i] || !dropped[i + 1]) continue
+    const bare = lines[i].trim()
+    if (!bare || bare.length > 12) continue
+    if (/[，。！？、；：,.!?;:]/.test(bare)) continue
+    if (isAdgebraLine(bare) || isIconImage(bare)) continue
+    dropped[i] = true
+  }
+
+  const out = lines.filter((_, index) => !dropped[index])
   return out.join('\n').replace(/\n{3,}/g, '\n\n').trim()
 }
 

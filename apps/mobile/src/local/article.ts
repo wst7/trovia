@@ -722,10 +722,11 @@ export function extractFromHtml(html: string, url: string): ExtractedArticle {
   // 两头之外还有整行噪声（评分条、徽章、广告标签），这类在整篇范围按行删。
   markdown = stripNoiseLines(markdown)
   const cleaned = scrubAppPrompts(markdown)
-  if (cleaned !== markdown) {
-    markdown = cleaned
-    plainText = toPlainText(markdown)
-  }
+  if (cleaned !== markdown) markdown = cleaned
+  // 清理之后要重新剥一次两头：第一轮剥的时候，开头还压着站点的图标和统计条，
+  // 正文容器看起来「第一行就是标题」，于是那条作者名留了下来。
+  markdown = trimMarkdownEdges(markdown, title)
+  plainText = toPlainText(markdown)
 
   const blocked = looksBlocked(html, plainText)
 
