@@ -26,19 +26,22 @@ function titleOf(item: DocumentSummary | SearchResult): string {
   return title
 }
 
-function metaOf(item: DocumentSummary | SearchResult): string {
-  const date = formatRelativeDate(item.saved_at)
+function metaOf(item: DocumentSummary | SearchResult, showDate: boolean): string {
+  // 列表按天分组时，日期已经在分组标题上，行里再写一遍就是同一件事说两遍。
+  const date = showDate ? formatRelativeDate(item.saved_at) : ''
   // 标题本身就是链接时，再写站名等于把同一件事说两遍；
   // 但只剩一个日期又会让这一行缺一条腿，所以统一叫「链接」。
   const titleIsUrl = !item.title || item.title.trim() === item.url
   // 标题位置已经是域名时，再写一遍没有意义，只留时间。
   if (titleIsUrl) {
     const { title, host } = urlTitleAndHost(item.url)
-    return host && title !== host ? `${host} · ${date}` : date
+    if (!host || title === host) return date
+    return date ? `${host} · ${date}` : host
   }
   // 站点名和域名经常是同一件事（「x.com · X (formerly Twitter)」），统一只写域名。
   const host = domainOf(item.url)
-  return host ? `${host} · ${date}` : date
+  if (!host) return date
+  return date ? `${host} · ${date}` : host
 }
 
 /**
@@ -49,10 +52,13 @@ export function RecentRow({
   item,
   onPress,
   onTerminal,
+  showDate = true,
 }: {
   item: DocumentSummary
   onPress: () => void
   onTerminal?: (status: ParseStatus) => void
+  /** 列表已经按天分组时传 false，避免日期重复。 */
+  showDate?: boolean
 }) {
   return (
     <Pressable
@@ -68,7 +74,7 @@ export function RecentRow({
           </Text>
           <View className="mt-1 flex-row items-center gap-2">
             <Text className="flex-shrink text-caption text-muted" numberOfLines={1}>
-              {metaOf(item)}
+              {metaOf(item, showDate)}
             </Text>
             <LiveStatusMark
               docId={item.id}
@@ -91,10 +97,12 @@ export function ResultRow({
   item,
   onPress,
   onTerminal,
+  showDate = true,
 }: {
   item: SearchResult
   onPress: () => void
   onTerminal?: (status: ParseStatus) => void
+  showDate?: boolean
 }) {
   return (
     <Pressable
@@ -110,7 +118,7 @@ export function ResultRow({
           </Text>
           <View className="mt-1 flex-row items-center gap-2">
             <Text className="flex-shrink text-caption text-muted" numberOfLines={1}>
-              {metaOf(item)}
+              {metaOf(item, showDate)}
             </Text>
             <LiveStatusMark
               docId={item.document_id}

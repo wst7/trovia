@@ -8,6 +8,9 @@ import { errorMessage, STATUS_TEXT } from '@xunji/shared'
 import { AppTabBar, TAB_BAR_HEIGHT } from '../components/AppTabBar'
 import { RecentRow } from '../components/RecordRow'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
+import { subscribeChange } from '../local/bus'
+import { dayLabel } from '../local/dates'
+import { processPendingQueue } from '../local/pipeline'
 import * as repo from '../local/repo'
 import { useToast } from '../providers/ToastProvider'
 import { TextButton } from '../ui/Button'
@@ -32,6 +35,8 @@ export function DocumentsScreen() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [retryable, setRetryable] = useState(0)
+  const [retrying, setRetrying] = useState(false)
 
   const keyword = useDebouncedValue(keywordInput.trim(), 300)
   const requestSeq = useRef(0)
@@ -51,6 +56,7 @@ export function DocumentsScreen() {
         setTotal(res.total)
         setPage(nextPage)
         setError(null)
+        void repo.countRetryableFailed().then(setRetryable).catch(() => undefined)
       } catch (e) {
         if (seq !== requestSeq.current) return
         setError(errorMessage(e, '加载收藏列表失败，请稍后重试。'))
@@ -86,6 +92,39 @@ export function DocumentsScreen() {
       void loadRef.current(1, 'replace')
     }, []),
   )
+
+  // 后台整理会改状态，列表跟着变，不用手动下拉。
+  // 只在第一页自动刷新：用户翻到很后面时把列表冲回顶部比不刷新更烦。
+  const pageRef = useRef(1)
+  pageRef.current = page
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null
+    return subscribeChange(() => {
+      if (pageRef.current !== 1) return
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => void loadRef.current(1, 'replace'), 800)
+    })
+  }, [])
+
+  async function handleRetryFailed() {
+    if (retrying) return
+    setRetrying(true)
+    try {
+      const count = await repo.retryFailedBatch()
+      if (count === 0) {
+        toast('没有可以重试的条目。', { type: 'warning' })
+        return
+      }
+      setRetrying(false)
+      toast(`已重新排队 ${count} 条，正在后台整理。`, { type: 'success' })
+      reload()
+      void processPendingQueue()
+    } catch {
+      toast('重试没有启动，请稍后再试。', { type: 'error' })
+    } finally {
+      setRetrying(false)
+    }
+  }
 
   function handleTerminal(status: ParseStatus) {
     if (status === 'completed') {
@@ -130,6 +169,18 @@ export function DocumentsScreen() {
               <Text className="text-body-sm text-muted">{unit}</Text>
             </View>
 
+            {retryable > 0 ? (
+              <View className="mt-3 flex-row items-center justify-between">
+                <Text className="flex-1 text-caption text-muted">
+                  {retryable} 条没整理成功，多数是当时没能连上站点
+                </Text>
+                <TextButton
+                  label={retrying ? '正在排队…' : '重试'}
+                  onPress={() => void handleRetryFailed()}
+                />
+              </View>
+            ) : null}
+
             <View className="mt-6">
               <SearchInput
                 value={keywordInput}
@@ -146,16 +197,24 @@ export function DocumentsScreen() {
             ) : null}
           </View>
         }
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => {
+          const label = dayLabel(item.saved_at)
+          const previous = index > 0 ? dayLabel(items[index - 1].saved_at) : null
+          return (
           <View>
+            {label && label !== previous ? (
+              <Text className="mt-5 mb-2 text-caption font-medium text-faint">{label}</Text>
+            ) : null}
             <RecentRow
               item={item}
               onPress={() => router.push(`/documents/${item.id}`)}
               onTerminal={handleTerminal}
+              showDate={false}
             />
             <Divider />
           </View>
-        )}
+          )
+        }}
         ListEmptyComponent={
           loading ? (
             <View className="mt-10 items-center">

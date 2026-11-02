@@ -9,6 +9,7 @@ import type {
 } from '@xunji/shared'
 
 import type { ExtractedArticle } from './article'
+import { passesCoverage } from './coverage'
 import { getDb } from './db'
 import { SEMANTIC_MIN_SCORE, cosine, embedTexts, loadEmbedConfig, loadVectors } from './embed'
 import type { Completer } from './intent'
@@ -413,6 +414,40 @@ export interface DocumentStats {
   failed: number
 }
 
+/**
+ * 值得再试一次的失败：当时网络不通、站点抽风、或者我们自己的解析崩了。
+ * 被站点明确拒绝（FETCH_BLOCKED）、只能在 App 内打开、正文要靠脚本渲染的，
+ * 重试一百次也是同一个结果，不该出现在「重试」按钮里。
+ */
+const RETRYABLE_CODES = ['FETCH_FAILED', 'INTERNAL_ERROR', 'PARSE_INCOMPLETE']
+
+export async function countRetryableFailed(): Promise<number> {
+  const db = await getDb()
+  const placeholders = RETRYABLE_CODES.map(() => '?').join(', ')
+  const row = await db.getFirstAsync<{ total: number }>(
+    `SELECT COUNT(*) AS total FROM documents
+      WHERE deleted_at IS NULL AND parse_status = 'failed'
+        AND (parse_error_code IS NULL OR parse_error_code IN (${placeholders}))`,
+    ...RETRYABLE_CODES,
+  )
+  return row?.total ?? 0
+}
+
+export async function retryFailedBatch(limit = 60): Promise<number> {
+  const db = await getDb()
+  const placeholders = RETRYABLE_CODES.map(() => '?').join(', ')
+  const rows = await db.getAllAsync<{ id: string }>(
+    `SELECT id FROM documents
+      WHERE deleted_at IS NULL AND parse_status = 'failed'
+        AND (parse_error_code IS NULL OR parse_error_code IN (${placeholders}))
+      ORDER BY saved_at DESC LIMIT ?`,
+    ...RETRYABLE_CODES,
+    limit,
+  )
+  for (const row of rows) await markForRetry(row.id)
+  return rows.length
+}
+
 /** 设置页的深色统计面板只需要这四个数。 */
 export async function documentStats(): Promise<DocumentStats> {
   const db = await getDb()
@@ -453,6 +488,7 @@ const STOP_TERMS = new Set([
   '如果', '已经', '现在', '时候', '时间', '问题', '东西', '事情', '觉得', '认为', '没有',
   '不是', '真的', '非常', '比较', '一直', '这样', '那样', '很多', '如何', '这些', '关于',
   '的时', '时候', '有的', '时候', '一种', '是否', '以及', '或者', '然后', '而且', '并且',
+  '这种', '那种', '种东', '个东', '么东', '这玩', '玩意', '有点', '一点', '好像', '感觉',
 ])
 
 export function queryTerms(query: string): string[] {
@@ -620,6 +656,7 @@ export async function searchDocuments(query: string, limit = 20): Promise<Search
     const site = (row.site_name ?? '').toLowerCase()
 
     let score = 0
+    let matchedTerms = 0
     const hitTitle: string[] = []
     const hitKeywords: string[] = []
     const hitSummary: string[] = []
@@ -627,30 +664,40 @@ export async function searchDocuments(query: string, limit = 20): Promise<Search
     const hitSite: string[] = []
 
     for (const term of terms) {
+      let matchedThisTerm = false
       if (title.includes(term)) {
+        matchedThisTerm = true
         score += 10
         if (hitTitle.length < 3) hitTitle.push(term)
       }
       if (keywordsText.includes(term)) {
         score += 7
         if (hitKeywords.length < 3) hitKeywords.push(term)
+        matchedThisTerm = true
       }
       if (summary.includes(term)) {
         score += 4
         if (hitSummary.length < 3) hitSummary.push(term)
+        matchedThisTerm = true
       }
       if (body.includes(term)) {
         score += 2
         if (hitBody.length < 3) hitBody.push(term)
+        matchedThisTerm = true
       }
       if (site.includes(term)) {
         score += 3
         if (hitSite.length < 2) hitSite.push(term)
+        matchedThisTerm = true
       }
+      if (matchedThisTerm) matchedTerms += 1
     }
 
     // 只有时间条件时，区间内的每条都算命中，靠时间排序。
     if (!dateOnly && score <= 0) continue
+    // 覆盖率：中文二元组会让一句无关的话也蹭上一个词（「...这种东西」命中「这种」）。
+    // 至少对上一半的词才算这条跟查询有关，否则就是噪声。
+    if (!dateOnly && !passesCoverage(matchedTerms, terms.length)) continue
 
     const parts: string[] = []
     if (hit) parts.unshift(dateLabelOf(hit))

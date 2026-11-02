@@ -106,8 +106,8 @@ export function HomeScreen() {
     })
   }, [routeParams.q])
 
-  async function runSearch() {
-    const q = query.trim()
+  async function runSearch(text?: string) {
+    const q = (text ?? query).trim()
     if (!q || searching) return
     setSearching(true)
     setSearchError(null)
@@ -222,6 +222,24 @@ export function HomeScreen() {
                       ? '换一天试试，或者直接描述你还记得的内容。'
                       : '换一种描述，或者把原链接粘到上面保存下来。'}
                   </Text>
+                  {/* 用户不会猜出「今天」「上周」这种说法能当条件用，空结果时给几个能点的话。 */}
+                  <View className="mt-5 flex-row flex-wrap items-center">
+                    {(interpretation
+                      ? ['这个月的', '不带时间的', '上周存的']
+                      : ['今天的', '上周存的', '这个月的']
+                    ).map((example) => (
+                      <View key={example} className="mr-5">
+                        <TextButton
+                          label={example}
+                          onPress={() => {
+                            setQuery(example)
+                            void runSearch(example)
+                          }}
+                          tone="muted"
+                        />
+                      </View>
+                    ))}
+                  </View>
                 </View>
               ) : results ? (
                 <View className="mt-2">
