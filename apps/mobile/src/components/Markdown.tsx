@@ -35,7 +35,7 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
     }
     if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
       nodes.push(
-        <Text key={key} className="italic">
+        <Text key={key} className="italic text-ink">
           {renderInline(part.slice(1, -1), key)}
         </Text>,
       )

@@ -31,7 +31,7 @@ export const palette = {
     lineStrong: '#3b3b37',
     ink: '#edeae4',
     muted: '#9b9891',
-    faint: '#6b6862',
+    faint: '#8a877f',
     accent: '#e4715b',
     accentQuiet: '#2e1d18',
     danger: '#e4685c',

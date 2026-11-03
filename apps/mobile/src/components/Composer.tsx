@@ -116,7 +116,8 @@ export function Composer({
 
       <View className="flex-row items-center justify-between gap-3 px-3 pb-2">
         <Text
-          className={cx('flex-1 text-caption', error && 'text-danger')}
+          // 必须显式给颜色：Text 不写颜色时是系统黑，深色模式下等于隐形。
+          className={cx('flex-1 text-caption', error ? 'text-danger' : 'text-muted')}
           numberOfLines={1}
         >
           {hint}
