@@ -4,6 +4,7 @@ import { cacheImages } from './imageStore'
 import { emitChange } from './bus'
 import { summarizeWithLlm } from './llm'
 import { isOcrAvailable, ocrImages } from './ocr'
+import { mergeOcrText } from './ocr-text'
 import * as repo from './repo'
 import { oneLine } from './util'
 
@@ -84,13 +85,11 @@ async function processOne(id: string, url: string): Promise<void> {
     emitChange()
     const texts = await ocrImages(article.images, url)
     if (texts.length > 0) {
-      const recognized = texts.join('\n\n')
-      article.markdown = [article.markdown, '## 图片文字', recognized]
-        .filter((part) => part && part.trim())
-        .join('\n\n')
-      article.plainText = [article.plainText, recognized]
-        .filter((part) => part && part.trim())
-        .join('\n\n')
+      // 图上认出来的字只进检索文本（plainText），不并进正文 markdown：
+      // 它们是搜索线索，不是文章内容，摆进正文只会让读者读到一段「图片文字」。
+      const merged = mergeOcrText(article, texts.join('\n\n'))
+      article.markdown = merged.markdown
+      article.plainText = merged.plainText
     }
   }
 
