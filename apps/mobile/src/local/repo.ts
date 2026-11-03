@@ -11,6 +11,7 @@ import type {
 import type { ExtractedArticle } from './article'
 import { passesCoverage } from './coverage'
 import { getDb } from './db'
+import { resolveImportedSavedAt } from './import/dates'
 import { RETRYABLE_CODES } from './retry'
 import { SEMANTIC_MIN_SCORE, cosine, embedTexts, loadEmbedConfig, loadVectors } from './embed'
 import type { Completer } from './intent'
@@ -127,11 +128,8 @@ export async function createDocument(
 
   const id = newId()
   const now = nowIso()
-  // 导入文件里的时间可能很旧；一直往前推一点总比全挤在今天好，所以只在合理范围内采用。
-  const saved =
-    savedAt && Number.isFinite(savedAt) && savedAt > 0 && savedAt <= Date.now()
-      ? new Date(savedAt).toISOString()
-      : now
+  // 导入文件里的时间可能很旧；只在合理范围内采用（见 import/dates.ts）。
+  const saved = resolveImportedSavedAt(savedAt, Date.now())
   await db.runAsync(
     `INSERT INTO documents (id, url, canonical_url, source_type, title, parse_status, parse_stage, saved_at, updated_at, metadata)
      VALUES (?, ?, ?, ?, ?, 'pending', 'fetch', ?, ?, ?)`,
