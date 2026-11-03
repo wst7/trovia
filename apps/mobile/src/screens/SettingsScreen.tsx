@@ -24,17 +24,26 @@ import * as repo from '../local/repo'
 import type { DocumentStats } from '../local/repo'
 import { useLocalRevision } from '../local/useLocalRevision'
 import { useToast } from '../providers/ToastProvider'
+import { useT } from '../i18n'
+import { setLocalePreference } from '../i18n/prefs'
+import type { LocalePreference } from '../i18n'
 
 const APP_NAME = 'Trovia'
 
+const LOCALE_OPTIONS: { value: LocalePreference; labelKey: string }[] = [
+  { value: 'system', labelKey: 'settings.language.system' },
+  { value: 'zh', labelKey: 'settings.language.zh' },
+  { value: 'en', labelKey: 'settings.language.en' },
+]
+
 type IconName = ComponentProps<typeof Ionicons>['name']
 
-function statsLine(stats: DocumentStats | null): string {
-  if (stats === null) return '读取中…'
-  if (stats.total === 0) return '还没有收藏'
-  const parts = [`${stats.total} 条`]
-  if (stats.processing > 0) parts.push(`${stats.processing} 篇整理中`)
-  if (stats.failed > 0) parts.push(`${stats.failed} 篇失败`)
+function statsLine(stats: DocumentStats | null, t: (key: string, vars?: Record<string, string | number>) => string): string {
+  if (stats === null) return t('settings.stats.loading')
+  if (stats.total === 0) return t('settings.stats.empty')
+  const parts = [t('settings.stats.total', { count: stats.total })]
+  if (stats.processing > 0) parts.push(t('settings.stats.processing', { count: stats.processing }))
+  if (stats.failed > 0) parts.push(t('settings.stats.failed', { count: stats.failed }))
   return parts.join(' · ')
 }
 
@@ -116,15 +125,17 @@ function SectionLabel({ children }: { children: string }) {
 }
 
 export function SettingsScreen() {
+  const t = useT()
   const router = useRouter()
   const { toast } = useToast()
   const revision = useLocalRevision()
   const insets = useSafeAreaInsets()
 
   const [stats, setStats] = useState<DocumentStats | null>(null)
-  const [llmLabel, setLlmLabel] = useState('读取中…')
+  const [llm, setLlm] = useState<{ enabled: boolean; model: string | null } | null>(null)
   const [exporting, setExporting] = useState(false)
-  const [syncLabel, setSyncLabel] = useState('未配置')
+  const [sync, setSync] = useState<{ configured: boolean; at: string | null } | null>(null)
+  const [localePref, setLocalePref] = useState<LocalePreference>('system')
   // 整库重抓：可中断的批处理，进度写在行副标题上。
   const [rebulk, setRebulk] = useState<{ done: number; total: number; current: string | null } | null>(null)
   const stopRebulk = useRef(false)
@@ -144,7 +155,9 @@ export function SettingsScreen() {
       )
       setRebulk(null)
       toast(
-        result.stopped ? `已停止，重新整理了 ${result.processed} 条。` : `重新整理完成，共 ${result.processed} 条。`,
+        result.stopped
+          ? t('settings.rebulk.stopped', { count: result.processed })
+          : t('settings.rebulk.done', { count: result.processed }),
         { type: 'success' },
       )
     })()
@@ -163,8 +176,8 @@ export function SettingsScreen() {
         lastSyncAt(),
       ])
       setStats(nextStats)
-      setLlmLabel(llm.enabled ? `已开启 · ${llm.model || '未命名模型'}` : '关闭')
-      setSyncLabel(!configured ? '未配置' : syncedAt ? `${relativeTime(syncedAt)}同步` : '等待首次同步')
+      setLlm({ enabled: llm.enabled, model: llm.model ?? null })
+      setSync({ configured, at: syncedAt ?? null })
     } catch {
       // 读本地库失败时保持上一次的值，不打断用户。
     }
@@ -182,21 +195,21 @@ export function SettingsScreen() {
     try {
       const docs = await listAllForExport()
       if (docs.length === 0) {
-        toast('还没有可以导出的收藏。', { type: 'warning' })
+        toast(t('settings.export.empty'), { type: 'warning' })
         return
       }
       const result = await writeExport(docs)
       if (!result) {
-        toast('这台设备上暂时无法写入文件。', { type: 'error' })
+        toast(t('settings.export.noWrite'), { type: 'error' })
         return
       }
       const Sharing = await import('expo-sharing')
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(result.jsonPath, { mimeType: 'application/json', dialogTitle: '导出收藏' })
+        await Sharing.shareAsync(result.jsonPath, { mimeType: 'application/json', dialogTitle: t('settings.export.dialog') })
       }
-      toast(`已导出 ${docs.length} 条，JSON 与 Markdown 都写好了。`, { type: 'success' })
+      toast(t('settings.export.done', { count: docs.length }), { type: 'success' })
     } catch {
-      toast('导出失败，请稍后重试。', { type: 'error' })
+      toast(t('settings.export.failed'), { type: 'error' })
     } finally {
       setExporting(false)
     }
@@ -207,9 +220,9 @@ export function SettingsScreen() {
       await clearAllDocuments()
       emitChange()
       await reload()
-      toast('已清空本机收藏。', { type: 'success' })
+      toast(t('settings.clear.done'), { type: 'success' })
     } catch {
-      toast('清空失败，请稍后重试。', { type: 'error' })
+      toast(t('settings.clear.failed'), { type: 'error' })
     }
   }
 
@@ -220,106 +233,142 @@ export function SettingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View className="h-14 justify-center">
-          <Text className="text-heading font-semibold text-ink">我的</Text>
+          <Text className="text-heading font-semibold text-ink">{t('settings.title')}</Text>
         </View>
-        <Text className="mb-6 text-caption text-faint">本机 · 没有账号，内容不上传</Text>
+        <Text className="mb-6 text-caption text-faint">{t('settings.subtitle')}</Text>
 
         <View className="mb-6">
-          <SectionLabel>同步</SectionLabel>
+          <SectionLabel>{t('settings.section.sync')}</SectionLabel>
           <Group>
             <Row
               icon="cloud-outline"
-              title="WebDAV 同步"
-              subtitle="写进你自己的网盘，不经过我们的服务器"
-              value={syncLabel}
+              title={t('settings.sync.title')}
+              subtitle={t('settings.sync.subtitle')}
+              value={
+                sync === null
+                  ? ''
+                  : !sync.configured
+                    ? t('settings.sync.none')
+                    : sync.at
+                      ? t('settings.sync.at', { when: relativeTime(sync.at) })
+                      : t('settings.sync.waiting')
+              }
               onPress={() => router.push('/settings/sync')}
-              accessibilityLabel="WebDAV 同步"
+              accessibilityLabel={t('settings.sync.title')}
             />
             <Row
               icon="phone-portrait-outline"
-              title="本机存储"
-              subtitle="正文、摘要与索引都在 xunji.db"
-              value={statsLine(stats)}
+              title={t('settings.storage.title')}
+              subtitle={t('settings.storage.subtitle')}
+              value={statsLine(stats, t)}
             />
           </Group>
         </View>
 
         <View className="mb-6">
-          <SectionLabel>整理</SectionLabel>
+          <SectionLabel>{t('settings.section.organize')}</SectionLabel>
           <Group>
             <Row
               icon="sparkles-outline"
-              title="大模型摘要"
-              subtitle="用自己的模型写摘要与关键词"
-              value={llmLabel}
+              title={t('settings.llm.title')}
+              subtitle={t('settings.llm.subtitle')}
+              value={
+                llm === null
+                  ? ''
+                  : llm.enabled
+                    ? t('settings.llm.on', { model: llm.model || t('settings.llm.unnamed') })
+                    : t('settings.llm.off')
+              }
               onPress={() => router.push('/settings/llm')}
-              accessibilityLabel="打开大模型设置"
+              accessibilityLabel={t('settings.llm.a11y')}
             />
           </Group>
         </View>
 
         <View className="mb-6">
-          <SectionLabel>数据</SectionLabel>
+          <SectionLabel>{t('settings.section.data')}</SectionLabel>
           <Group>
             <Row
               icon="enter-outline"
-              title="导入收藏"
-              subtitle="浏览器书签、CSV 或链接清单"
+              title={t('settings.import.title')}
+              subtitle={t('settings.import.subtitle')}
               onPress={() => router.push('/settings/import')}
-              accessibilityLabel="导入收藏"
+              accessibilityLabel={t('settings.import.title')}
             />
             <Row
               icon="download-outline"
-              title="导出全部收藏"
-              subtitle={exporting ? '正在写入文件…' : 'JSON 备份 + 可读 Markdown，随时带走'}
-              value={stats ? `${stats.total} 条` : undefined}
+              title={t('settings.export.title')}
+              subtitle={
+                exporting ? t('settings.export.writing') : t('settings.export.subtitle')
+              }
+              value={stats ? t('settings.stats.total', { count: stats.total }) : undefined}
               onPress={() => void handleExport()}
-              accessibilityLabel="导出全部收藏"
+              accessibilityLabel={t('settings.export.title')}
             />
             <Row
               icon="refresh-outline"
-              title={rebulk ? '停止重新整理' : '重新整理全部正文'}
+              title={rebulk ? t('settings.rebulk.stop') : t('settings.rebulk.title')}
               subtitle={
                 rebulk
-                  ? `已完成 ${rebulk.done}/${rebulk.total}${rebulk.current ? ` · ${rebulk.current.slice(0, 18)}` : ''}`
-                  : '重新抓取每篇正文，取回其中较新的那版'
+                  ? `${t('settings.rebulk.progress', { done: rebulk.done, total: rebulk.total })}${
+                      rebulk.current ? ` · ${rebulk.current.slice(0, 18)}` : ''
+                    }`
+                  : t('settings.rebulk.subtitle')
               }
-              value={rebulk ? '进行中' : undefined}
+              value={rebulk ? t('settings.rebulk.running') : undefined}
               onPress={handleReprocessAll}
-              accessibilityLabel={rebulk ? '停止重新整理' : '重新整理全部正文'}
+              accessibilityLabel={rebulk ? t('settings.rebulk.stop') : t('settings.rebulk.title')}
             />
             <Row
               icon="trash-outline"
-              title="清空全部收藏"
-              subtitle="删除本机正文、摘要与索引，无法恢复"
+              title={t('settings.clear.title')}
+              subtitle={t('settings.clear.subtitle')}
               danger
               onPress={() => setConfirmingClear(true)}
-              accessibilityLabel="清空全部收藏"
+              accessibilityLabel={t('settings.clear.title')}
             />
           </Group>
         </View>
 
         <View className="mb-6">
-          <SectionLabel>关于</SectionLabel>
+          <SectionLabel>{t('settings.section.language')}</SectionLabel>
+          <Group>
+            {LOCALE_OPTIONS.map((option) => (
+              <Row
+                key={option.value}
+                icon={localePref === option.value ? 'radio-button-on' : 'radio-button-off'}
+                title={t(option.labelKey)}
+                onPress={() => {
+                  setLocalePref(option.value)
+                  void setLocalePreference(option.value)
+                }}
+                accessibilityLabel={t(option.labelKey)}
+              />
+            ))}
+          </Group>
+        </View>
+
+        <View className="mb-6">
+          <SectionLabel>{t('settings.section.about')}</SectionLabel>
           <Group>
             <Row
               icon="information-circle-outline"
               title={APP_NAME}
-              subtitle="只保存在这台手机上"
+              subtitle={t('settings.about.local')}
               value={`v${Constants.expoConfig?.version ?? '—'}`}
             />
           </Group>
         </View>
 
         <Text className="mt-2 text-center text-caption text-faint">
-          链接与图片由本机解析，图片文字用端侧 OCR 识别，不会上传。
+          {t('settings.footer')}
         </Text>
       </ScrollView>
       <ConfirmDialog
         visible={confirmingClear}
-        title="清空全部收藏？"
-        message="本机的正文、摘要和索引都会被删除，无法恢复。大模型设置会保留。"
-        confirmLabel="清空"
+        title={t('settings.clear.confirmTitle')}
+        message={t('settings.clear.confirmBody')}
+        confirmLabel={t('settings.clear.confirmAction')}
         destructive
         onCancel={() => setConfirmingClear(false)}
         onConfirm={() => {

@@ -3,7 +3,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { ActivityIndicator, FlatList, Keyboard, Pressable, RefreshControl, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { DocumentSummary, ParseStatus } from '@trovia/shared'
-import { errorMessage, STATUS_TEXT, domainOf } from '@trovia/shared'
+import { domainOf } from '@trovia/shared'
 
 import { TAB_BAR_HEIGHT } from '../components/AppTabBar'
 import { RecentRow } from '../components/RecordRow'
@@ -18,10 +18,13 @@ import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { GUTTER, Screen } from '../ui/Screen'
 import { SearchInput } from '../ui/SearchInput'
 import { usePalette } from '../ui/palette'
+import { useT } from '../i18n'
+import { errorText } from '../i18n/errors'
 
 const PAGE_SIZE = 20
 
 export function DocumentsScreen() {
+  const t = useT()
   const routeParams = useLocalSearchParams<{ imported?: string }>()
   const router = useRouter()
   const { toast } = useToast()
@@ -95,7 +98,7 @@ export function DocumentsScreen() {
           .catch(() => undefined)
       } catch (e) {
         if (seq !== requestSeq.current) return
-        setError(errorMessage(e, '加载收藏列表失败，请稍后重试。'))
+        setError(errorText(e, t('list.loadFailed')))
       } finally {
         if (seq === requestSeq.current) {
           setLoading(false)
@@ -170,9 +173,11 @@ export function DocumentsScreen() {
     exitSelection()
     try {
       for (const id of ids) await repo.deleteDocument(id)
-      toast(ids.length === 1 ? '已删除。' : `已删除 ${ids.length} 条。`, { type: 'success' })
+      toast(ids.length === 1 ? t('list.deletedOne') : t('list.deletedMany', { count: ids.length }), {
+        type: 'success',
+      })
     } catch {
-      toast('删除没有全部完成，剩下的还在列表里。', { type: 'error' })
+      toast(t('list.deletePartial'), { type: 'error' })
     } finally {
       reload()
     }
@@ -184,21 +189,21 @@ export function DocumentsScreen() {
     try {
       const count = await repo.retryFailedBatch()
       if (count === 0) {
-        toast('没有可以重试的条目。', { type: 'warning' })
+        toast(t('list.retryNone'), { type: 'warning' })
         return
       }
       setRetrying(false)
       const skipped = Math.max(0, failed - count)
       toast(
         skipped > 0
-          ? `已重新排队 ${count} 条；另外 ${skipped} 条被站点拒绝，重试没有意义。`
-          : `已重新排队 ${count} 条，正在后台整理。`,
+          ? t('list.retriedSome', { count, skipped })
+          : t('list.retriedAll', { count }),
         { type: 'success' },
       )
       reload()
       void processPendingQueue()
     } catch {
-      toast('重试没有启动，请稍后再试。', { type: 'error' })
+      toast(t('list.retryStartFailed'), { type: 'error' })
     } finally {
       setRetrying(false)
     }
@@ -206,17 +211,21 @@ export function DocumentsScreen() {
 
   function handleTerminal(status: ParseStatus) {
     if (status === 'completed') {
-      toast('已完成整理，可以通过描述内容搜索它。', { type: 'success' })
+      toast(t('home.toast.completed'), { type: 'success' })
     } else if (status === 'failed') {
-      toast(STATUS_TEXT.failed, { type: 'error' })
+      toast(t('status.failed'), { type: 'error' })
     } else {
-      toast(STATUS_TEXT.partial, { type: 'warning' })
+      toast(t('status.partial'), { type: 'warning' })
     }
     reload()
   }
 
   const hasMore = items.length < total
-  const unit = loading ? '正在加载…' : keyword || failedOnly || importedOnly ? '条匹配' : '条内容'
+  const unit = loading
+    ? t('list.unitLoading')
+    : keyword || failedOnly || importedOnly
+      ? t('list.unitMatch')
+      : t('list.unitItem')
 
   return (
     <Screen>
@@ -245,14 +254,16 @@ export function DocumentsScreen() {
           <View>
             {selecting ? (
               <View className="mt-4 flex-row items-center justify-between">
-                <Text className="text-heading font-semibold text-ink">已选 {selected.size} 条</Text>
+                <Text className="text-heading font-semibold text-ink">
+                  {t('list.selectedCount', { count: selected.size })}
+                </Text>
                 <View className="flex-row items-center gap-4">
                   <TextButton
-                    label={selected.size === items.length ? '取消全选' : '全选本页'}
+                    label={selected.size === items.length ? t('list.clearAll') : t('list.selectAll')}
                     onPress={() => setSelected(selected.size === items.length ? new Set() : new Set(items.map((item) => item.id)))}
                     tone="muted"
                   />
-                  <TextButton label="完成" onPress={exitSelection} />
+                  <TextButton label={t('common.done')} onPress={exitSelection} />
                 </View>
               </View>
             ) : (
@@ -268,7 +279,7 @@ export function DocumentsScreen() {
                       onPress={() => setGroupBy(mode)}
                       hitSlop={8}
                       accessibilityRole="button"
-                      accessibilityLabel={mode === 'day' ? '按日期分组' : '按网站分组'}
+                      accessibilityLabel={mode === 'day' ? t('list.groupByDay') : t('list.groupBySite')}
                     >
                       <Text
                         className={
@@ -277,7 +288,7 @@ export function DocumentsScreen() {
                             : 'text-caption text-faint'
                         }
                       >
-                        {mode === 'day' ? '日期' : '网站'}
+                        {mode === 'day' ? t('list.day') : t('list.site')}
                       </Text>
                     </Pressable>
                   ))}
@@ -289,11 +300,11 @@ export function DocumentsScreen() {
               <View className="mt-3 flex-row items-center justify-between">
                 <Text className="flex-1 text-body-sm text-muted" onPress={() => setFailedOnly((on) => !on)}>
                   {failedOnly
-                    ? '只看没能整理的，点这里回到全部'
-                    : `${failed} 条没能整理（含在 ${libraryTotal || total} 条里）`}
+                    ? t('list.failedOnlyOn')
+                    : t('list.failedCount', { count: failed, total: libraryTotal || total })}
                 </Text>
                 <TextButton
-                  label={retrying ? '正在排队…' : '重试全部'}
+                  label={retrying ? t('list.requeuing') : t('list.retryAll')}
                   onPress={() => void handleRetryFailed()}
                   tone="muted"
                 />
@@ -308,26 +319,26 @@ export function DocumentsScreen() {
                 }}
                 hitSlop={8}
                 accessibilityRole="button"
-                accessibilityLabel="只看导入的收藏"
+                accessibilityLabel={t('list.importedOnly')}
               >
                 <Text
                   className={
                     importedOnly ? 'text-caption font-medium text-ink underline' : 'text-caption text-faint'
                   }
                 >
-                  只看导入的
+                  {t('list.importedOnly')}
                 </Text>
               </Pressable>
               {importedOnly ? (
                 <Text className="text-caption text-faint">
-                  这些是从文件导入的；原始收藏时间取自文件时会保留。
+                  {t('list.importedHint')}
                 </Text>
               ) : null}
             </View>
 
             {failedOnly ? (
               <Text className="mt-2 text-caption text-faint">
-                站点拒绝读取的条目只能留下标题和链接，重试没有意义，所以它们没有重试入口。
+                {t('list.failedOnlyHint')}
               </Text>
             ) : null}
 
@@ -335,14 +346,14 @@ export function DocumentsScreen() {
               <SearchInput
                 value={keywordInput}
                 onChangeText={setKeywordInput}
-                accessibilityLabel="按关键词筛选"
+                accessibilityLabel={t('list.filterA11y')}
               />
             </View>
 
             {error ? (
               <View className="mt-4 flex-row items-center justify-between">
                 <Text className="flex-1 text-body-sm text-danger">{error}</Text>
-                <TextButton label="重试" onPress={reload} />
+                <TextButton label={t('common.retry')} onPress={reload} />
               </View>
             ) : null}
           </View>
@@ -381,7 +392,7 @@ export function DocumentsScreen() {
                       void (async () => {
                         await repo.markForRetry(item.id)
                         void processPendingQueue()
-                        toast('已重新排队这一条。', { type: 'success' })
+                        toast(t('list.requeuedOne'), { type: 'success' })
                         reload()
                       })()
                     }
@@ -400,21 +411,21 @@ export function DocumentsScreen() {
             <View className="mt-10">
               <Text className="text-body text-ink">
                 {importedOnly
-                  ? '没有从文件导入的收藏。'
+                  ? t('list.emptyImported')
                   : failedOnly
-                    ? '没有没能整理的内容。'
+                    ? t('list.emptyFailed')
                     : keyword
-                      ? '没有匹配的收藏。'
-                      : '还没有收藏。'}
+                      ? t('list.emptyKeyword')
+                      : t('list.emptyAll')}
               </Text>
               <Text className="mt-1 text-body-sm text-muted">
                 {keyword || failedOnly || importedOnly
-                  ? '换一个筛选条件，或者回到全部。'
-                  : '回到首页粘贴第一个链接，Trovia 会自动整理。'}
+                  ? t('list.emptyHintFiltered')
+                  : t('list.emptyHintAll')}
               </Text>
               <View className="mt-4 self-start">
                 <TextButton
-                  label={keyword ? '清除筛选' : '回到首页'}
+                  label={keyword ? t('list.clearFilter') : t('list.backHome')}
                   onPress={() => (keyword ? setKeywordInput('') : router.replace('/'))}
                 />
               </View>
@@ -428,7 +439,7 @@ export function DocumentsScreen() {
                 <ActivityIndicator size="small" color={p.muted} />
               ) : (
                 <TextButton
-                  label="加载更多"
+                  label={t('list.loadMore')}
                   onPress={() => {
                     if (!loadingMore && !loading) void load(page + 1, 'append')
                   }}
@@ -449,10 +460,12 @@ export function DocumentsScreen() {
           style={{ bottom: TAB_BAR_HEIGHT + insets.bottom, height: 64 }}
         >
           <Text className="text-body-sm text-muted">
-            {selected.size > 0 ? `将删除 ${selected.size} 条` : '点一行来选中'}
+            {selected.size > 0
+              ? t('list.willDelete', { count: selected.size })
+              : t('list.tapToSelect')}
           </Text>
           <Button
-            label="删除"
+            label={t('common.delete')}
             variant="destructive"
             size="sm"
             disabled={selected.size === 0}
@@ -464,9 +477,13 @@ export function DocumentsScreen() {
       {confirmingDelete ? (
         <ConfirmDialog
           visible
-          title={selected.size === 1 ? '删除这 1 条收藏？' : `删除这 ${selected.size} 条收藏？`}
-          message="删除后无法恢复，其它设备下次同步时也会跟着删除。"
-          confirmLabel="删除"
+          title={
+            selected.size === 1
+              ? t('list.deleteTitleOne')
+              : t('list.deleteTitleMany', { count: selected.size })
+          }
+          message={t('list.deleteBody')}
+          confirmLabel={t('common.delete')}
           destructive
           onConfirm={() => void deleteSelected()}
           onCancel={() => setConfirmingDelete(false)}

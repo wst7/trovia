@@ -9,6 +9,7 @@ import { useToast } from '../providers/ToastProvider'
 import { Button, IconButton, TextButton } from '../ui/Button'
 import { Screen } from '../ui/Screen'
 import { TextField } from '../ui/TextField'
+import { useT } from '../i18n'
 import { GUTTER } from '../ui/Screen'
 import { usePalette } from '../ui/palette'
 
@@ -17,6 +18,7 @@ import { usePalette } from '../ui/palette'
  * 关闭时整体变淡——用户能看见配置，也知道它当前不生效。
  */
 export function LlmSettingsScreen() {
+  const t = useT()
   const router = useRouter()
   const { toast } = useToast()
   const insets = useSafeAreaInsets()
@@ -70,9 +72,11 @@ export function LlmSettingsScreen() {
     try {
       const added = await buildVectors(40)
       await reloadIndex()
-      toast(added > 0 ? `已为 ${added} 篇建立语义索引。` : '没有需要补建的条目。', { type: 'success' })
+      toast(added > 0 ? t('llm.indexed', { count: added }) : t('llm.indexNothing'), {
+        type: 'success',
+      })
     } catch {
-      toast('建立索引失败，请检查模型是否支持 embeddings。', { type: 'error' })
+      toast(t('llm.indexFailed'), { type: 'error' })
     } finally {
       setBuilding(false)
     }
@@ -88,15 +92,15 @@ export function LlmSettingsScreen() {
     if (saving) return
     if (enabled) {
       if (!/^https?:\/\/\S+$/i.test(baseUrl.trim())) {
-        toast('服务地址需要以 http:// 或 https:// 开头。', { type: 'error' })
+        toast(t('llm.needUrl'), { type: 'error' })
         return
       }
       if (!model.trim()) {
-        toast('请填写模型名称。', { type: 'error' })
+        toast(t('llm.needModel'), { type: 'error' })
         return
       }
       if (!hasKey && !apiKey.trim()) {
-        toast('请填写 API Key，或先关闭大模型。', { type: 'error' })
+        toast(t('llm.needKey'), { type: 'error' })
         return
       }
     }
@@ -107,11 +111,11 @@ export function LlmSettingsScreen() {
       setApiKey('')
       await reload()
       await reloadIndex()
-      toast(enabled ? '已保存，新收藏会用这个模型整理。' : '已保存，将使用本地抽取式摘要。', {
+      toast(enabled ? t('llm.savedOn') : t('llm.savedOff'), {
         type: 'success',
       })
     } catch {
-      toast('保存设置失败，请稍后重试。', { type: 'error' })
+      toast(t('llm.saveFailed'), { type: 'error' })
     } finally {
       setSaving(false)
     }
@@ -120,21 +124,21 @@ export function LlmSettingsScreen() {
   async function handleTest() {
     if (testing) return
     if (!/^https?:\/\/\S+$/i.test(baseUrl.trim())) {
-      toast('服务地址需要以 http:// 或 https:// 开头。', { type: 'error' })
+      toast(t('llm.needUrl'), { type: 'error' })
       return
     }
     if (!hasKey && !apiKey.trim()) {
-      toast('请先填写 API Key。', { type: 'error' })
+      toast(t('llm.needKeyOnly'), { type: 'error' })
       return
     }
 
     setTesting(true)
     try {
       const reply = await testLlmConnection({ enabled: true, baseUrl, model, intent, embedModel, semantic }, apiKey)
-      toast(`连接成功，模型回复：${reply}`, { type: 'success' })
+      toast(t('llm.testOk', { reply }), { type: 'success' })
     } catch (error) {
-      const message = error instanceof Error ? error.message : '连接失败'
-      toast(`连接失败：${message}`, { type: 'error' })
+      const message = error instanceof Error ? error.message : ''
+      toast(t('llm.testFailed', { message }), { type: 'error' })
     } finally {
       setTesting(false)
     }
@@ -147,7 +151,7 @@ export function LlmSettingsScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View className="h-14 flex-row items-center">
-          <IconButton name="chevron-back" size={22} accessibilityLabel="返回" onPress={goBack} />
+          <IconButton name="chevron-back" size={22} accessibilityLabel={t('detail.back')} onPress={goBack} />
         </View>
 
         <ScrollView
@@ -156,16 +160,12 @@ export function LlmSettingsScreen() {
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
-          <Text className="text-title font-semibold text-ink">大模型</Text>
-          <Text className="mt-2 text-body-sm text-muted">
-            可选。打开后新收藏会交给你自己的模型写摘要与关键词；关闭时从原文离线抽取，不上传任何内容。
-            搜索时会把那句话发给模型理解意图；语义检索还要把正文片段发去算向量——这一项可以在下面单独关掉。
-            请求都直接发往你填的地址，我们不中转，也没有存这样的服务器。
-          </Text>
+          <Text className="text-title font-semibold text-ink">{t('llm.title')}</Text>
+          <Text className="mt-2 text-body-sm text-muted">{t('llm.intro')}</Text>
 
           <View className="mt-6 flex-row items-center gap-3">
             <View className="flex-1">
-              <Text className="text-body-sm text-ink">用大模型写摘要</Text>
+              <Text className="text-body-sm text-ink">{t('llm.switch.summary')}</Text>
             </View>
             <Switch
               value={enabled}
@@ -173,17 +173,14 @@ export function LlmSettingsScreen() {
               trackColor={{ false: p.line, true: p.accent }}
               thumbColor={p.surface}
               ios_backgroundColor={p.line}
-              accessibilityLabel="使用大模型写摘要"
+              accessibilityLabel={t('llm.switch.summary')}
             />
           </View>
 
           <View className="mt-4 flex-row items-center gap-3">
             <View className="flex-1">
-              <Text className="text-body-sm text-ink">用模型理解搜索意图</Text>
-              <Text className="mt-1 text-caption text-muted">
-                把「上次存的那篇讲睡眠的」这类话翻译成时间与关键词；不打开时只用本地规则。
-                打开后，你输入的搜索词会发给上面那个地址；内容本身不会被发出去。
-              </Text>
+              <Text className="text-body-sm text-ink">{t('llm.switch.intent')}</Text>
+              <Text className="mt-1 text-caption text-muted">{t('llm.switch.intentHint')}</Text>
             </View>
             <Switch
               value={intent}
@@ -191,18 +188,14 @@ export function LlmSettingsScreen() {
               trackColor={{ false: p.line, true: p.accent }}
               thumbColor={p.surface}
               ios_backgroundColor={p.line}
-              accessibilityLabel="使用模型理解搜索意图"
+              accessibilityLabel={t('llm.switch.intent')}
             />
           </View>
 
           <View className="mt-4 flex-row items-center gap-3">
             <View className="flex-1">
-              <Text className="text-body-sm text-ink">语义补充检索</Text>
-              <Text className="mt-1 text-caption text-muted">
-                字面没找到时，用向量找意思相近的内容，单独列在下面，不参与主排序。
-                打开后要为每篇正文建向量，第一次会把正文片段逐篇发给上面填的地址算一遍，比较慢；
-                关掉只影响「意思相近」，按字面搜索完全不受影响。
-              </Text>
+              <Text className="text-body-sm text-ink">{t('llm.switch.semantic')}</Text>
+              <Text className="mt-1 text-caption text-muted">{t('llm.switch.semanticHint')}</Text>
             </View>
             <Switch
               value={semantic}
@@ -210,70 +203,74 @@ export function LlmSettingsScreen() {
               trackColor={{ false: p.line, true: p.accent }}
               thumbColor={p.surface}
               ios_backgroundColor={p.line}
-              accessibilityLabel="使用语义补充检索"
+              accessibilityLabel={t('llm.switch.semantic')}
             />
           </View>
 
           <View className={enabled ? 'mt-6 gap-5' : 'mt-6 gap-5 opacity-45'}>
             <TextField
-              label="服务地址"
+              label={t('llm.field.baseUrl')}
               value={baseUrl}
               onChangeText={setBaseUrl}
               placeholder={DEFAULT_LLM.baseUrl}
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="url"
-              accessibilityLabel="大模型服务地址"
+              accessibilityLabel={t('llm.field.baseUrl')}
             />
             <TextField
-              label="模型名称"
+              label={t('llm.field.model')}
               value={model}
               onChangeText={setModel}
               placeholder={DEFAULT_LLM.model}
               autoCapitalize="none"
               autoCorrect={false}
-              accessibilityLabel="模型名称"
+              accessibilityLabel={t('llm.field.model')}
             />
             <TextField
-              label="向量模型"
+              label={t('llm.field.embed')}
               value={embedModel}
               onChangeText={setEmbedModel}
               placeholder={DEFAULT_LLM.embedModel}
               autoCapitalize="none"
               autoCorrect={false}
-              hint="用于语义检索的 embeddings 模型；服务不支持 embeddings 时留空即可。"
-              accessibilityLabel="向量模型"
+              hint={t('llm.field.embedHint')}
+              accessibilityLabel={t('llm.field.embed')}
             />
             <TextField
               label="API Key"
               value={apiKey}
               onChangeText={setApiKey}
-              placeholder={hasKey ? '已保存在系统钥匙串，留空则不修改' : '填写你的 API Key'}
+              placeholder={
+                hasKey ? t('llm.field.keyPlaceholderSet') : t('llm.field.keyPlaceholderEmpty')
+              }
               autoCapitalize="none"
               autoCorrect={false}
               secureTextEntry
-              hint="密钥只写入系统钥匙串，不会上传，也不会出现在日志里。"
-              accessibilityLabel="大模型 API Key"
+              hint={t('llm.field.keyHint')}
+              accessibilityLabel="API Key"
             />
           </View>
 
           <View className="mt-6 flex-row items-center justify-between">
             <Text className="text-body-sm text-muted">
-              {indexed === null ? '语义索引：—' : `语义索引：${indexed.indexed} / ${indexed.total} 篇`}
+              {indexed === null
+                ? t('llm.index.none')
+                : t('llm.index.count', { done: indexed.indexed, total: indexed.total })}
             </Text>
-            <TextButton label="补建索引" onPress={() => void handleBuildIndex()} tone="muted" />
+            <TextButton label={t('llm.buildIndex')} onPress={() => void handleBuildIndex()} tone="muted" />
           </View>
 
           <View className="mt-4 flex-row gap-2">
             <Button
-              label={saving ? '保存中…' : '保存设置'}
+              label={saving ? t('llm.saving') : t('llm.save')}
               onPress={() => void handleSave()}
               loading={saving}
               size="sm"
               variant="primary"
             />
             <Button
-              label={testing ? '测试中…' : '测试连接'}
+              label={testing ? t('llm.testing') : t('llm.test')}
               onPress={() => void handleTest()}
               loading={testing}
               size="sm"

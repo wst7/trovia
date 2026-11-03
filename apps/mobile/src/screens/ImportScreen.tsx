@@ -3,7 +3,6 @@ import { useRouter } from 'expo-router'
 import { ScrollView, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import { FORMAT_LABELS } from '../local/import/parse'
 import { addedRange } from '../local/import/parse'
 import { pickAndParse, runImport } from '../local/import/service'
 import type { ImportProgress, ImportSummary, PickedFile } from '../local/import/service'
@@ -11,6 +10,7 @@ import { processPendingQueue } from '../local/pipeline'
 import { useToast } from '../providers/ToastProvider'
 import { Button, IconButton, TextButton } from '../ui/Button'
 import { GUTTER, Screen } from '../ui/Screen'
+import { useT } from '../i18n'
 import { usePalette } from '../ui/palette'
 
 /**
@@ -20,6 +20,7 @@ import { usePalette } from '../ui/palette'
  * 一次性把几百条链接塞进数据库却不说清楚，用户会以为数据被弄乱了。
  */
 export function ImportScreen() {
+  const t = useT()
   const router = useRouter()
   const { toast } = useToast()
   const insets = useSafeAreaInsets()
@@ -47,12 +48,12 @@ export function ImportScreen() {
       const result = await pickAndParse()
       if (!result) return
       if (result.items.length === 0) {
-        toast('这个文件里没有读到可导入的链接。', { type: 'warning' })
+        toast(t('import.noLinks'), { type: 'warning' })
         return
       }
       setPicked(result)
     } catch (error) {
-      toast(error instanceof Error ? error.message : '读取文件失败。', { type: 'error' })
+      toast(error instanceof Error ? error.message : t('import.readFailed'), { type: 'error' })
     } finally {
       setBusy(false)
     }
@@ -67,12 +68,12 @@ export function ImportScreen() {
       setSummary(result)
       setPicked(null)
       void processPendingQueue()
-      toast(`已加入 ${result.created} 条，正在后台整理。`, { type: 'success' })
+      toast(t('import.added', { count: result.created }), { type: 'success' })
       // 导入完直接去收藏页并打开「只看导入的」：否则用户回到列表只看到一排「整理中」，
       // 分不清哪些是刚进来的。
       if (result.created > 0) router.replace('/documents?imported=1')
     } catch {
-      toast('导入中断了，已经写入的条目保留着。', { type: 'error' })
+      toast(t('import.interrupted'), { type: 'error' })
     } finally {
       setBusy(false)
       setProgress(null)
@@ -82,57 +83,82 @@ export function ImportScreen() {
   return (
     <Screen>
       <View className="h-14 flex-row items-center justify-between">
-        <IconButton name="chevron-back" onPress={goBack} accessibilityLabel="返回" />
+        <IconButton name="chevron-back" onPress={goBack} accessibilityLabel={t('detail.back')} />
       </View>
 
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: GUTTER, paddingBottom: insets.bottom + 40 }}
         showsVerticalScrollIndicator={false}
       >
-        <Text className="text-title font-semibold text-ink">导入收藏</Text>
-        <Text className="mt-2 text-body-sm text-muted">
-          支持浏览器导出的书签 HTML、Chrome / Edge 的书签 JSON、CSV 表格，以及一行一个链接的纯文本。
-          导入只加入待整理队列，正文会在后台慢慢抓取。
-        </Text>
+        <Text className="text-title font-semibold text-ink">{t('settings.import.title')}</Text>
+        <Text className="mt-2 text-body-sm text-muted">{t('import.intro')}</Text>
 
         {summary ? (
           <View className="mt-8">
             <Text className="text-body text-ink">
-              已导入 {summary.created} 条
-              {summary.duplicate > 0 ? `，跳过重复 ${summary.duplicate} 条` : ''}
-              {summary.failed > 0 ? `，失败 ${summary.failed} 条` : ''}。
+              {t('import.result', { count: summary.created })}
+              {summary.duplicate > 0
+                ? t('import.resultDuplicate', { count: summary.duplicate })
+                : ''}
+              {summary.failed > 0 ? t('import.resultFailed', { count: summary.failed }) : ''}.
             </Text>
-            <Text className="mt-1 text-body-sm text-muted">正文正在后台整理，可以先去收藏页看进度。</Text>
+            <Text className="mt-1 text-body-sm text-muted">{t('import.resultHint')}</Text>
             <View className="mt-6 flex-row gap-3">
-              <Button label="去收藏看看" onPress={() => router.replace('/documents')} size="sm" variant="primary" />
-              <Button label="再导入一次" onPress={() => void handlePick()} size="sm" variant="secondary" />
+              <Button
+                label={t('import.goDocuments')}
+                onPress={() => router.replace('/documents')}
+                size="sm"
+                variant="primary"
+              />
+              <Button
+                label={t('import.again')}
+                onPress={() => void handlePick()}
+                size="sm"
+                variant="secondary"
+              />
             </View>
           </View>
         ) : picked ? (
           <View className="mt-8">
-            <Text className="text-caption font-semibold text-muted">文件</Text>
+            <Text className="text-caption font-semibold text-muted">{t('import.file')}</Text>
             <Text className="mt-1 text-body text-ink" numberOfLines={2}>
               {picked.name}
             </Text>
-            <Text className="mt-1 text-caption text-faint">{FORMAT_LABELS[picked.format]}</Text>
+            <Text className="mt-1 text-caption text-faint">{t(`import.format.${picked.format}`)}</Text>
 
             <View className="mt-6 gap-2">
-              <Line label="识别到" value={`${picked.items.length} 条链接`} color={p.ink} />
-              <Line label="已经收藏过" value={`${picked.existing} 条`} color={p.muted} />
-              <Line label="本次会新增" value={`${picked.fresh.length} 条`} color={p.accent} />
+              <Line
+                label={t('import.detected')}
+                value={t('import.detectedValue', { count: picked.items.length })}
+                color={p.ink}
+              />
+              <Line
+                label={t('import.existing')}
+                value={t('import.detectedValue', { count: picked.existing })}
+                color={p.muted}
+              />
+              <Line
+                label={t('import.new')}
+                value={t('import.detectedValue', { count: picked.fresh.length })}
+                color={p.accent}
+              />
               {importedRange ? (
                 // 带时间的导出（Pocket、书签）会把原收藏时间带进来；先说清楚，
                 // 免得用户以为几百条老收藏全变成「今天」。
-                <Line label="收藏时间" value={importedRange} color={p.muted} />
+                <Line label={t('import.savedTime')} value={importedRange} color={p.muted} />
               ) : null}
               {picked.skipped.length > 0 ? (
-                <Line label="跳过" value={`${picked.skipped.length} 行`} color={p.warn} />
+                <Line
+                  label={t('import.skippedLabel')}
+                  value={t('import.skippedValue', { count: picked.skipped.length })}
+                  color={p.warn}
+                />
               ) : null}
             </View>
 
             {picked.skipped.length > 0 ? (
               <View className="mt-4">
-                <Text className="text-caption text-faint">跳过的内容（最多显示 3 条）</Text>
+                <Text className="text-caption text-faint">{t('import.skippedTitle')}</Text>
                 {picked.skipped.slice(0, 3).map((row, index) => (
                   <Text key={`${row.line}-${index}`} className="mt-1 text-caption text-muted" numberOfLines={1}>
                     {row.reason}：{row.line}
@@ -144,7 +170,9 @@ export function ImportScreen() {
             <View className="mt-8 flex-row gap-3">
               <Button
                 label={
-                  progress ? `导入中 ${progress.done}/${progress.total}` : `导入 ${picked.fresh.length} 条`
+                  progress
+                    ? t('import.importing', { done: progress.done, total: progress.total })
+                    : t('import.importCount', { count: picked.fresh.length })
                 }
                 onPress={() => void handleImport()}
                 loading={busy && Boolean(progress)}
@@ -152,13 +180,13 @@ export function ImportScreen() {
                 size="sm"
                 variant="primary"
               />
-              <TextButton label="换个文件" onPress={() => void handlePick()} tone="muted" />
+              <TextButton label={t('import.otherFile')} onPress={() => void handlePick()} tone="muted" />
             </View>
           </View>
         ) : (
           <View className="mt-8">
             <Button
-              label={busy ? '正在读取…' : '选择文件'}
+              label={busy ? t('import.reading') : t('import.choose')}
               onPress={() => void handlePick()}
               loading={busy}
               size="sm"

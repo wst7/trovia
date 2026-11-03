@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { saveImageToLibrary } from '../local/save-image'
+import { useT } from '../i18n'
 
 /**
  * 全屏看图：双指缩放、放大后拖动、双击放大/还原、左右切换。
@@ -32,6 +33,7 @@ export interface ImageViewerProps {
 }
 
 export function ImageViewer({ visible, images, index, onClose, onIndexChange }: ImageViewerProps) {
+  const t = useT()
   const insets = useSafeAreaInsets()
   const window = Dimensions.get('window')
   const [size, setSize] = useState({ width: window.width, height: window.height })
@@ -83,12 +85,12 @@ export function ImageViewer({ visible, images, index, onClose, onIndexChange }: 
     setSaving(false)
     setNote(
       result.ok
-        ? '已存到相册'
+        ? t('viewer.saved')
         : result.reason === 'permission'
-          ? '没有相册权限，去系统设置里允许后再试'
+          ? t('viewer.noPermission')
           : result.reason === 'unavailable'
-            ? '这台设备不支持保存'
-            : '保存失败，图片可能已经失效',
+            ? t('viewer.unsupported')
+            : t('viewer.saveFailed'),
     )
     setTimeout(() => setNote(null), 2600)
   }, [current, saving])
@@ -195,7 +197,7 @@ export function ImageViewer({ visible, images, index, onClose, onIndexChange }: 
         <Pressable
           className="absolute inset-0 items-center justify-center"
           onPress={onClose}
-          accessibilityLabel="关闭图片"
+          accessibilityLabel={t('viewer.closeImage')}
         >
           <Animated.View
             {...responder.panHandlers}
@@ -235,7 +237,7 @@ export function ImageViewer({ visible, images, index, onClose, onIndexChange }: 
 
         {loading ? (
           <View pointerEvents="none" className="absolute inset-0 items-center justify-center">
-            <Text className="text-caption text-white/50">加载中…</Text>
+            <Text className="text-caption text-white/50">{t('common.loadingImage')}</Text>
           </View>
         ) : null}
 
@@ -243,7 +245,7 @@ export function ImageViewer({ visible, images, index, onClose, onIndexChange }: 
           onPress={onClose}
           className="absolute right-4 h-11 w-11 items-center justify-center rounded-full bg-black/55"
           style={{ top: insets.top + 8 }}
-          accessibilityLabel="关闭"
+          accessibilityLabel={t('common.close')}
         >
           <Text className="text-body text-white">✕</Text>
         </Pressable>
@@ -254,9 +256,9 @@ export function ImageViewer({ visible, images, index, onClose, onIndexChange }: 
           className="absolute left-4 h-11 items-center justify-center rounded-full bg-black/55 px-4"
           style={{ top: insets.top + 8, opacity: saving ? 0.5 : 1 }}
           accessibilityRole="button"
-          accessibilityLabel="保存这张图片到相册"
+          accessibilityLabel={t('viewer.saveA11y')}
         >
-          <Text className="text-caption text-white">{saving ? '保存中…' : '保存'}</Text>
+          <Text className="text-caption text-white">{saving ? t('viewer.saving') : t('common.save')}</Text>
         </Pressable>
 
         {note ? (

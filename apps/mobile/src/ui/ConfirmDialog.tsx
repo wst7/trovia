@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Animated, Modal, Pressable, Text, View } from 'react-native'
 
 import { Button } from './Button'
+import { useT } from '../i18n'
 
 interface ConfirmDialogProps {
   visible: boolean
@@ -23,11 +24,12 @@ export function ConfirmDialog({
   title,
   message,
   confirmLabel,
-  cancelLabel = '取消',
+  cancelLabel,
   destructive = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const t = useT()
   const enter = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
@@ -44,7 +46,7 @@ export function ConfirmDialog({
         <Pressable
           className="absolute inset-0"
           onPress={onCancel}
-          accessibilityLabel="关闭对话框"
+          accessibilityLabel={t('ui.closeDialog')}
         />
         <View
           className="w-full max-w-[340px] rounded-md border border-line bg-surface p-5"
@@ -53,7 +55,7 @@ export function ConfirmDialog({
           <Text className="text-heading font-semibold text-ink">{title}</Text>
           <Text className="mt-2 text-body-sm text-muted">{message}</Text>
           <View className="mt-5 flex-row justify-end gap-2">
-            <Button label={cancelLabel} onPress={onCancel} variant="quiet" size="sm" />
+            <Button label={cancelLabel ?? t('common.cancel')} onPress={onCancel} variant="quiet" size="sm" />
             <Button
               label={confirmLabel}
               onPress={onConfirm}

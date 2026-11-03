@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { Image, Linking, Pressable, Text, View } from 'react-native'
+import { t } from '../i18n'
 
 /**
  * 受限 Markdown 渲染器：标题、段落、列表、引用、代码块、行内代码/粗体/斜体、
@@ -107,7 +108,7 @@ function ArticleImage({ uri, alt, onPress }: { uri: string; alt?: string; onPres
       className="mb-4 overflow-hidden rounded-sm bg-sunken"
       style={{ width: '100%', aspectRatio: ratio }}
       accessibilityRole="imagebutton"
-      accessibilityLabel="查看大图"
+      accessibilityLabel={t('detail.viewImage')}
     >
       <Image
         source={{ uri }}

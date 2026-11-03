@@ -12,6 +12,8 @@
  * 把剩下的文字留作关键词。不联网、不调模型，纯本地正则 + 日期算术，
  * 所以可以单测，也不会因为模型抽风给出奇怪的区间。
  */
+import { getLocale, t } from '../i18n'
+
 export type DateField = 'saved' | 'published'
 
 export interface DateRange {
@@ -75,8 +77,21 @@ function startOfWeek(at: Date): Date {
   return addDays(day, -weekday)
 }
 
+const WEEKDAY_CN = ['一', '二', '三', '四', '五', '六', '日']
+const WEEKDAY_EN = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+/** 「周三」「上周三」这类说法，两种语言各自成句。 */
+function weekdayLabel(index: number, prefix: '' | 'last' | 'lastlast' = ''): string {
+  if (getLocale() === 'en') {
+    const lead = prefix === 'last' ? 'last ' : prefix === 'lastlast' ? 'two weeks ago ' : ''
+    return `${lead}${WEEKDAY_EN[index] ?? ''}`
+  }
+  const lead = prefix === 'last' ? '上' : prefix === 'lastlast' ? '上上' : ''
+  return `${lead}周${WEEKDAY_CN[index] ?? ''}`
+}
+
 function dayLabel(at: Date): string {
-  return `${at.getMonth() + 1}月${at.getDate()}日`
+  return t('query.monthDay', { month: at.getMonth() + 1, day: at.getDate() })
 }
 
 function rangeOfDay(at: Date, label: string, field: DateField): DateRange {
@@ -135,7 +150,12 @@ export function parseQuery(input: string, options: ParseOptions = {}): ParsedQue
   take(/(\d{4})\s*年\s*(\d{1,2})\s*月/, (m) => {
     const year = Number(m[1])
     const month = Number(m[2]) - 1
-    return rangeOfSpan(new Date(year, month, 1), new Date(year, month + 1, 1), `${year}年${month + 1}月`, field)
+    return rangeOfSpan(
+      new Date(year, month, 1),
+      new Date(year, month + 1, 1),
+      t('query.yearMonth', { year, month: month + 1 }),
+      field,
+    )
   })
 
   take(/(\d{1,2})\s*月\s*(\d{1,2})\s*[日号]/, (m) => {
@@ -152,7 +172,12 @@ export function parseQuery(input: string, options: ParseOptions = {}): ParsedQue
     let year = now.getFullYear()
     if (month > now.getMonth()) year -= 1
     const first = new Date(year, month, 1)
-    return rangeOfSpan(first, new Date(year, month + 1, 1), `${year}年${month + 1}月`, field)
+    return rangeOfSpan(
+      first,
+      new Date(year, month + 1, 1),
+      t('query.yearMonth', { year, month: month + 1 }),
+      field,
+    )
   })
 
   take(/(\d{4})\s*年(?!\s*\d)/, (m) => {
@@ -160,14 +185,20 @@ export function parseQuery(input: string, options: ParseOptions = {}): ParsedQue
     // 否则「2022年最值得买的手机」会被误当成发表时间的过滤条件。
     if (!PUBLISHED_HINT.test(input) && !SAVED_HINT.test(input)) return null
     const year = Number(m[1])
-    return rangeOfSpan(new Date(year, 0, 1), new Date(year + 1, 0, 1), `${year}年`, field)
+    return rangeOfSpan(new Date(year, 0, 1), new Date(year + 1, 0, 1), t('query.year', { year }), field)
   })
 
   // ---- 相对日期词 ----
   const relative: Record<string, number> = { 大前天: -3, 前天: -2, 昨天: -1, 昨日: -1, 昨儿: -1, 今天: 0, 今日: 0, 当天: 0 }
   take(/(大前天|前天|昨天|昨日|昨儿|今天|今日|当天)/, (m) => {
     const at = addDays(now, relative[m[1]] ?? 0)
-    const label = m[1].startsWith('昨') ? '昨天' : m[1].startsWith('前') ? '前天' : m[1] === '大前天' ? '大前天' : '今天'
+    const label = m[1].startsWith('昨')
+      ? t('query.yesterday')
+      : m[1] === '大前天'
+        ? t('query.threeDaysAgo')
+        : m[1].startsWith('前')
+          ? t('query.twoDaysAgo')
+          : t('query.today')
     return rangeOfDay(at, label, field)
   })
 
@@ -175,25 +206,25 @@ export function parseQuery(input: string, options: ParseOptions = {}): ParsedQue
     const offset = cnNumber(m[1])
     if (!offset) return null
     const at = addDays(now, -offset)
-    return rangeOfDay(at, `${offset}天前`, field)
+    return rangeOfDay(at, t('query.daysAgo', { count: offset }), field)
   })
 
   take(/(?:最近|近|过去)\s*(\d{1,3}|[一二两三四五六七八九十]{1,3}|几)\s*[天日]/, (m) => {
     const span = cnNumber(m[1])
     if (!span) return null
-    return rangeOfSpan(addDays(now, -(span - 1)), addDays(now, 1), `最近${span}天`, field)
+    return rangeOfSpan(addDays(now, -(span - 1)), addDays(now, 1), t('query.lastNDays', { count: span }), field)
   })
 
   take(/(?:最近|近|过去)\s*(?:一|1)?\s*(?:个)?\s*(?:周|星期|礼拜)/, () => {
-    return rangeOfSpan(addDays(now, -6), addDays(now, 1), '最近七天', field)
+    return rangeOfSpan(addDays(now, -6), addDays(now, 1), t('query.last7days'), field)
   })
 
   take(/(?:最近|近|过去)\s*(?:一|1)?\s*(?:个)?\s*月/, () => {
-    return rangeOfSpan(addDays(now, -29), addDays(now, 1), '最近三十天', field)
+    return rangeOfSpan(addDays(now, -29), addDays(now, 1), t('query.last30days'), field)
   })
 
   take(/(?:最近|近|过去)\s*(?:一|1)?\s*年/, () => {
-    return rangeOfSpan(addDays(now, -364), addDays(now, 1), '最近一年', field)
+    return rangeOfSpan(addDays(now, -364), addDays(now, 1), t('query.lastYear'), field)
   })
 
   // ---- 周 / 月 / 年 ----
@@ -201,7 +232,12 @@ export function parseQuery(input: string, options: ParseOptions = {}): ParsedQue
   take(/(上|这|本)?\s*(?:个)?\s*(?:周|星期|礼拜)末/, (m) => {
     const base = startOfWeek(now)
     const start = m[1] === '上' ? addDays(base, -2) : addDays(base, 5) // 周六
-    return rangeOfSpan(start, addDays(start, 2), m[1] === '上' ? '上周末' : '本周末', field)
+    return rangeOfSpan(
+      start,
+      addDays(start, 2),
+      m[1] === '上' ? t('query.lastWeekend') : t('query.thisWeekend'),
+      field,
+    )
   })
 
   // 带限定词的一整周：「上周」「这个星期」「本礼拜」。
@@ -211,48 +247,77 @@ export function parseQuery(input: string, options: ParseOptions = {}): ParsedQue
 
     if (m[2]) {
       const at = addDays(weekStart, WEEKDAY_INDEX[m[2]] ?? 0)
-      const label = m[1] === '上' ? `上周${m[2]}` : m[1] === '上上' ? `上上周${m[2]}` : `周${m[2]}`
-      return rangeOfDay(at, label, field)
+      const prefix = m[1] === '上' ? 'last' : m[1] === '上上' ? 'lastlast' : ''
+      return rangeOfDay(at, weekdayLabel(WEEKDAY_INDEX[m[2]] ?? 0, prefix), field)
     }
 
-    const label = m[1] === '上' ? '上周' : m[1] === '上上' ? '上上周' : '本周'
+    const label =
+      m[1] === '上'
+        ? t('query.lastWeek')
+        : m[1] === '上上'
+          ? t('query.twoWeeksAgo')
+          : t('query.thisWeek')
     return rangeOfSpan(weekStart, addDays(weekStart, 7), label, field)
   })
 
   // 光说星期几：「周三」「星期天」= 本周那天。
   take(/(?:周|星期|礼拜)([一二三四五六日天])/, (m) => {
     const at = addDays(startOfWeek(now), WEEKDAY_INDEX[m[1]] ?? 0)
-    return rangeOfDay(at, `周${m[1]}`, field)
+    return rangeOfDay(at, weekdayLabel(WEEKDAY_INDEX[m[1]] ?? 0), field)
   })
 
   // 「上个月」这类必须带限定词，避免把「月亮」里的「月」吃掉。
   take(/(上上|上|这|本)\s*个?月(?!\s*\d)/, (m) => {
     const offset = m[1] === '上' ? -1 : m[1] === '上上' ? -2 : 0
     const first = new Date(now.getFullYear(), now.getMonth() + offset, 1)
-    const label = m[1] === '上' ? '上个月' : m[1] === '上上' ? '上上个月' : '本月'
+    const label =
+      m[1] === '上'
+        ? t('query.lastMonth')
+        : m[1] === '上上'
+          ? t('query.twoMonthsAgo')
+          : t('query.thisMonth')
     return rangeOfSpan(first, new Date(first.getFullYear(), first.getMonth() + 1, 1), label, field)
   })
 
   take(/(前年|去年|今年|本年)/, (m) => {
     const year = m[1] === '前年' ? now.getFullYear() - 2 : m[1] === '去年' ? now.getFullYear() - 1 : now.getFullYear()
-    return rangeOfSpan(new Date(year, 0, 1), new Date(year + 1, 0, 1), `${year}年`, field)
+    return rangeOfSpan(new Date(year, 0, 1), new Date(year + 1, 0, 1), t('query.year', { year }), field)
   })
 
   // ---- 英文习惯说法（顺手支持，不额外宣传） ----
-  take(/\b(today|yesterday|last week|this week|last month|this month)\b/i, (m) => {
-    const word = m[1].toLowerCase()
-    if (word === 'today' || word === 'yesterday') {
-      const at = addDays(now, word === 'today' ? 0 : -1)
-      return rangeOfDay(at, word === 'today' ? '今天' : '昨天', field)
-    }
-    if (word.includes('week')) {
-      const start = word.startsWith('last') ? addDays(startOfWeek(now), -7) : startOfWeek(now)
-      return rangeOfSpan(start, addDays(start, 7), word.startsWith('last') ? '上周' : '本周', field)
-    }
-    const offset = word.startsWith('last') ? -1 : 0
-    const first = new Date(now.getFullYear(), now.getMonth() + offset, 1)
-    return rangeOfSpan(first, new Date(first.getFullYear(), first.getMonth() + 1, 1), word.startsWith('last') ? '上个月' : '本月', field)
-  })
+  take(
+    /\b(day before yesterday|today|yesterday|last week|this week|last month|this month|last year|this year)\b/i,
+    (m) => {
+      const word = m[1].toLowerCase()
+      if (word === 'today' || word === 'yesterday' || word === 'day before yesterday') {
+        const offset = word === 'today' ? 0 : word === 'yesterday' ? -1 : -2
+        const label =
+          offset === 0 ? t('query.today') : offset === -1 ? t('query.yesterday') : t('query.twoDaysAgo')
+        return rangeOfDay(addDays(now, offset), label, field)
+      }
+      if (word.includes('week')) {
+        const start = word.startsWith('last') ? addDays(startOfWeek(now), -7) : startOfWeek(now)
+        return rangeOfSpan(
+          start,
+          addDays(start, 7),
+          word.startsWith('last') ? t('query.lastWeek') : t('query.thisWeek'),
+          field,
+        )
+      }
+      if (word.includes('year')) {
+        const year = word.startsWith('last') ? now.getFullYear() - 1 : now.getFullYear()
+        return rangeOfSpan(new Date(year, 0, 1), new Date(year + 1, 0, 1), t('query.year', { year }), field)
+      }
+      const offset = word.startsWith('last') ? -1 : 0
+      const first = new Date(now.getFullYear(), now.getMonth() + offset, 1)
+      return rangeOfSpan(
+        first,
+        new Date(first.getFullYear(), first.getMonth() + 1, 1),
+        word.startsWith('last') ? t('query.lastMonth') : t('query.thisMonth'),
+        field,
+      )
+    },
+  )
 
   // ---- 剩下的是关键词 ----
   const text = rest
@@ -262,7 +327,10 @@ export function parseQuery(input: string, options: ParseOptions = {}): ParsedQue
     .trim()
 
   const onlyDate = text.replace(/[\s\p{P}]/gu, '').length === 0
-  const summary = ranges.length > 0 ? `${ranges[0].label}${field === 'published' ? '发表' : '保存'}的` : null
+  const summary =
+    ranges.length > 0
+      ? t(field === 'published' ? 'query.publishedOf' : 'query.savedOf', { label: ranges[0].label })
+      : null
 
   return { text, ranges, summary, onlyDate }
 }

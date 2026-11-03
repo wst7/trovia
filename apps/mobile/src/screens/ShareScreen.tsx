@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { errorMessage, isValidHttpUrl } from '@trovia/shared'
+import { isValidHttpUrl } from '@trovia/shared'
 
 import { processPendingQueue } from '../local/pipeline'
 import * as repo from '../local/repo'
@@ -10,9 +10,12 @@ import { useToast } from '../providers/ToastProvider'
 import { Button } from '../ui/Button'
 import { Screen } from '../ui/Screen'
 import { usePalette } from '../ui/palette'
+import { useT } from '../i18n'
+import { errorText } from '../i18n/errors'
 
 /** 分享进入后的保存结果页：保存到本机一次，然后跳到详情。 */
 export function ShareScreen() {
+  const t = useT()
   const router = useRouter()
   const params = useLocalSearchParams<{ url?: string | string[]; hint?: string | string[] }>()
   const rawUrl = Array.isArray(params.url) ? params.url[0] : params.url
@@ -34,18 +37,18 @@ export function ShareScreen() {
       try {
         const res = await repo.createDocument(url, rawHint ?? null)
         if (res.duplicate) {
-          toast('这篇内容已经保存过了。')
+          toast(t('home.toast.duplicate'))
         } else {
-          toast('已保存，正在本机整理内容……', { type: 'success' })
+          toast(t('home.toast.saved'), { type: 'success' })
           void processPendingQueue()
         }
         router.replace(`/documents/${res.id}`)
       } catch (e) {
         if (e instanceof Error && e.message === 'INVALID_URL') {
-          setError('这不是一个可以保存的链接。')
+          setError(t('composer.invalidUrl'))
           return
         }
-        setError(errorMessage(e, '保存失败，请稍后重试。'))
+        setError(errorText(e, t('composer.saveFailed')))
       }
     })()
   }, [url, rawHint, router, toast])
@@ -56,20 +59,18 @@ export function ShareScreen() {
         <View className="h-14" />
         {!url ? (
           <View className="mt-6">
-            <Text className="text-title font-semibold text-ink">没有可保存的链接。</Text>
-            <Text className="mt-2 text-body-sm text-muted">
-              这次分享里没有找到网页地址。回到首页，可以手动粘贴链接或分享文字。
-            </Text>
+            <Text className="text-title font-semibold text-ink">{t('share.noUrlTitle')}</Text>
+            <Text className="mt-2 text-body-sm text-muted">{t('share.noUrlBody')}</Text>
             <View className="mt-6 self-start">
-              <Button label="回到首页" onPress={() => router.replace('/')} size="sm" />
+              <Button label={t('list.backHome')} onPress={() => router.replace('/')} size="sm" />
             </View>
           </View>
         ) : error ? (
           <View className="mt-6">
-            <Text className="text-title font-semibold text-ink">保存没有完成。</Text>
+            <Text className="text-title font-semibold text-ink">{t('share.failedTitle')}</Text>
             <Text className="mt-2 text-body-sm text-muted">{error}</Text>
             <View className="mt-6 self-start">
-              <Button label="回到首页" onPress={() => router.replace('/')} size="sm" />
+              <Button label={t('list.backHome')} onPress={() => router.replace('/')} size="sm" />
             </View>
           </View>
         ) : (

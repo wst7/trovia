@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'expo-router'
 import { Pressable, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import { useT } from '../i18n'
 import { usePalette } from '../ui/palette'
 
 export type TabKey = 'home' | 'documents' | 'settings'
@@ -12,14 +13,26 @@ type IconName = ComponentProps<typeof Ionicons>['name']
 
 const TABS: {
   key: TabKey
-  label: string
+  labelKey: string
   href: '/' | '/documents' | '/settings'
   icon: IconName
   activeIcon: IconName
 }[] = [
-  { key: 'home', label: '首页', href: '/', icon: 'home-outline', activeIcon: 'home' },
-  { key: 'documents', label: '收藏', href: '/documents', icon: 'albums-outline', activeIcon: 'albums' },
-  { key: 'settings', label: '我的', href: '/settings', icon: 'person-outline', activeIcon: 'person' },
+  { key: 'home', labelKey: 'tab.home', href: '/', icon: 'home-outline', activeIcon: 'home' },
+  {
+    key: 'documents',
+    labelKey: 'tab.documents',
+    href: '/documents',
+    icon: 'albums-outline',
+    activeIcon: 'albums',
+  },
+  {
+    key: 'settings',
+    labelKey: 'tab.settings',
+    href: '/settings',
+    icon: 'person-outline',
+    activeIcon: 'person',
+  },
 ]
 
 /**
@@ -37,6 +50,7 @@ export function AppTabBar() {
       : 'home'
   const insets = useSafeAreaInsets()
   const p = usePalette()
+  const t = useT()
 
   return (
     <View
@@ -53,7 +67,7 @@ export function AppTabBar() {
                 if (!selected) router.replace(tab.href)
               }}
               accessibilityRole="tab"
-              accessibilityLabel={tab.label}
+              accessibilityLabel={t(tab.labelKey)}
               accessibilityState={{ selected }}
               className="flex-1 items-center justify-center gap-1"
             >
@@ -71,7 +85,7 @@ export function AppTabBar() {
                         : 'text-[10px] tracking-[0.2px] text-faint'
                     }
                   >
-                    {tab.label}
+                    {t(tab.labelKey)}
                   </Text>
                 </View>
               )}

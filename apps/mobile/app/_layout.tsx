@@ -13,6 +13,7 @@ import { maybeRetryFailed } from '../src/local/auto-retry'
 import { hydrateImages } from '../src/local/image-hydrate'
 import { ClipboardPrompt } from '../src/components/ClipboardPrompt'
 import { getDb } from '../src/local/db'
+import { loadLocalePreference } from '../src/i18n/prefs'
 import { processPendingQueue } from '../src/local/pipeline'
 import { ToastProvider } from '../src/providers/ToastProvider'
 import { ShareIntentBridge } from '../src/share/ShareIntentBridge'
@@ -55,6 +56,8 @@ function RootNavigator() {
     let cancelled = false
     void (async () => {
       try {
+        // 先装回语言选择，再渲染第一屏，避免闪一下中文再跳到英文。
+        await loadLocalePreference()
         await getDb()
       } finally {
         if (!cancelled) setReady(true)

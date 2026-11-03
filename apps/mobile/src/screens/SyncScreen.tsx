@@ -9,20 +9,24 @@ import { useToast } from '../providers/ToastProvider'
 import { Button, IconButton, TextButton } from '../ui/Button'
 import { GUTTER, Screen } from '../ui/Screen'
 import { TextField } from '../ui/TextField'
+import { useT } from '../i18n'
 
 /**
  * 同步失败要说清楚是哪一类错。
  * 「稍后再试」对着一堆不同原因，用户只能干等；分清楚之后每个人都知道该改哪一项。
  */
-function describeSyncError(error: unknown): string {
-  if (error instanceof SyncNotConfigured) return '还没填好同步账户。'
+function describeSyncError(
+  error: unknown,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string {
+  if (error instanceof SyncNotConfigured) return t('sync.err.notConfigured')
 
   const message = error instanceof Error ? error.message : String(error)
-  if (/401|unauthor/i.test(message)) return '网盘拒绝了这组账号密码。坚果云要用「应用密码」。'
-  if (/403/.test(message)) return '这个账号没有该目录的写入权限。'
-  if (/404/.test(message)) return '地址不对：路径要找得到 WebDAV 根目录。'
-  if (/abort|timeout|network|fetch/i.test(message)) return '连不上网盘，检查网络或服务器地址。'
-  return `同步没有完成：${message.slice(0, 80)}`
+  if (/401|unauthor/i.test(message)) return t('sync.err.unauthorized')
+  if (/403/.test(message)) return t('sync.err.forbidden')
+  if (/404/.test(message)) return t('sync.err.notFound')
+  if (/abort|timeout|network|fetch/i.test(message)) return t('sync.err.network')
+  return t('sync.err.other', { message: message.slice(0, 80) })
 }
 
 /**
@@ -32,6 +36,7 @@ function describeSyncError(error: unknown): string {
  * 都支持，不需要我们做 OAuth 审核，也没有中心服务器能读到内容。
  */
 export function SyncScreen() {
+  const t = useT()
   const router = useRouter()
   const { toast } = useToast()
   const insets = useSafeAreaInsets()
@@ -75,7 +80,7 @@ export function SyncScreen() {
 
   async function persist(): Promise<boolean> {
     if (!baseUrl.trim() || !username.trim() || !password) {
-      toast('地址、用户名、密码都要填。坚果云要用「应用密码」，不是登录密码。', { type: 'warning' })
+      toast(t('sync.missingFields'), { type: 'warning' })
       return false
     }
     await saveConfig({ baseUrl: baseUrl.trim(), username: username.trim(), folder: folder.trim() || 'trovia' }, password)
@@ -88,10 +93,10 @@ export function SyncScreen() {
     setBusy('test')
     try {
       await testConnection()
-      toast('连上了，目录可读写。', { type: 'success' })
-      setResult('连接正常')
+      toast(t('sync.testOk'), { type: 'success' })
+      setResult(t('sync.statusOk'))
     } catch (error) {
-      toast(describeSyncError(error), { type: 'error' })
+      toast(describeSyncError(error, t), { type: 'error' })
       setResult(null)
     } finally {
       setBusy(null)
@@ -109,7 +114,7 @@ export function SyncScreen() {
       toast(line, { type: 'success' })
       setLastAt(await lastSyncAt())
     } catch (error) {
-      const reason = describeSyncError(error)
+      const reason = describeSyncError(error, t)
       toast(reason, { type: 'error' })
       setResult(reason)
     } finally {
@@ -120,7 +125,7 @@ export function SyncScreen() {
   return (
     <Screen>
       <View className="h-14 flex-row items-center justify-between">
-        <IconButton name="chevron-back" onPress={goBack} accessibilityLabel="返回" />
+        <IconButton name="chevron-back" onPress={goBack} accessibilityLabel={t('detail.back')} />
       </View>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
@@ -129,25 +134,25 @@ export function SyncScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text className="text-title font-semibold text-ink">同步</Text>
-          <Text className="mt-2 text-body-sm text-muted">
-            内容写进你自己的网盘，我们不经过任何服务器。坚果云、群晖、Nextcloud 这类支持 WebDAV 的都可以。
-          </Text>
+          <Text className="text-title font-semibold text-ink">{t('settings.section.sync')}</Text>
+          <Text className="mt-2 text-body-sm text-muted">{t('sync.intro')}</Text>
 
           {/* 地址和目录是拼起来的，填错时界面必须自己说出来：把最终会访问的
               地址显示出来，比让人对着两个输入框猜要省事得多。 */}
           {effectiveUrl ? (
-            <Text className="mt-4 text-caption text-faint">实际会访问：{effectiveUrl}/docs/</Text>
+            <Text className="mt-4 text-caption text-faint">
+              {t('sync.effective', { url: effectiveUrl })}
+            </Text>
           ) : null}
           {folderLooksDuplicated ? (
             <Text className="mt-1 text-caption text-warn">
-              地址里已经带了「{folder.trim()}」，目录又填了一次。地址一般填到 /dav 为止。
+              {t('sync.duplicated', { folder: folder.trim() })}
             </Text>
           ) : null}
 
           <View className="mt-8 gap-6">
             <TextField
-              label="服务器地址"
+              label={t('sync.label.server')}
               value={baseUrl}
               onChangeText={setBaseUrl}
               placeholder="https://dav.jianguoyun.com/dav/"
@@ -156,36 +161,36 @@ export function SyncScreen() {
               keyboardType="url"
             />
             <TextField
-              label="用户名"
+              label={t('sync.label.username')}
               value={username}
               onChangeText={setUsername}
-              placeholder="邮箱"
+              placeholder={t('sync.placeholder.email')}
               autoCapitalize="none"
               autoCorrect={false}
             />
             <TextField
-              label="应用密码"
+              label={t('sync.label.password')}
               value={password}
               onChangeText={setPassword}
-              placeholder="坚果云：账户信息 → 安全选项 → 添加应用"
+              placeholder={t('sync.hint.password')}
               autoCapitalize="none"
               autoCorrect={false}
               secureTextEntry
             />
             <TextField
-              label="远端目录"
+              label={t('sync.label.folder')}
               value={folder}
               onChangeText={setFolder}
               placeholder="trovia"
               autoCapitalize="none"
               autoCorrect={false}
-              hint="目录不存在会自动创建，只往这个目录里写。"
+              hint={t('sync.hint.folder')}
             />
           </View>
 
           <View className="mt-8 flex-row gap-3">
             <Button
-              label={busy === 'test' ? '正在连接…' : '测试连接'}
+              label={busy === 'test' ? t('sync.testing') : t('sync.test')}
               onPress={() => void handleTest()}
               variant="secondary"
               size="sm"
@@ -193,7 +198,7 @@ export function SyncScreen() {
               disabled={busy !== null}
             />
             <Button
-              label={busy === 'sync' ? '正在同步…' : '立即同步'}
+              label={busy === 'sync' ? t('sync.syncing') : t('sync.now')}
               onPress={() => void handleSync()}
               variant="primary"
               size="sm"
@@ -204,34 +209,32 @@ export function SyncScreen() {
 
           {result ? <Text className="mt-6 text-body-sm text-ink">{result}</Text> : null}
           {lastAt ? (
-            <Text className="mt-1 text-caption text-faint">上次同步 {lastAt.replace('T', ' ').slice(0, 16)}</Text>
+            <Text className="mt-1 text-caption text-faint">
+              {t('sync.lastAt', { when: lastAt.replace('T', ' ').slice(0, 16) })}
+            </Text>
           ) : (
-            <Text className="mt-1 text-caption text-faint">还没有同步过。</Text>
+            <Text className="mt-1 text-caption text-faint">{t('sync.never')}</Text>
           )}
 
           <View className="mt-10">
-            <Text className="text-caption text-muted">同步什么</Text>
-            <Text className="mt-1 text-caption text-faint">
-              收藏的标题、正文、摘要、关键词与来源链接。图片保存在本机，不会上传；换设备后图片会在重新解析时补上。
-            </Text>
+            <Text className="text-caption text-muted">{t('sync.whatTitle')}</Text>
+            <Text className="mt-1 text-caption text-faint">{t('sync.whatBody')}</Text>
           </View>
 
           <View className="mt-6">
-            <Text className="text-caption text-muted">冲突怎么办</Text>
-            <Text className="mt-1 text-caption text-faint">
-              两台设备都改过同一条时，新的那份占主位，另一份留成「（冲突副本）」，不会悄悄丢掉。
-            </Text>
+            <Text className="text-caption text-muted">{t('sync.conflictTitle')}</Text>
+            <Text className="mt-1 text-caption text-faint">{t('sync.conflictBody')}</Text>
           </View>
 
           <View className="mt-8">
             <TextButton
-              label="清除已保存的密码"
+              label={t('sync.clearPassword')}
               tone="muted"
               onPress={() => {
                 void (async () => {
                   await saveConfig({ baseUrl, username, folder }, '')
                   setPassword('')
-                  toast('已清除密码，内容仍保留在本机。', { type: 'success' })
+                  toast(t('sync.cleared'), { type: 'success' })
                 })()
               }}
             />

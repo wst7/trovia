@@ -10,6 +10,7 @@ import * as repo from '../local/repo'
 import { titleHintFrom } from '../local/util'
 import { useToast } from '../providers/ToastProvider'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
+import { useT } from '../i18n'
 
 /** 上次已经问过的链接：同一个链接不重复弹，换了一条再问。 */
 const LAST_OFFERED_KEY = 'xunji.clipboard.v1'
@@ -28,6 +29,7 @@ interface Candidate {
  * 用户点保存时，链接随保存进入本机数据库，标题种子只在内存里传给保存流程。
  */
 export function ClipboardPrompt({ enabled }: { enabled: boolean }) {
+  const t = useT()
   const router = useRouter()
   const pathname = usePathname()
   const pathnameRef = useRef(pathname)
@@ -93,21 +95,21 @@ export function ClipboardPrompt({ enabled }: { enabled: boolean }) {
     try {
       const res = await repo.createDocument(url, hint)
       if (res.duplicate) {
-        toast('这篇内容已经保存过了。', {
+        toast(t('home.toast.duplicate'), {
           action: {
-            label: '打开已有收藏',
+            label: t('home.toast.openExisting'),
             onPress: () => router.push(`/documents/${res.id}`),
           },
         })
       } else {
-        toast('已保存，正在本机整理内容……', {
+        toast(t('home.toast.saved'), {
           type: 'success',
-          action: { label: '查看', onPress: () => router.push(`/documents/${res.id}`) },
+          action: { label: t('common.view'), onPress: () => router.push(`/documents/${res.id}`) },
         })
         void processPendingQueue()
       }
     } catch {
-      toast('保存失败，请稍后重试。', { type: 'error' })
+      toast(t('composer.saveFailed'), { type: 'error' })
     } finally {
       savingRef.current = false
     }
@@ -128,10 +130,10 @@ export function ClipboardPrompt({ enabled }: { enabled: boolean }) {
   return (
     <ConfirmDialog
       visible={candidate !== null}
-      title="保存剪贴板里的链接？"
+      title={t('clipboard.title')}
       message={message}
-      confirmLabel="保存"
-      cancelLabel="不用"
+      confirmLabel={t('common.save')}
+      cancelLabel={t('common.notNow')}
       onConfirm={() => void handleSave()}
       onCancel={handleDismiss}
     />

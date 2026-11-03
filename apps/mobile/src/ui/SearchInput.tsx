@@ -5,6 +5,7 @@ import { TextInput, View } from 'react-native'
 import { cx } from './cx'
 import { usePalette } from './palette'
 import { IconButton } from './Button'
+import { useT } from '../i18n'
 
 interface SearchInputProps {
   value: string
@@ -18,10 +19,11 @@ interface SearchInputProps {
 export function SearchInput({
   value,
   onChangeText,
-  placeholder = '筛选收藏',
+  placeholder,
   accessibilityLabel,
   autoFocus = false,
 }: SearchInputProps) {
+  const t = useT()
   const p = usePalette()
   const [focused, setFocused] = useState(false)
 
@@ -38,7 +40,7 @@ export function SearchInput({
         onChangeText={onChangeText}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t('list.filterA11y')}
         placeholderTextColor={p.faint}
         selectionColor={p.accent}
         cursorColor={p.accent}
@@ -54,7 +56,7 @@ export function SearchInput({
           name="close-circle"
           size={16}
           tone="muted"
-          accessibilityLabel="清除筛选"
+          accessibilityLabel={t('list.clearFilter')}
           onPress={() => onChangeText('')}
         />
       ) : null}

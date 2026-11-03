@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native'
 import { extractHttpUrl, isValidHttpUrl } from '@trovia/shared'
 
+import { useT } from '../i18n'
 import { titleHintFrom } from '../local/util'
 import { cx } from '../ui/cx'
 import { usePalette } from '../ui/palette'
@@ -45,6 +46,7 @@ export function Composer({
   onFocus,
 }: ComposerProps) {
   const p = usePalette()
+  const t = useT()
   const [focused, setFocused] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -58,9 +60,9 @@ export function Composer({
   const hint = error
     ? error
     : saveMode
-      ? '保存这个链接'
+      ? t('composer.hint.save')
       : trimmed.length > 0
-        ? '按这句描述找回'
+        ? t('composer.hint.search')
         : ''
 
   async function submit() {
@@ -70,7 +72,7 @@ export function Composer({
       return
     }
     if (!isValidHttpUrl(detectedUrl)) {
-      setError('这不是一个可以保存的链接。')
+      setError(t('composer.invalidUrl'))
       return
     }
     setError(null)
@@ -78,7 +80,7 @@ export function Composer({
     try {
       await onSave(detectedUrl, titleHintFrom(value, detectedUrl))
     } catch {
-      setError('保存失败，请稍后重试。')
+      setError(t('composer.saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -102,14 +104,14 @@ export function Composer({
           onFocus?.()
         }}
         onBlur={() => setFocused(false)}
-        placeholder="粘贴链接，或描述你记得的那句话"
+        placeholder={t('composer.placeholder')}
         placeholderTextColor={p.faint}
         multiline
         maxLength={4000}
         textAlignVertical="top"
         selectionColor={p.accent}
         cursorColor={p.accent}
-        accessibilityLabel="描述你想找回的内容，或粘贴要保存的链接"
+        accessibilityLabel={t('composer.a11y')}
         editable={!saving}
         className="min-h-[52px] max-h-[132px] px-4 pt-4 text-body text-ink"
       />
@@ -126,7 +128,7 @@ export function Composer({
           onPress={() => void submit()}
           disabled={!ready}
           accessibilityRole="button"
-          accessibilityLabel={saveMode ? '保存链接' : '开始查找'}
+          accessibilityLabel={saveMode ? t('composer.action.save') : t('composer.action.search')}
           accessibilityState={{ disabled: !ready, busy }}
           hitSlop={8}
           className="h-9 w-9 items-center justify-center rounded-sm"

@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native'
 import type { ParseStatus } from '@trovia/shared'
-import { statusText } from '@trovia/shared'
+import { statusLabel } from '../i18n/status'
 
 import { cx } from './cx'
 
@@ -44,7 +44,7 @@ export function StatusMark({
         <Text className="text-caption text-muted">整理中</Text>
       ) : withLabel && (partial || failed) ? (
         <Text className="text-[11px] text-muted" numberOfLines={1}>
-          {statusText(status, errorCode)}
+          {statusLabel(status, errorCode)}
         </Text>
       ) : null}
     </View>

@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons'
 
 import { usePalette } from '../ui/palette'
 import { LiveStatusMark } from './LiveStatusMark'
+import { useT } from '../i18n'
 
 /**
  * 没有标题的收藏怎么显示才不别扭：
@@ -82,6 +83,7 @@ export function RecentRow({
   onRetry?: () => void
 }) {
   const p = usePalette()
+  const t = useT()
   // 有些站点的 favicon 地址能打开但内容是空的（0 字节/透明图），会留下一个空框。
   // 加载失败就退回首字母，左列至少还是「有东西」的。
   const [imageBroken, setImageBroken] = useState(false)
@@ -95,7 +97,11 @@ export function RecentRow({
       delayLongPress={320}
       accessibilityRole="button"
       accessibilityState={selecting ? { selected: Boolean(selected) } : undefined}
-      accessibilityLabel={selected ? `${item.title || item.url}，已选中` : item.title || item.url}
+      accessibilityLabel={
+        selected
+          ? t('row.selected', { title: item.title || item.url })
+          : item.title || item.url
+      }
       className="py-3"
     >
       {({ pressed }) => (
@@ -143,7 +149,7 @@ export function RecentRow({
                   onTerminal={onTerminal}
                 />
                 {onRetry ? (
-                  <Pressable onPress={onRetry} hitSlop={10} accessibilityRole="button" accessibilityLabel="重试这一条">
+                  <Pressable onPress={onRetry} hitSlop={10} accessibilityRole="button" accessibilityLabel="{t('row.retryOne')}">
                     {/* 行内重试不用强调色：一屏七个红字，强调色就失效了。 */}
                     <Text className="text-caption text-ink">重试</Text>
                   </Pressable>

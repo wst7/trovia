@@ -12,6 +12,7 @@ import { hydrateImages } from './image-hydrate'
 import { deviceId, loadConfig, loadPassword } from './sync-config'
 import type { WebDavConfig } from './sync-config'
 import { createSyncStore } from './sync-store'
+import { t } from '../i18n'
 
 function joinUrl(baseUrl: string, folder: string): string {
   const base = baseUrl.trim().replace(/\/+$/, '')
@@ -65,10 +66,10 @@ export async function syncNow(): Promise<SyncReport> {
 /** 报告变成一句人话，界面和 Toast 共用。 */
 export function describeReport(report: SyncReport): string {
   const parts: string[] = []
-  if (report.pushed > 0) parts.push(`上传 ${report.pushed} 条`)
-  if (report.pulled > 0) parts.push(`取回 ${report.pulled} 条`)
-  if (report.deleted > 0) parts.push(`删除 ${report.deleted} 条`)
-  if (report.conflicts > 0) parts.push(`保留 ${report.conflicts} 份冲突副本`)
-  if (parts.length === 0) return '两端已经一致，没有需要同步的改动。'
-  return parts.join('，')
+  if (report.pushed > 0) parts.push(t('sync.report.pushed', { count: report.pushed }))
+  if (report.pulled > 0) parts.push(t('sync.report.pulled', { count: report.pulled }))
+  if (report.deleted > 0) parts.push(t('sync.report.deleted', { count: report.deleted }))
+  if (report.conflicts > 0) parts.push(t('sync.report.conflicts', { count: report.conflicts }))
+  if (parts.length === 0) return t('sync.report.none')
+  return parts.join(t('sync.report.join'))
 }
