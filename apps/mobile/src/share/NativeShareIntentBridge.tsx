@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'expo-router'
 import { useShareIntent } from 'expo-share-intent'
-import { extractHttpUrl, isValidHttpUrl } from '@xunji/shared'
+import { extractHttpUrl, isValidHttpUrl } from '@trovia/shared'
 
 import { titleHintFrom } from '../local/util'
 import { useToast } from '../providers/ToastProvider'

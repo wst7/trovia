@@ -13,7 +13,7 @@
  * 3. **不同步 image_files**。那是本机文件路径（documentDirectory 下的绝对路径），
  *    传到别的设备上是废字符串；图片本身按正文里的远程地址在新设备重新下载。
  */
-import type { LocalStore, SyncRecord } from '@xunji/sync'
+import type { LocalStore, SyncRecord } from '@trovia/sync'
 
 import { getDb } from './db'
 

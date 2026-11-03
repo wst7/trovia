@@ -1,5 +1,5 @@
 {
-  "name": "@xunji/web",
+  "name": "@trovia/web",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -9,8 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@xunji/api": "*",
-    "@xunji/shared": "*",
+    "@trovia/api": "*",
+    "@trovia/shared": "*",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-router-dom": "^6.30.6"

@@ -10,8 +10,8 @@ import type {
   ReprocessResponse,
   SearchResponse,
   User,
-} from '@xunji/shared'
-import { ApiError, FRIENDLY_MESSAGES } from '@xunji/shared'
+} from '@trovia/shared'
+import { ApiError, FRIENDLY_MESSAGES } from '@trovia/shared'
 
 const DEFAULT_TIMEOUT_MS = 15_000
 const NETWORK_FALLBACK = '网络连接失败，请稍后重试。'

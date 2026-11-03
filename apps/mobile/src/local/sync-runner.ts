@@ -4,9 +4,9 @@
  * 这里刻意不做后台自动同步：手机上「悄悄传数据」比「手动点一下」更让人不安，
  * 也更容易在弱网下反复失败。等界面稳定了再考虑前台定时。
  */
-import { syncOnce } from '@xunji/sync'
-import type { SyncReport } from '@xunji/sync'
-import { WebDavTarget } from '@xunji/sync/webdav'
+import { syncOnce } from '@trovia/sync'
+import type { SyncReport } from '@trovia/sync'
+import { WebDavTarget } from '@trovia/sync/webdav'
 
 import { hydrateImages } from './image-hydrate'
 import { deviceId, loadConfig, loadPassword } from './sync-config'

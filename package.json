@@ -19,18 +19,18 @@
     "react-dom": "19.3.0"
   },
   "scripts": {
-    "dev": "npm run dev -w @xunji/web",
-    "dev:landing": "npm run dev -w @xunji/landing",
-    "dev:mobile": "npm run start -w @xunji/mobile",
-    "mobile:ios": "npm run ios -w @xunji/mobile",
-    "mobile:android": "npm run android -w @xunji/mobile",
-    "mobile:typecheck": "npm run typecheck -w @xunji/mobile",
-    "mobile:doctor": "npm run doctor -w @xunji/mobile",
-    "mobile:export": "npm run export -w @xunji/mobile",
-    "api:typecheck": "npm run typecheck -w @xunji/api",
-    "build": "npm run build -w @xunji/web && npm run build -w @xunji/landing",
-    "preview": "npm run preview -w @xunji/web",
-    "preview:landing": "npm run preview -w @xunji/landing",
+    "dev": "npm run dev -w @trovia/web",
+    "dev:landing": "npm run dev -w @trovia/landing",
+    "dev:mobile": "npm run start -w @trovia/mobile",
+    "mobile:ios": "npm run ios -w @trovia/mobile",
+    "mobile:android": "npm run android -w @trovia/mobile",
+    "mobile:typecheck": "npm run typecheck -w @trovia/mobile",
+    "mobile:doctor": "npm run doctor -w @trovia/mobile",
+    "mobile:export": "npm run export -w @trovia/mobile",
+    "api:typecheck": "npm run typecheck -w @trovia/api",
+    "build": "npm run build -w @trovia/web && npm run build -w @trovia/landing",
+    "preview": "npm run preview -w @trovia/web",
+    "preview:landing": "npm run preview -w @trovia/landing",
     "postinstall": "patch-package"
   }
 }

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
-import type { DocumentSummary, SearchResult } from '@xunji/shared'
-import { domainOf, formatRelativeDate, SOURCE_TYPE_LABELS } from '@xunji/shared'
+import type { DocumentSummary, SearchResult } from '@trovia/shared'
+import { domainOf, formatRelativeDate, SOURCE_TYPE_LABELS } from '@trovia/shared'
 import { LiveStatusBadge } from './LiveStatusBadge'
 
 /** 搜索结果：标题、来源、摘要、匹配原因、引用片段。 */

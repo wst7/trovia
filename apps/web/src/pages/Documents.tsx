@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
-import type { DocumentSummary } from '@xunji/shared'
-import { errorMessage } from '@xunji/shared'
+import type { DocumentSummary } from '@trovia/shared'
+import { errorMessage } from '@trovia/shared'
 import { DocumentSummaryCard } from '../components/DocumentCard'
 import { SearchIcon } from '../components/Icons'
 

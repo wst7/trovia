@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { errorMessage, isValidHttpUrl } from '@xunji/shared'
+import { errorMessage, isValidHttpUrl } from '@trovia/shared'
 
 import { processPendingQueue } from '../local/pipeline'
 import * as repo from '../local/repo'

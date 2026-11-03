@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Image, Pressable, Text, View } from 'react-native'
-import type { DocumentSummary, ParseStatus, SearchResult } from '@xunji/shared'
-import { domainOf, formatRelativeDate } from '@xunji/shared'
+import type { DocumentSummary, ParseStatus, SearchResult } from '@trovia/shared'
+import { domainOf, formatRelativeDate } from '@trovia/shared'
 
 import { Ionicons } from '@expo/vector-icons'
 

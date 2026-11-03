@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native'
-import type { ParseStatus } from '@xunji/shared'
-import { statusText } from '@xunji/shared'
+import type { ParseStatus } from '@trovia/shared'
+import { statusText } from '@trovia/shared'
 
 import { cx } from './cx'
 

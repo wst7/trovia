@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Ionicons } from '@expo/vector-icons'
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native'
-import { extractHttpUrl, isValidHttpUrl } from '@xunji/shared'
+import { extractHttpUrl, isValidHttpUrl } from '@trovia/shared'
 
 import { titleHintFrom } from '../local/util'
 import { cx } from '../ui/cx'

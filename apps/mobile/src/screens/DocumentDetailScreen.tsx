@@ -2,12 +2,12 @@ import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Image, Linking, Pressable, ScrollView, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import type { DocumentDetail, ParseStatus, RelatedItem } from '@xunji/shared'
+import type { DocumentDetail, ParseStatus, RelatedItem } from '@trovia/shared'
 import {
   domainOf,
   errorMessage,
   formatDate,
-} from '@xunji/shared'
+} from '@trovia/shared'
 
 import { relativeTime } from '../local/dates'
 

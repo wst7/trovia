@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
-import type { ParseStatus } from '@xunji/shared'
+import type { ParseStatus } from '@trovia/shared'
 
 import { useLiveStatus } from '../hooks/useLiveStatus'
 import { StatusMark } from '../ui/StatusMark'

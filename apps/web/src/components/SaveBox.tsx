@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { extractHttpUrl } from '@xunji/shared'
+import { extractHttpUrl } from '@trovia/shared'
 import { PlusIcon } from './Icons'
 
 /**

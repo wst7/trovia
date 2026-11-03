@@ -19,7 +19,7 @@
 
 export { WebDavTarget } from './webdav'
 // LocalDirTarget 依赖 node:fs，只在桌面/测试里用，不从入口导出，
-// 否则移动端一引 @xunji/sync 就会把 node 内置模块带进 RN 的类型检查。
+// 否则移动端一引 @trovia/sync 就会把 node 内置模块带进 RN 的类型检查。
 
 export interface SyncTarget {
   /** 列出某个前缀下的文件；path 是相对根目录的路径，如 `docs/abc.json`。 */

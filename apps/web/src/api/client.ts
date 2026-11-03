@@ -1,4 +1,4 @@
-import { createApiClient } from '@xunji/api'
+import { createApiClient } from '@trovia/api'
 
 const API_BASE = '/api/v1'
 const TOKEN_KEY = 'xunji_token'

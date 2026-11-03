@@ -3,7 +3,7 @@ import * as Clipboard from 'expo-clipboard'
 import { usePathname, useRouter } from 'expo-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppState } from 'react-native'
-import { extractHttpUrl, isValidHttpUrl } from '@xunji/shared'
+import { extractHttpUrl, isValidHttpUrl } from '@trovia/shared'
 
 import { processPendingQueue } from '../local/pipeline'
 import * as repo from '../local/repo'

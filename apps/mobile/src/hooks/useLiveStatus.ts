@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AppState } from 'react-native'
-import type { ParseStatus } from '@xunji/shared'
-import { isTerminalStatus } from '@xunji/shared'
+import type { ParseStatus } from '@trovia/shared'
+import { isTerminalStatus } from '@trovia/shared'
 
 import { getStatus } from '../local/repo'
 

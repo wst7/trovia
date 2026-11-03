@@ -6,7 +6,7 @@ import type {
   RelatedItem,
   SearchResult,
   SourceType,
-} from '@xunji/shared'
+} from '@trovia/shared'
 
 import type { ExtractedArticle } from './article'
 import { passesCoverage } from './coverage'

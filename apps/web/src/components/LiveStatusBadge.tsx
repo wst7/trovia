@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ParseStatus } from '@xunji/shared'
-import { isTerminalStatus } from '@xunji/shared'
+import type { ParseStatus } from '@trovia/shared'
+import { isTerminalStatus } from '@trovia/shared'
 import { api } from '../api/client'
 import { StatusBadge } from './StatusBadge'
 

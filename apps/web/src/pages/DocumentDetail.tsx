@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
-import type { DocumentDetail, ParseStatus, RelatedItem } from '@xunji/shared'
+import type { DocumentDetail, ParseStatus, RelatedItem } from '@trovia/shared'
 import {
   dedupeRelated,
   domainOf,
@@ -10,7 +10,7 @@ import {
   RELATION_LABELS,
   sourceLabel,
   SOURCE_TYPE_LABELS,
-} from '@xunji/shared'
+} from '@trovia/shared'
 import { ArrowLeftIcon } from '../components/Icons'
 import { LiveStatusBadge } from '../components/LiveStatusBadge'
 import { Markdown } from '../components/Markdown'

@@ -1,5 +1,5 @@
 {
-  "name": "@xunji/api",
+  "name": "@trovia/api",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@xunji/shared": "*"
+    "@trovia/shared": "*"
   },
   "devDependencies": {
     "typescript": "^5.5.4"

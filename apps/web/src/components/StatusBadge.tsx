@@ -1,5 +1,5 @@
-import type { ParseStatus } from '@xunji/shared'
-import { STATUS_TEXT, statusTone } from '@xunji/shared'
+import type { ParseStatus } from '@trovia/shared'
+import { STATUS_TEXT, statusTone } from '@trovia/shared'
 
 /**
  * 状态只在需要用户注意时出现：

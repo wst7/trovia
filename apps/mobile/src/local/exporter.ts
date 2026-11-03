@@ -5,7 +5,7 @@
  * 一份机器可读的 JSON（将来导入/迁移用），一份人能读的 Markdown（直接扔进笔记软件）。
  * 两者都只包含用户自己的内容，不含索引与向量这类派生数据。
  */
-import type { DocumentDetail } from '@xunji/shared'
+import type { DocumentDetail } from '@trovia/shared'
 
 type FileSystemModule = typeof import('expo-file-system/legacy')
 

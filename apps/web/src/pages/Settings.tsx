@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, clearToken } from '../api/client'
-import type { User } from '@xunji/shared'
-import { errorMessage, formatDate } from '@xunji/shared'
+import type { User } from '@trovia/shared'
+import { errorMessage, formatDate } from '@trovia/shared'
 import { useToast } from '../components/Toast'
 
 export default function Settings() {
