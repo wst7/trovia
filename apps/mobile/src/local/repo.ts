@@ -175,6 +175,8 @@ export async function listDocuments(options: {
   keyword?: string
   /** 只看没能整理的条目：失败汇总点进去就是它。 */
   failedOnly?: boolean
+  /** 只看从文件导入的条目：导入 300 条之后总得能找回这一批。 */
+  importedOnly?: boolean
 }): Promise<{ items: DocumentSummary[]; total: number }> {
   const db = await getDb()
   const keyword = options.keyword?.trim() ?? ''
@@ -185,6 +187,9 @@ export async function listDocuments(options: {
   const clauses: string[] = ['deleted_at IS NULL']
   const params: (string | number)[] = []
   if (options.failedOnly) clauses.push("parse_status = 'failed'")
+  // metadata 里的 origin 是导入时写下的；用 LIKE 而不是 json_extract，
+  // 免得依赖 SQLite 是否编译了 JSON1。
+  if (options.importedOnly) clauses.push("metadata LIKE '%\"origin\"%'")
   if (keyword) {
     clauses.push('(title LIKE ? OR summary_short LIKE ? OR search_text LIKE ?)')
     params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`)

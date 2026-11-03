@@ -68,6 +68,9 @@ export function ImportScreen() {
       setPicked(null)
       void processPendingQueue()
       toast(`已加入 ${result.created} 条，正在后台整理。`, { type: 'success' })
+      // 导入完直接去收藏页并打开「只看导入的」：否则用户回到列表只看到一排「整理中」，
+      // 分不清哪些是刚进来的。
+      if (result.created > 0) router.replace('/documents?imported=1')
     } catch {
       toast('导入中断了，已经写入的条目保留着。', { type: 'error' })
     } finally {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useFocusEffect, useRouter } from 'expo-router'
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { ActivityIndicator, FlatList, Keyboard, Pressable, RefreshControl, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { DocumentSummary, ParseStatus } from '@xunji/shared'
@@ -22,6 +22,7 @@ import { usePalette } from '../ui/palette'
 const PAGE_SIZE = 20
 
 export function DocumentsScreen() {
+  const routeParams = useLocalSearchParams<{ imported?: string }>()
   const router = useRouter()
   const { toast } = useToast()
   const insets = useSafeAreaInsets()
@@ -36,11 +37,21 @@ export function DocumentsScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [failed, setFailed] = useState(0)
+  // 整库条数：筛选后 total 会变，但「含在 N 条里」说的应该是整个库。
+  const [libraryTotal, setLibraryTotal] = useState(0)
   const [retrying, setRetrying] = useState(false)
   const [selecting, setSelecting] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [failedOnly, setFailedOnly] = useState(false)
+  // 导入 300 条之后，用户需要能一眼找回「这一批」；来源写在 metadata 里。
+  const [importedOnly, setImportedOnly] = useState(false)
+  // 从导入页跳过来时带着 ?imported=1，直接停在「只看导入的」。
+  useFocusEffect(
+    useCallback(() => {
+      if (routeParams.imported === '1') setImportedOnly(true)
+    }, [routeParams.imported]),
+  )
   // 313 条时按日期找还行，再多就得换一条线索：按站点分组能直接跳到「那篇少数派」。
   const [groupBy, setGroupBy] = useState<'day' | 'site'>('day')
   // 按站点分组时先排序：日期顺序下同一个站点散落在各处，组标题会重复出现。
@@ -68,6 +79,7 @@ export function DocumentsScreen() {
           pageSize: PAGE_SIZE,
           keyword,
           failedOnly,
+          importedOnly,
         })
         if (seq !== requestSeq.current) return
         setItems((current) => (mode === 'replace' ? res.items : [...current, ...res.items]))
@@ -76,7 +88,10 @@ export function DocumentsScreen() {
         setError(null)
         void repo
           .documentStats()
-          .then((stats) => setFailed(stats.failed))
+          .then((stats) => {
+            setFailed(stats.failed)
+            setLibraryTotal(stats.total)
+          })
           .catch(() => undefined)
       } catch (e) {
         if (seq !== requestSeq.current) return
@@ -89,7 +104,7 @@ export function DocumentsScreen() {
         }
       }
     },
-    [keyword, failedOnly],
+    [keyword, failedOnly, importedOnly],
   )
 
   useEffect(() => {
@@ -201,7 +216,7 @@ export function DocumentsScreen() {
   }
 
   const hasMore = items.length < total
-  const unit = loading ? '正在加载…' : keyword || failedOnly ? '条匹配' : '条内容'
+  const unit = loading ? '正在加载…' : keyword || failedOnly || importedOnly ? '条匹配' : '条内容'
 
   return (
     <Screen>
@@ -273,7 +288,9 @@ export function DocumentsScreen() {
             {failed > 0 ? (
               <View className="mt-3 flex-row items-center justify-between">
                 <Text className="flex-1 text-body-sm text-muted" onPress={() => setFailedOnly((on) => !on)}>
-                  {failedOnly ? '只看没能整理的，点这里回到全部' : `${failed} 条没能整理（含在 ${total} 条里）`}
+                  {failedOnly
+                    ? '只看没能整理的，点这里回到全部'
+                    : `${failed} 条没能整理（含在 ${libraryTotal || total} 条里）`}
                 </Text>
                 <TextButton
                   label={retrying ? '正在排队…' : '重试全部'}
@@ -282,6 +299,31 @@ export function DocumentsScreen() {
                 />
               </View>
             ) : null}
+
+            <View className="mt-3 flex-row items-center gap-4">
+              <Pressable
+                onPress={() => {
+                  setImportedOnly((on) => !on)
+                  setFailedOnly(false)
+                }}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="只看导入的收藏"
+              >
+                <Text
+                  className={
+                    importedOnly ? 'text-caption font-medium text-ink underline' : 'text-caption text-faint'
+                  }
+                >
+                  只看导入的
+                </Text>
+              </Pressable>
+              {importedOnly ? (
+                <Text className="text-caption text-faint">
+                  这些是从文件导入的；原始收藏时间取自文件时会保留。
+                </Text>
+              ) : null}
+            </View>
 
             {failedOnly ? (
               <Text className="mt-2 text-caption text-faint">
@@ -357,11 +399,17 @@ export function DocumentsScreen() {
           ) : error ? undefined : (
             <View className="mt-10">
               <Text className="text-body text-ink">
-                {failedOnly ? '没有没能整理的内容。' : keyword ? '没有匹配的收藏。' : '还没有收藏。'}
+                {importedOnly
+                  ? '没有从文件导入的收藏。'
+                  : failedOnly
+                    ? '没有没能整理的内容。'
+                    : keyword
+                      ? '没有匹配的收藏。'
+                      : '还没有收藏。'}
               </Text>
               <Text className="mt-1 text-body-sm text-muted">
-                {keyword
-                  ? '换一个关键词，或者清除筛选。'
+                {keyword || failedOnly || importedOnly
+                  ? '换一个筛选条件，或者回到全部。'
                   : '回到首页粘贴第一个链接，Trovia 会自动整理。'}
               </Text>
               <View className="mt-4 self-start">
