@@ -249,6 +249,24 @@
 
     walk(document.body, dict)
 
+    // 截图里的界面也是中文的，所以英文版换一套英文界面的图。
+    // 没有对应截图的（例如那张靠图片文字命中的搜索），整块藏起来，
+    // 因为换成英文界面就证明不了那句话了。
+    document.querySelectorAll('img[data-src-en]').forEach(function (img) {
+      var zhSrc = img.getAttribute('data-src-zh') || img.getAttribute('src')
+      var zhAlt = img.getAttribute('data-alt-zh') || img.getAttribute('alt')
+      if (lang === 'en') {
+        img.setAttribute('src', img.getAttribute('data-src-en'))
+        img.setAttribute('alt', img.getAttribute('data-alt-en') || '')
+      } else {
+        img.setAttribute('src', zhSrc)
+        img.setAttribute('alt', zhAlt || '')
+      }
+    })
+    document.querySelectorAll('[data-hide-en]').forEach(function (node) {
+      node.hidden = lang === 'en'
+    })
+
     document.querySelectorAll('.lang-switch button').forEach(function (button) {
       var active = button.getAttribute('data-lang') === lang
       button.classList.toggle('is-active', active)
@@ -257,6 +275,13 @@
   }
 
   /** 第一次切到英文前，把当前中文记下来，切回来时按原样还原。 */
+  function rememberImages() {
+    document.querySelectorAll('img[data-src-en]').forEach(function (img) {
+      if (!img.getAttribute('data-src-zh')) img.setAttribute('data-src-zh', img.getAttribute('src'))
+      if (!img.getAttribute('data-alt-zh')) img.setAttribute('data-alt-zh', img.getAttribute('alt'))
+    })
+  }
+
   function snapshot() {
     var map = {}
     var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null)
@@ -269,6 +294,7 @@
   }
 
   function start() {
+    rememberImages()
     BACKUP = snapshot()
     var lang = detect()
     document.querySelectorAll('.lang-switch button').forEach(function (button) {

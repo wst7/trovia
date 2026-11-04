@@ -396,4 +396,12 @@ export const zh: Dictionary = {
   'detail.origin.import': '从 {file} 导入',
   'detail.origin.restore': '从 {file} 恢复',
   'detail.origin.backup': '从备份恢复',
+
+  'search.reason.sep': '」「',
+  'search.reason.join': '；',
+  'search.reason.title': '标题命中「{terms}」',
+  'search.reason.keywords': '关键词命中「{terms}」',
+  'search.reason.summary': '摘要命中「{terms}」',
+  'search.reason.body': '正文命中「{terms}」',
+  'search.reason.site': '来源匹配「{terms}」',
 }

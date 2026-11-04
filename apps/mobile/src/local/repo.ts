@@ -22,6 +22,7 @@ import { matchRange, timeOf } from './query'
 import type { DateRange } from './query'
 import { hasContentTerm, queryTerms } from './terms'
 import { newId, normalizeUrl, nowIso, oneLine, parseJsonArray, parseJsonObject, sourceTypeOf } from './util'
+import { t } from '../i18n'
 
 export { queryTerms } from './terms'
 
@@ -797,18 +798,27 @@ export async function searchDocuments(query: string, limit = 20): Promise<Search
     // 至少对上一半的词才算这条跟查询有关，否则就是噪声。
     if (!dateOnly && !passesCoverage(matchedTerms, terms.length)) continue
 
+    // 命中原因要说给人听，所以按界面语言拼，不在数据层写死中文。
+    const sep = t('search.reason.sep')
+    const why = (kind: string, words: string[]) =>
+      words.length ? t(`search.reason.${kind}`, { terms: words.join(sep) }) : null
     const parts: string[] = []
     if (hit) parts.unshift(dateLabelOf(hit))
-    if (hitTitle.length) parts.push(`标题命中「${hitTitle.join('」「')}」`)
-    if (hitKeywords.length) parts.push(`关键词命中「${hitKeywords.join('」「')}」`)
-    if (hitSummary.length) parts.push(`摘要命中「${hitSummary.join('」「')}」`)
-    if (hitBody.length) parts.push(`正文命中「${hitBody.join('」「')}」`)
-    if (hitSite.length) parts.push(`来源匹配「${hitSite.join('」「')}」`)
+    for (const [kind, words] of [
+      ['title', hitTitle],
+      ['keywords', hitKeywords],
+      ['summary', hitSummary],
+      ['body', hitBody],
+      ['site', hitSite],
+    ] as const) {
+      const line = why(kind, words)
+      if (line) parts.push(line)
+    }
 
     scored.push({
       row,
       score: dateOnly ? 1 : score / (terms.length * 10),
-      reason: parts.slice(0, 3).join('；'),
+      reason: parts.slice(0, 3).join(t('search.reason.join')),
       excerpt: dateOnly ? null : excerptAround(row.plain_text ?? '', terms),
       at: sortTimeOf(row, hit),
     })

@@ -396,4 +396,12 @@ export const en: Dictionary = {
   'detail.origin.import': 'Imported from {file}',
   'detail.origin.restore': 'Restored from {file}',
   'detail.origin.backup': 'Restored from a backup',
+
+  'search.reason.sep': '”, “',
+  'search.reason.join': ' · ',
+  'search.reason.title': 'title “{terms}”',
+  'search.reason.keywords': 'keywords “{terms}”',
+  'search.reason.summary': 'summary “{terms}”',
+  'search.reason.body': 'text “{terms}”',
+  'search.reason.site': 'site “{terms}”',
 }
