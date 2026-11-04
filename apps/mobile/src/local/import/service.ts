@@ -6,6 +6,7 @@
  */
 import * as DocumentPicker from 'expo-document-picker'
 
+import { emitChange } from '../bus'
 import * as repo from '../repo'
 import { normalizeUrl, parseImport } from './parse'
 import type { ImportFormat, ImportItem, RestoreDocument } from './parse'
@@ -102,6 +103,9 @@ export async function runRestore(
     onProgress?.({ done: index + 1, total: documents.length })
   }
 
+  // 恢复是直接写库，不经过解析队列，所以这里要自己喊一声；
+  // 否则收藏页还停在导入前的列表上，得手动下拉才看得到。
+  if (created > 0) emitChange()
   return { created, duplicate, failed }
 }
 
@@ -133,5 +137,7 @@ export async function runImport(
     onProgress?.({ done: index + 1, total: items.length })
   }
 
+  // 第一条落库就让列表刷新，别等后台整理完。
+  if (created > 0) emitChange()
   return { created, duplicate, failed }
 }

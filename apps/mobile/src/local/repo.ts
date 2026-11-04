@@ -253,7 +253,11 @@ export async function listDocuments(options: {
   if (options.failedOnly) clauses.push("parse_status = 'failed'")
   // metadata 里的 origin 是导入时写下的；用 LIKE 而不是 json_extract，
   // 免得依赖 SQLite 是否编译了 JSON1。
-  if (options.importedOnly) clauses.push("metadata LIKE '%\"origin\"%'")
+  // 老条目存的是 "origin"（当时拼好的中文），新条目存 origin_kind + origin_file；
+  // 两种都要算「导入的」，否则恢复完切到这个筛选会看到空列表。
+  if (options.importedOnly) {
+    clauses.push("(metadata LIKE '%\"origin\"%' OR metadata LIKE '%\"origin_kind\"%')")
+  }
   if (keyword) {
     clauses.push('(title LIKE ? OR summary_short LIKE ? OR search_text LIKE ?)')
     params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`)
