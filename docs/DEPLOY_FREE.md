@@ -75,7 +75,7 @@ GitHub → Settings → Secrets and variables → Actions → **Variables** → 
 
 Cloudflare Pages 连同一个仓库：
 
-- 构建命令：`npm run build -w @xunji/landing`
+- 构建命令：`npm run build -w @trovia/landing`
 - 输出目录：`apps/landing/dist`
 - 环境变量：`XUNJI_APP_URL=https://<服务名>.onrender.com`
 

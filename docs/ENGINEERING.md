@@ -78,7 +78,7 @@ xunji/
 ├── package.json             # npm workspaces 根（apps/*、packages/*）
 ├── package-lock.json
 ├── apps/
-│   ├── web/                 # @xunji/web：React + Vite 应用（用户实际使用的界面）
+│   ├── web/                 # @trovia/web：React + Vite 应用（用户实际使用的界面）
 │       ├── package.json
 │       ├── vite.config.ts   # dev 代理 /api → XUNJI_API_TARGET || localhost:8000
 │       ├── tsconfig.json
@@ -89,15 +89,15 @@ xunji/
 │           ├── main.tsx
 │           ├── App.tsx          # 路由 + 侧栏导航
 │           ├── styles.css
-│           ├── api/client.ts    # @xunji/api 适配：base URL / localStorage token / 401 跳转
+│           ├── api/client.ts    # @trovia/api 适配：base URL / localStorage token / 401 跳转
 │           ├── components/      # SearchBox, SaveBox, DocumentCard, StatusBadge,
 │           │                    # LiveStatusBadge, Toast, Markdown, AuthForm
 │           └── pages/           # Home, Documents, DocumentDetail, Settings,
 │                                # Login, Register
-│   ├── mobile/              # @xunji/mobile：独立 iOS + Android 客户端（Expo / RN）
+│   ├── mobile/              # @trovia/mobile：独立 iOS + Android 客户端（Expo / RN）
 │   │   ├── app/             # Expo Router：index/login/register/documents/[id]/settings/share
 │   │   ├── src/
-│   │   │   ├── api/client.ts    # @xunji/api 适配：绝对 base URL / SecureStore token / 401 事件
+│   │   │   ├── api/client.ts    # @trovia/api 适配：绝对 base URL / SecureStore token / 401 事件
 │   │   │   ├── auth/            # AuthProvider、SecureStore token、待处理分享
 │   │   │   ├── storage/         # AsyncStorage 键、缓存用户、离线待保存队列
 │   │   │   ├── outbox/          # 单飞、顺序刷新队列
@@ -109,7 +109,7 @@ xunji/
 │   │   ├── app.config.ts    # scheme / bundle id / 分享插件 / 开发期 ATS 与 cleartext
 │   │   ├── metro.config.js  # monorepo watchFolders + nodeModulesPaths
 │   │   └── tsconfig.json
-│   └── landing/              # @xunji/landing：纯静态说明页（无框架），
+│   └── landing/              # @trovia/landing：纯静态说明页（无框架），
 │                             # dev 5174，构建时注入 XUNJI_APP_URL / XUNJI_SITE_URL
 │       ├── package.json
 │       ├── vite.config.ts    # transformIndexHtml 替换 __APP_URL__ / __SITE_URL__
@@ -118,10 +118,10 @@ xunji/
 │       ├── styles.css
 │       └── Dockerfile        # 构建上下文必须是仓库根目录
 └── packages/
-    ├── api/                # @xunji/api：createApiClient（请求/超时/信封/401 回调/接口定义）
+    ├── api/                # @trovia/api：createApiClient（请求/超时/信封/401 回调/接口定义）
     │   ├── package.json
     │   └── src/index.ts
-    └── shared/              # @xunji/shared：第 5 节 API 契约类型 + 平台无关的
+    └── shared/              # @trovia/shared：第 5 节 API 契约类型 + 平台无关的
         ├── package.json     # format.ts / errors.ts（web 与 mobile 共用）
         └── src/index.ts
 ```
@@ -152,10 +152,10 @@ xunji/
   React Query、Markdown 组件库、WebView 或字体包。样式使用 RN `StyleSheet`，视觉令牌与 Web 一致，
   仅浅色。`ios/`、`android/` 由 Expo prebuild 生成，不提交。
 - 平台无关的展示/校验逻辑（状态文案与色调、终端状态、域名/日期、URL 提取、错误文案、`ApiError`）
-  必须放在 `packages/shared`，Web 与 mobile 从 `@xunji/shared` 导入；shared 不得引用 DOM、
+  必须放在 `packages/shared`，Web 与 mobile 从 `@trovia/shared` 导入；shared 不得引用 DOM、
   `window`、`localStorage` 或 React Native API。
 - 平台无关的 HTTP 传输（路径与 query、15s 超时、`{data}` 解包、错误信封、401 回调、接口定义）
-  放在 `packages/api` 的 `createApiClient`，Web 与 mobile 从 `@xunji/api` 导入。两端
+  放在 `packages/api` 的 `createApiClient`，Web 与 mobile 从 `@trovia/api` 导入。两端
   `api/client.ts` 只做适配：base URL、token 读取、401 后的清 token/跳转或事件；不得复制请求逻辑。
   `packages/api` 不引用 `window`、`localStorage` 或 React Native API，token 与 401 副作用由 adapter 注入。
   401 回调会带上本次请求实际使用的 token，适配层据此忽略旧会话的迟到响应。
@@ -507,7 +507,7 @@ def search(session, user_id: str, query: str, limit: int = 10, settings=None) ->
 ### 7.1 Web
 
 - API base：`/api/v1`（vite dev server proxy → `http://localhost:8000`；nginx 同样代理）。
-- 请求通过 `@xunji/api` 的 `createApiClient`；本端 adapter 只提供相对 base URL、`localStorage`
+- 请求通过 `@trovia/api` 的 `createApiClient`；本端 adapter 只提供相对 base URL、`localStorage`
   token 读取和 401 清 token + 跳 `/login`。请求默认 15s 超时。
 - token 存 `localStorage["xunji_token"]`；401 → 清 token 并跳 `/login`。
   Web 也会校验本次 401 使用的 token 是否仍是当前 token，避免旧响应误清新会话。
@@ -590,8 +590,8 @@ cd backend && .venv/bin/python -m app.workers.runner
 
 # 前端（monorepo，仓库根目录执行）
 npm install
-npm run api:typecheck    # @xunji/api
-npm run typecheck -w @xunji/shared
+npm run api:typecheck    # @trovia/api
+npm run typecheck -w @trovia/shared
 npm run dev            # http://localhost:5173
 npm run build          # 必须零 TS 错误
 

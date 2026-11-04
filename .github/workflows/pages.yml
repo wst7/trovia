@@ -38,7 +38,7 @@ jobs:
       # 说明页里的应用入口指向安装包，而不是已暂停的网页应用。
       # 站点地址必须写成项目站点的绝对地址，og:image 需要绝对 URL。
       - name: Build landing
-        run: npm run build -w @xunji/landing
+        run: npm run build -w @trovia/landing
         env:
           XUNJI_APP_URL: https://github.com/wst7/trovia/releases/latest
           XUNJI_SITE_URL: https://wst7.github.io/trovia
