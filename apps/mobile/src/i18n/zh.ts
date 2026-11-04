@@ -381,4 +381,9 @@ export const zh: Dictionary = {
   'query.monthDay': '{month}月{day}日',
   'query.savedOf': '{label}保存的',
   'query.publishedOf': '{label}发表的',
+
+  'settings.section.appearance': '外观',
+  'settings.theme.system': '跟随系统',
+  'settings.theme.light': '浅色',
+  'settings.theme.dark': '深色',
 }

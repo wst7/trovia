@@ -26,9 +26,17 @@ import { useLocalRevision } from '../local/useLocalRevision'
 import { useToast } from '../providers/ToastProvider'
 import { useT } from '../i18n'
 import { setLocalePreference } from '../i18n/prefs'
+import { getThemePreference, setThemePreference } from '../theme'
+import type { ThemePreference } from '../theme'
 import type { LocalePreference } from '../i18n'
 
 const APP_NAME = 'Trovia'
+
+const THEME_OPTIONS: { value: ThemePreference; labelKey: string }[] = [
+  { value: 'system', labelKey: 'settings.theme.system' },
+  { value: 'light', labelKey: 'settings.theme.light' },
+  { value: 'dark', labelKey: 'settings.theme.dark' },
+]
 
 const LOCALE_OPTIONS: { value: LocalePreference; labelKey: string }[] = [
   { value: 'system', labelKey: 'settings.language.system' },
@@ -136,6 +144,7 @@ export function SettingsScreen() {
   const [exporting, setExporting] = useState(false)
   const [sync, setSync] = useState<{ configured: boolean; at: string | null } | null>(null)
   const [localePref, setLocalePref] = useState<LocalePreference>('system')
+  const [themePref, setThemePref] = useState<ThemePreference>('system')
   // 整库重抓：可中断的批处理，进度写在行副标题上。
   const [rebulk, setRebulk] = useState<{ done: number; total: number; current: string | null } | null>(null)
   const stopRebulk = useRef(false)
@@ -186,6 +195,7 @@ export function SettingsScreen() {
   useFocusEffect(
     useCallback(() => {
       void reload()
+      void getThemePreference().then(setThemePref)
     }, [reload, revision]),
   )
 
@@ -327,6 +337,24 @@ export function SettingsScreen() {
               onPress={() => setConfirmingClear(true)}
               accessibilityLabel={t('settings.clear.title')}
             />
+          </Group>
+        </View>
+
+        <View className="mb-6">
+          <SectionLabel>{t('settings.section.appearance')}</SectionLabel>
+          <Group>
+            {THEME_OPTIONS.map((option) => (
+              <Row
+                key={option.value}
+                icon={themePref === option.value ? 'radio-button-on' : 'radio-button-off'}
+                title={t(option.labelKey)}
+                onPress={() => {
+                  setThemePref(option.value)
+                  void setThemePreference(option.value)
+                }}
+                accessibilityLabel={t(option.labelKey)}
+              />
+            ))}
           </Group>
         </View>
 

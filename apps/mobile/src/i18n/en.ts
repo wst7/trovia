@@ -380,4 +380,9 @@ export const en: Dictionary = {
   'query.monthDay': '{month}/{day}',
   'query.savedOf': 'saved {label}',
   'query.publishedOf': 'published {label}',
+
+  'settings.section.appearance': 'APPEARANCE',
+  'settings.theme.system': 'Follow system',
+  'settings.theme.light': 'Light',
+  'settings.theme.dark': 'Dark',
 }
