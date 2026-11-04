@@ -20,7 +20,7 @@ from app.services import search_service
 
 
 def _user(session) -> uuid.UUID:
-    user = User(email=f"search-{uuid.uuid4().hex[:8]}@xunji.test", password_hash="x")
+    user = User(email=f"search-{uuid.uuid4().hex[:8]}@trovia.test", password_hash="x")
     session.add(user)
     session.commit()
     return user.id

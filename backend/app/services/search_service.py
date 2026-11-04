@@ -69,7 +69,7 @@ from app.ai.embedding import get_embedding_provider
 from app.config import Settings, get_settings
 from app.logging import get_logger
 
-logger = get_logger("xunji.search")
+logger = get_logger("trovia.search")
 
 # 候选准入与打分的绝对门槛（阈值依据：中文真子串标题命中 similarity ≥0.10、
 # 无关串 =0；local 哈希 embedding 无关查询余弦噪声实测 ≤0.06）

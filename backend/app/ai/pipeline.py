@@ -25,7 +25,7 @@ from app.models import Document, DocumentChunk, DocumentRelation
 from app.parsers.base import ParseResult
 from app.parsers.registry import get_parser
 
-logger = get_logger("xunji.ai.pipeline")
+logger = get_logger("trovia.ai.pipeline")
 
 # 关联关系阈值（真实证据：语义余弦 / 主题 Jaccard / 同来源常量分）
 SEMANTIC_MIN_COSINE = 0.2

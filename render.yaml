@@ -7,7 +7,7 @@
 # 休眠期间 worker 也停着，任务留在库里，醒来后继续处理。
 services:
   - type: web
-    name: xunji
+    name: trovia
     runtime: docker
     plan: free
     region: singapore

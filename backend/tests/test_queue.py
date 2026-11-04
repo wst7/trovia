@@ -10,7 +10,7 @@ from app.workers import queue
 
 
 def make_user(session) -> User:
-    user = User(email=f"queue-{uuid.uuid4().hex[:6]}@xunji.test", password_hash="x")
+    user = User(email=f"queue-{uuid.uuid4().hex[:6]}@trovia.test", password_hash="x")
     session.add(user)
     session.commit()
     return user

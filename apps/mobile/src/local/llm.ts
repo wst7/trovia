@@ -30,12 +30,29 @@ export const DEFAULT_LLM: LlmConfig = {
   semantic: true,
 }
 
-const CONFIG_KEY = 'xunji.llm.v1'
-const SECRET_KEY = 'xunji.llm.key.v1'
+const CONFIG_KEY = 'trovia.llm.v1'
+const SECRET_KEY = 'trovia.llm.key.v1'
+// 改名前的键：只读一次，读到就搬到新键上。用户配过的模型不该因为改名丢掉。
+const LEGACY_CONFIG_KEY = 'xunji.llm.v1'
+const LEGACY_SECRET_KEY = 'xunji.llm.key.v1'
 const TIMEOUT_MS = 30_000
 
+/** 旧的存储键 → 新键。读到旧值就顺手写回新键，下次不再读旧的。 */
+async function readMigrated(key: string, legacyKey: string): Promise<string | null> {
+  const current = await AsyncStorage.getItem(key)
+  if (current) return current
+  const legacy = await AsyncStorage.getItem(legacyKey)
+  if (!legacy) return null
+  await AsyncStorage.setItem(key, legacy).catch(() => undefined)
+  await AsyncStorage.removeItem(legacyKey).catch(() => undefined)
+  return legacy
+}
+
 export async function loadLlmState(): Promise<LlmState> {
-  const [raw, key] = await Promise.all([AsyncStorage.getItem(CONFIG_KEY), loadLlmKey()])
+  const [raw, key] = await Promise.all([
+    readMigrated(CONFIG_KEY, LEGACY_CONFIG_KEY),
+    loadLlmKey(),
+  ])
   let parsed: Partial<LlmConfig> = {}
   if (raw) {
     try {
@@ -73,7 +90,13 @@ export async function saveLlmState(config: LlmConfig, apiKey?: string): Promise<
 
 export async function loadLlmKey(): Promise<string | null> {
   try {
-    return await SecureStore.getItemAsync(SECRET_KEY)
+    const current = await SecureStore.getItemAsync(SECRET_KEY)
+    if (current) return current
+    const legacy = await SecureStore.getItemAsync(LEGACY_SECRET_KEY)
+    if (!legacy) return null
+    await SecureStore.setItemAsync(SECRET_KEY, legacy)
+    await SecureStore.deleteItemAsync(LEGACY_SECRET_KEY).catch(() => undefined)
+    return legacy
   } catch {
     return null
   }

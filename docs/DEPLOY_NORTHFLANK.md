@@ -12,16 +12,16 @@
 | ref | 资源 | 规格 | 说明 |
 |---|---|---|---|
 | `project` | 项目 `Xunji` | 区域 `asia-east`（香港） | 入口流量仅限本项目 |
-| `db` | PostgreSQL **16** addon `xunji-db` | `nf-compute-50` + 6 GB 卷 | 只开内部访问，不开公网 |
-| `backend` | BuildService `xunji-backend` | 构建计划 `nf-compute-400-16` | 构建上下文 `/backend`，Dockerfile `/backend/Dockerfile` |
-| `env` | SecretGroup `xunji-env` | — | `APP_SECRET`、离线 AI 默认值；`DATABASE_URL` = addon 的 `POSTGRES_URI` 别名 |
-| `api` | DeploymentService `xunji-api` | `nf-compute-50`（0.5 vCPU / 1 GB） | 容器端口 8000，**私有**，不占公网域名 |
-| `worker` | DeploymentService `xunji-worker` | `nf-compute-50` | 同一镜像，启动命令 `python -m app.workers.runner`，无端口 |
-| `web` | CombinedService `xunji-web` | `nf-compute-20`（0.2 vCPU / 512 MB） | 容器端口 80，**公开**；Nginx 托管前端并把 `/api/` 反代到 `http://xunji-api:8000` |
+| `db` | PostgreSQL **16** addon `trovia-db` | `nf-compute-50` + 6 GB 卷 | 只开内部访问，不开公网 |
+| `backend` | BuildService `trovia-backend` | 构建计划 `nf-compute-400-16` | 构建上下文 `/backend`，Dockerfile `/backend/Dockerfile` |
+| `env` | SecretGroup `trovia-env` | — | `APP_SECRET`、离线 AI 默认值；`DATABASE_URL` = addon 的 `POSTGRES_URI` 别名 |
+| `api` | DeploymentService `trovia-api` | `nf-compute-50`（0.5 vCPU / 1 GB） | 容器端口 8000，**私有**，不占公网域名 |
+| `worker` | DeploymentService `trovia-worker` | `nf-compute-50` | 同一镜像，启动命令 `python -m app.workers.runner`，无端口 |
+| `web` | CombinedService `trovia-web` | `nf-compute-20`（0.2 vCPU / 512 MB） | 容器端口 80，**公开**；Nginx 托管前端并把 `/api/` 反代到 `http://trovia-api:8000` |
 
 费用（Northflank 公开价，美元）：API 12 + Worker 12 + Web 5.4 ≈ **每月 29.4**，另加数据库的 `nf-compute-50`（12/月）和 6 GB 卷。构建计划 `nf-compute-400-16` 只在构建时按分钟计费，空闲不计。
 
-`xunji-api` 不开放公网端口：浏览器只访问 `xunji-web`，由 Nginx 反代到内部服务，所以前端和 API 同源，不需要 CORS，也不需要单独给 API 配域名。
+`trovia-api` 不开放公网端口：浏览器只访问 `trovia-web`，由 Nginx 反代到内部服务，所以前端和 API 同源，不需要 CORS，也不需要单独给 API 配域名。
 
 ## 前置条件
 
@@ -44,11 +44,11 @@
 
 ## 部署后必须确认的 4 件事
 
-1. **公开域名**。Services → `xunji-web` → Ports → 复制域名，形如
-   `https://http--xunji-web--<随机后缀>.code.run`。后缀是随机生成的，**重建服务可能变**，不要把它硬编码到别处。
+1. **公开域名**。Services → `trovia-web` → Ports → 复制域名，形如
+   `https://http--trovia-web--<随机后缀>.code.run`。后缀是随机生成的，**重建服务可能变**，不要把它硬编码到别处。
    `code.run` 域名自带 TLS。
 2. **前端能否打到后端**。浏览器打开 `https://<web 域名>/api/v1/health`，应返回 JSON。
-   502 表示 Nginx 连不上后端：检查 `xunji-web` 的运行时变量 `API_UPSTREAM` 是否为 `http://xunji-api:8000`（内部服务名 + 容器端口）。
+   502 表示 Nginx 连不上后端：检查 `trovia-web` 的运行时变量 `API_UPSTREAM` 是否为 `http://trovia-api:8000`（内部服务名 + 容器端口）。
 3. **数据库扩展**。在 addon 的控制台里执行：
 
    ```sql
@@ -66,7 +66,7 @@
 
 模板里给的是默认离线配置：`AI_PROVIDER=extractive`、`EMBEDDING_PROVIDER=local`、`EMBEDDING_DIM=1536`。它能完整跑通（摘要、分块、索引、检索），但摘要质量明显低于模型。
 
-要接真实服务：Project → Secrets → `xunji-env` → 添加变量，然后重启 API 与 Worker。
+要接真实服务：Project → Secrets → `trovia-env` → 添加变量，然后重启 API 与 Worker。
 
 | 变量 | 示例 | 说明 |
 |---|---|---|
@@ -97,7 +97,7 @@ EXPO_PUBLIC_API_BASE_URL=https://<web 域名>/api/v1 npm run dev:mobile -- -c
 
 1. Settings → Secrets and variables → Actions → **Variables** → 新建 `XUNJI_API_BASE_URL`，值为 `https://<web 域名>/api/v1`（工作流会拒绝非 HTTPS 的值）。
 2. 推送 `main`，或在 Actions → **Android APK** → Run workflow。
-3. 跑完后在该次运行页底部下载 artifact `xunji-apk-<sha>`，里面是 `xunji-<sha>-arm64.apk`，传到手机安装（需允许“未知来源”）。
+3. 跑完后在该次运行页底部下载 artifact `trovia-apk-<sha>`，里面是 `trovia-<sha>-arm64.apk`，传到手机安装（需允许“未知来源”）。
 
 它只能构建 Android：iOS 需要 macOS runner，用 EAS 或本机 Xcode。签名用的是 RN/Expo 模板的 debug 密钥，适合自己安装，不能上架。
 
@@ -108,12 +108,12 @@ EXPO_PUBLIC_API_BASE_URL=https://<web 域名>/api/v1 npm run dev:mobile -- -c
 1. 新建 Combined service，仓库同上，构建类型 Dockerfile，构建上下文 `/`，Dockerfile `/apps/landing/Dockerfile`，公开端口 80。
 2. **构建参数** `XUNJI_RUNTIME_URLS=1`：保留 `__APP_URL__` / `__SITE_URL__` 占位符，因为公开域名要等部署后才生成。
 3. **运行时变量** `XUNJI_APP_URL=https://<web 域名>`。`XUNJI_SITE_URL` 不用填，容器启动脚本会取 `NF_HOSTS` 的第一项作为自身地址
-   （`apps/landing/docker-entrypoint.d/40-xunji-urls.sh`，在 Nginx 启动前用 `sed` 替换）。
+   （`apps/landing/docker-entrypoint.d/40-trovia-urls.sh`，在 Nginx 启动前用 `sed` 替换）。
 
 ## 已知限制
 
 - 三个运行时服务都是 **1 个副本**。API 无状态，可以加副本（迁移的 advisory lock 已保证安全）；Worker 多副本也安全（`FOR UPDATE SKIP LOCKED`），但收益不大。
-- 模板里没有健康检查：模板 schema 里 `healthChecks.path/port` 只接受模板表达式，不能写字面量。建议在 UI 给 `xunji-api` 补一个 HTTP 健康检查 `/api/v1/health`、端口 8000；`xunji-web` 用 `/` 即可。
+- 模板里没有健康检查：模板 schema 里 `healthChecks.path/port` 只接受模板表达式，不能写字面量。建议在 UI 给 `trovia-api` 补一个 HTTP 健康检查 `/api/v1/health`、端口 8000；`trovia-web` 用 `/` 即可。
 - **后端目前没有限流**。`/api/v1/auth/register` 一旦公网可达就能被刷；在补上 `/auth/*` 限流之前，建议先不公开注册，或加一层 Cloudflare / Nginx `limit_req`。
 - 数据库 6 GB 起步，pgvector 的向量索引会随文档量增长，注意监控存储。
 - addon 支持定时备份（`backupsDump`），模板没有配置，建议在 UI 里打开。
@@ -127,7 +127,7 @@ EXPO_PUBLIC_API_BASE_URL=https://<web 域名>/api/v1 npm run dev:mobile -- -c
 | 构建日志报找不到 Dockerfile | 平台的 `dockerFilePath` 若按「相对工作目录」解释，`/backend/Dockerfile` 会变成 `/backend/backend/Dockerfile` | 把该服务的 Dockerfile 路径改成 `/Dockerfile`（工作目录仍是 `/backend`），或把工作目录设为 `/`、路径保持 `/backend/Dockerfile`；Web 服务同理 |
 | API 启动即退出，日志提到 `EMBEDDING_DIM` | 维度与 provider 实际输出不符 | 改 secret group 后重启 |
 | API 启动报 `relation "documents" does not exist` | 迁移没跑成 | 多半是扩展创建失败，按上面第 3 条检查 `pg_available_extensions` |
-| `https://<web 域名>/api/v1/health` 返回 502 | `API_UPSTREAM` 写错，或 `xunji-api` 未就绪 | 确认内部服务名 `xunji-api` 与端口 8000 |
-| Worker 反复重启 | 数据库还没 running，或 secret group 没拿到 `DATABASE_URL` | 确认 addon 已 running、`xunji-env` 的 addon 依赖里有 `POSTGRES_URI → DATABASE_URL` |
+| `https://<web 域名>/api/v1/health` 返回 502 | `API_UPSTREAM` 写错，或 `trovia-api` 未就绪 | 确认内部服务名 `trovia-api` 与端口 8000 |
+| Worker 反复重启 | 数据库还没 running，或 secret group 没拿到 `DATABASE_URL` | 确认 addon 已 running、`trovia-env` 的 addon 依赖里有 `POSTGRES_URI → DATABASE_URL` |
 | 登录后列表为空、换账号也空 | 数据确实为空（每个账号独立） / 连到了另一个数据库 | 在 addon 控制台 `SELECT count(*) FROM documents;` 核对 |
 | App 里所有请求失败 | `EXPO_PUBLIC_API_BASE_URL` 指向了内网地址或旧域名 | 重新打包，值改成 `https://<web 域名>/api/v1` |

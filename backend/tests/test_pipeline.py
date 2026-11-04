@@ -39,7 +39,7 @@ def make_fetch(name: str, final_url: str):
 
 
 def make_user(session) -> User:
-    user = User(email=f"pipe-{uuid.uuid4().hex[:6]}@xunji.test", password_hash="x")
+    user = User(email=f"pipe-{uuid.uuid4().hex[:6]}@trovia.test", password_hash="x")
     session.add(user)
     session.commit()
     return user

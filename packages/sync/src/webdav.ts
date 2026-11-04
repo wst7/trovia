@@ -45,7 +45,7 @@ function base64(input: string): string {
 }
 
 export interface WebDavOptions {
-  /** 例如 https://dav.jianguoyun.com/dav/xunji（根目录，末尾斜杠可有可无）。 */
+  /** 例如 https://dav.jianguoyun.com/dav/trovia（根目录，末尾斜杠可有可无）。 */
   baseUrl: string
   username: string
   password: string

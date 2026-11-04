@@ -16,7 +16,7 @@ from app.parsers.base import (
     parse_datetime,
 )
 
-logger = get_logger("xunji.parsers.wechat")
+logger = get_logger("trovia.parsers.wechat")
 
 _TITLE_SUFFIX_RE = re.compile(r"\s*[-|–—]\s*微信公众平台\s*$")
 _CT_RE = re.compile(r"""var\s+ct\s*=\s*["']?(\d{10})""")

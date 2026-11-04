@@ -30,7 +30,7 @@
                 "kind": "Addon",
                 "ref": "db",
                 "spec": {
-                  "name": "xunji-db",
+                  "name": "trovia-db",
                   "type": "postgresql",
                   "version": "16",
                   "billing": {
@@ -46,14 +46,14 @@
                 "kind": "BuildService",
                 "ref": "backend",
                 "spec": {
-                  "name": "xunji-backend",
+                  "name": "trovia-backend",
                   "billing": {
                     "buildPlan": "nf-compute-400-16"
                   },
                   "buildSource": "git",
                   "vcsData": {
                     "projectType": "github",
-                    "projectUrl": "https://github.com/wst7/xunji"
+                    "projectUrl": "https://github.com/wst7/trovia"
                   },
                   "buildSettings": {
                     "dockerfile": {
@@ -114,7 +114,7 @@
                 "kind": "SecretGroup",
                 "ref": "env",
                 "spec": {
-                  "name": "xunji-env",
+                  "name": "trovia-env",
                   "type": "secret",
                   "secretType": "environment",
                   "priority": 10,
@@ -152,7 +152,7 @@
                 "kind": "DeploymentService",
                 "ref": "api",
                 "spec": {
-                  "name": "xunji-api",
+                  "name": "trovia-api",
                   "billing": {
                     "deploymentPlan": "nf-compute-50"
                   },
@@ -182,7 +182,7 @@
                 "kind": "DeploymentService",
                 "ref": "worker",
                 "spec": {
-                  "name": "xunji-worker",
+                  "name": "trovia-worker",
                   "billing": {
                     "deploymentPlan": "nf-compute-50"
                   },
@@ -204,7 +204,7 @@
                 "kind": "CombinedService",
                 "ref": "web",
                 "spec": {
-                  "name": "xunji-web",
+                  "name": "trovia-web",
                   "billing": {
                     "deploymentPlan": "nf-compute-20",
                     "buildPlan": "nf-compute-400-16"
@@ -212,7 +212,7 @@
                   "buildSource": "git",
                   "vcsData": {
                     "projectType": "github",
-                    "projectUrl": "https://github.com/wst7/xunji",
+                    "projectUrl": "https://github.com/wst7/trovia",
                     "projectBranch": "main"
                   },
                   "buildSettings": {
@@ -242,7 +242,7 @@
                     }
                   ],
                   "runtimeEnvironment": {
-                    "API_UPSTREAM": "http://xunji-api:8000"
+                    "API_UPSTREAM": "http://trovia-api:8000"
                   }
                 }
               }

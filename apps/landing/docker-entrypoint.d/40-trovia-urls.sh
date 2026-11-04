@@ -14,7 +14,7 @@ HTML_DIR="${XUNJI_HTML_DIR:-/usr/share/nginx/html}"
 HTML="$HTML_DIR/index.html"
 
 if [ ! -f "$HTML" ]; then
-  echo "xunji: $HTML 不存在，跳过地址替换" >&2
+  echo "trovia: $HTML 不存在，跳过地址替换" >&2
   exit 0
 fi
 
@@ -38,4 +38,4 @@ sed -i \
   -e "s|__SITE_URL__|$(escape "$SITE_URL")|g" \
   "$HTML"
 
-echo "xunji: app=$APP_URL site=$SITE_URL"
+echo "trovia: app=$APP_URL site=$SITE_URL"

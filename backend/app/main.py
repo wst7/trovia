@@ -17,7 +17,7 @@ from app.db import run_migrations
 from app.errors import error_body, register_exception_handlers
 from app.logging import get_logger, setup_logging
 
-logger = get_logger("xunji.api")
+logger = get_logger("trovia.api")
 
 
 @asynccontextmanager

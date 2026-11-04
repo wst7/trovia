@@ -1,5 +1,5 @@
 [project]
-name = "xunji-backend"
+name = "trovia-backend"
 version = "0.1.0"
 description = "Xunji backend: personal link recall engine"
 requires-python = ">=3.11"

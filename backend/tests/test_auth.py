@@ -3,7 +3,7 @@ from __future__ import annotations
 
 
 def test_register_login_me_logout(client):
-    email = "alice@xunji.test"
+    email = "alice@trovia.test"
     reg = client.post("/api/v1/auth/register", json={"email": email, "password": "password123"})
     assert reg.status_code == 201
     body = reg.json()["data"]
@@ -31,26 +31,26 @@ def test_register_is_case_insensitive_on_email(client):
     )
     assert first.status_code == 201
     dup = client.post(
-        "/api/v1/auth/register", json={"email": "bob@xunji.test", "password": "password123"}
+        "/api/v1/auth/register", json={"email": "bob@trovia.test", "password": "password123"}
     )
     assert dup.status_code == 409
     assert dup.json()["error"]["code"] == "EMAIL_TAKEN"
 
 
 def test_login_with_wrong_password(client):
-    client.post("/api/v1/auth/register", json={"email": "c@xunji.test", "password": "password123"})
-    bad = client.post("/api/v1/auth/login", json={"email": "c@xunji.test", "password": "wrong-pass"})
+    client.post("/api/v1/auth/register", json={"email": "c@trovia.test", "password": "password123"})
+    bad = client.post("/api/v1/auth/login", json={"email": "c@trovia.test", "password": "wrong-pass"})
     assert bad.status_code == 401
     assert bad.json()["error"]["code"] == "INVALID_CREDENTIALS"
 
 
 def test_login_unknown_user(client):
-    resp = client.post("/api/v1/auth/login", json={"email": "nobody@xunji.test", "password": "password123"})
+    resp = client.post("/api/v1/auth/login", json={"email": "nobody@trovia.test", "password": "password123"})
     assert resp.status_code == 401
 
 
 def test_weak_password_and_bad_email_rejected(client):
-    weak = client.post("/api/v1/auth/register", json={"email": "d@xunji.test", "password": "1234567"})
+    weak = client.post("/api/v1/auth/register", json={"email": "d@trovia.test", "password": "1234567"})
     assert weak.status_code == 400
     assert weak.json()["error"]["code"] == "INVALID_PASSWORD"
 

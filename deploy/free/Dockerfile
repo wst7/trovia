@@ -8,7 +8,7 @@
 # 数据库不在这里：用外部免费 PostgreSQL（需要 vector / pg_trgm / pgcrypto）。
 #
 # 构建上下文必须是仓库根目录：
-#   docker build -f deploy/free/Dockerfile -t xunji-free .
+#   docker build -f deploy/free/Dockerfile -t trovia-free .
 
 FROM node:20-alpine AS web
 WORKDIR /repo
@@ -22,7 +22,7 @@ RUN npm ci
 COPY packages/api ./packages/api
 COPY packages/shared ./packages/shared
 COPY apps/web ./apps/web
-RUN npm run build -w @xunji/web
+RUN npm run build -w @trovia/web
 
 FROM python:3.12-slim
 

@@ -50,7 +50,7 @@ def build_headers(
     extra_headers: str,
 ) -> dict[str, str]:
     """构造请求头；api_key 为空时不发送鉴权头（适配 Ollama 等本地服务）。"""
-    headers = {"User-Agent": "xunji/0.1"}
+    headers = {"User-Agent": "trovia/0.1"}
     headers.update(parse_extra_headers(extra_headers))
     if api_key:
         header = (auth_header or "Authorization").strip()

@@ -118,7 +118,7 @@ async function run() {
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
   const address = server.address()
   assert.ok(address && typeof address === 'object')
-  const baseUrl = `http://127.0.0.1:${address.port}/dav/xunji`
+  const baseUrl = `http://127.0.0.1:${address.port}/dav/trovia`
 
   try {
     const target = new WebDavTarget({ baseUrl, username: 'u', password: 'p' })

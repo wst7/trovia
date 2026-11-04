@@ -16,7 +16,7 @@ from app.parsers.base import (
     parse_datetime,
 )
 
-logger = get_logger("xunji.parsers.github")
+logger = get_logger("trovia.parsers.github")
 
 _NUMBER_RE = re.compile(r"^\s*([\d,.]+)\s*([kKmM]?)\s*$")
 

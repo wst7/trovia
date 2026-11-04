@@ -13,7 +13,7 @@ from app.config import get_settings
 from app.errors import ApiError, FetchError
 from app.logging import get_logger
 
-logger = get_logger("xunji.fetch")
+logger = get_logger("trovia.fetch")
 
 DEFAULT_UA = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "

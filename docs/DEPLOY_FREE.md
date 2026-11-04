@@ -119,8 +119,8 @@ Cloudflare Pages 连同一个仓库：
 任何"给一个容器、注入 `PORT`"的平台都能跑这个镜像：
 
 ```bash
-docker build -f deploy/free/Dockerfile -t xunji .
-docker run -p 8000:8000 -e DATABASE_URL='postgresql://…' -e XUNJI_WEB_DIR=/app/web xunji
+docker build -f deploy/free/Dockerfile -t trovia .
+docker run -p 8000:8000 -e DATABASE_URL='postgresql://…' -e XUNJI_WEB_DIR=/app/web trovia
 ```
 
 - **Koyeb**：免费 Web 服务，同样是一个容器一个端口，配置项与 Render 基本一致。

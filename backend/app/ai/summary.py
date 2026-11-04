@@ -19,7 +19,7 @@ from app.ai.openai_compat import (
 )
 from app.logging import get_logger
 
-logger = get_logger("xunji.ai.summary")
+logger = get_logger("trovia.ai.summary")
 
 SUMMARY_TIMEOUT_SECONDS = 60.0
 SUMMARY_MAX_RETRIES = 2

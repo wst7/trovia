@@ -124,15 +124,15 @@ def test_openai_summary_uses_custom_path_auth_and_extra_headers():
         ai_chat_path="custom/chat",
         ai_auth_header="X-Api-Key",
         ai_auth_prefix="",  # 直接发送 key，不加 Bearer
-        ai_extra_headers='{"X-Org": "xunji"}',
+        ai_extra_headers='{"X-Org": "trovia"}',
     )
     provider = OpenAISummaryProvider(settings, client=_summary_client(handler))
     provider.summarize("标题", "正文")
     assert seen["url"] == "https://api.test/v1/custom/chat"
     assert seen["api_key"] == "secret"
     assert seen["authorization"] is None
-    assert seen["org"] == "xunji"
-    assert seen["user_agent"] == "xunji/0.1"
+    assert seen["org"] == "trovia"
+    assert seen["user_agent"] == "trovia/0.1"
 
 
 def test_openai_summary_json_mode_can_be_disabled():
@@ -281,7 +281,7 @@ def test_openai_embedding_uses_custom_path_auth_and_headers():
     settings.embedding_path = "custom/embeddings"
     settings.embedding_auth_header = "X-Api-Key"
     settings.embedding_auth_prefix = "Token"
-    settings.embedding_extra_headers = '{"X-Org": "xunji"}'
+    settings.embedding_extra_headers = '{"X-Org": "trovia"}'
     provider = OpenAIEmbeddingProvider(
         settings, client=httpx.Client(transport=httpx.MockTransport(handler))
     )
@@ -289,7 +289,7 @@ def test_openai_embedding_uses_custom_path_auth_and_headers():
     assert seen["url"] == "https://api.test/v1/custom/embeddings"
     assert seen["api_key"] == "Token secret"
     assert seen["authorization"] is None
-    assert seen["org"] == "xunji"
+    assert seen["org"] == "trovia"
 
 
 def test_openai_embedding_without_api_key_sends_no_auth_header():
@@ -354,7 +354,7 @@ def test_validate_settings_accepts_compatible_without_key():
         ai_provider="openai-compatible",
         ai_base_url="http://localhost:11434/v1",
         ai_model="qwen2.5:7b",
-        ai_extra_headers='{"X-Org": "xunji"}',
+        ai_extra_headers='{"X-Org": "trovia"}',
         ai_json_mode=False,
     )
     validate_settings(settings)

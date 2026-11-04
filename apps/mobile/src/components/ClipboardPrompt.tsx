@@ -13,7 +13,9 @@ import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { useT } from '../i18n'
 
 /** 上次已经问过的链接：同一个链接不重复弹，换了一条再问。 */
-const LAST_OFFERED_KEY = 'xunji.clipboard.v1'
+const LAST_OFFERED_KEY = 'trovia.clipboard.v1'
+// 改名前的键：只为读出「上次已经问过的那条链接」，避免重装/升级后再问一遍。
+const LEGACY_LAST_OFFERED_KEY = 'xunji.clipboard.v1'
 const MAX_CLIPBOARD_CHARS = 5000
 const CHECK_DELAY_MS = 900
 
@@ -55,7 +57,9 @@ export function ClipboardPrompt({ enabled }: { enabled: boolean }) {
       const url = extractHttpUrl(text)
       if (!url || !isValidHttpUrl(url)) return
 
-      const last = await AsyncStorage.getItem(LAST_OFFERED_KEY)
+      const last =
+        (await AsyncStorage.getItem(LAST_OFFERED_KEY)) ??
+        (await AsyncStorage.getItem(LEGACY_LAST_OFFERED_KEY))
       if (last === url) return
 
       if (await repo.hasDocument(url)) {

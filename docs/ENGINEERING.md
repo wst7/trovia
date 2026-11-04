@@ -8,7 +8,7 @@
 ## 1. 仓库结构
 
 ```text
-xunji/
+trovia/
 ├── docs/PRODUCT.md
 ├── docs/ENGINEERING.md
 ├── README.md
@@ -166,7 +166,7 @@ xunji/
 
 | 变量 | 默认 | 说明 |
 |---|---|---|
-| `DATABASE_URL` | `postgresql+psycopg://xunji:xunji@localhost:5432/xunji` | SQLAlchemy URL |
+| `DATABASE_URL` | `postgresql+psycopg://trovia:trovia@localhost:5432/trovia` | SQLAlchemy URL |
 | `APP_SECRET` | 空（生产必填） | 派生 token 用 |
 | `AI_PROVIDER` | `extractive` | `extractive` \| `openai` \| `openai-compatible`（后两者等价） |
 | `AI_API_KEY` / `AI_BASE_URL` / `AI_MODEL` | 空 / `https://api.openai.com/v1` / `gpt-4o-mini` | 摘要与关键词；API Key 可为空（本地服务） |
@@ -509,7 +509,7 @@ def search(session, user_id: str, query: str, limit: int = 10, settings=None) ->
 - API base：`/api/v1`（vite dev server proxy → `http://localhost:8000`；nginx 同样代理）。
 - 请求通过 `@trovia/api` 的 `createApiClient`；本端 adapter 只提供相对 base URL、`localStorage`
   token 读取和 401 清 token + 跳 `/login`。请求默认 15s 超时。
-- token 存 `localStorage["xunji_token"]`；401 → 清 token 并跳 `/login`。
+- token 存 `localStorage["trovia_token"]`；401 → 清 token 并跳 `/login`。
   Web 也会校验本次 401 使用的 token 是否仍是当前 token，避免旧响应误清新会话。
 - 路由：`/login`、`/register`、`/`、`/documents`、`/documents/:id`、`/settings`；未知路径回首页。
 - 顶栏只有品牌、`账户`，不提供侧边栏；`收藏` 列表从首页「查看全部」进入。
@@ -546,7 +546,7 @@ def search(session, user_id: str, query: str, limit: int = 10, settings=None) ->
 - 大模型（可选）：`src/local/llm.ts` 调用用户配置的任意 OpenAI 兼容
   `POST {baseUrl}/chat/completions`，30s 超时，要求返回
   `{"summary","keywords"}`（容忍代码块包裹）；服务地址与模型名存 AsyncStorage
-  （`xunji.llm.v1`），API Key 只存 `expo-secure-store`（`xunji.llm.key.v1`），
+  （`trovia.llm.v1`），API Key 只存 `expo-secure-store`（`trovia.llm.key.v1`），
   不写日志、不上传。未启用或调用失败时退回抽取式摘要，流水线不中断。
 - 路由：`/`（首页）、`/documents`、`/documents/[id]`、`/settings`、`/share`。
   首页 / 收藏 / 我的三栏底部导航（`components/AppTabBar.tsx`，`router.replace` 切换，不保留历史）；
@@ -577,9 +577,9 @@ cd backend && uv venv --python 3.12 && uv pip install -e '.[dev]'
 # 迁移
 cd backend && .venv/bin/python -m app.db --migrate
 
-# 测试（独立测试库 xunji_test，自动建库与迁移）
+# 测试（独立测试库 trovia_test，自动建库与迁移）
 cd backend && .venv/bin/python -m pytest -q
-# 并行跑不同切片时用不同库：XUNJI_TEST_DB=xunji_test_search .venv/bin/python -m pytest -q
+# 并行跑不同切片时用不同库：XUNJI_TEST_DB=trovia_test_search .venv/bin/python -m pytest -q
 
 # API 冒烟
 cd backend && .venv/bin/python -m uvicorn app.main:app --port 8000

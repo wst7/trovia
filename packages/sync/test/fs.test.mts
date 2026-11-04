@@ -54,7 +54,7 @@ const now = () => {
 const SCRATCH = '/Users/wstreet7/.hermes/cache/scratch'
 
 async function run() {
-  const root = await mkdtemp(join(SCRATCH, 'xunji-sync-'))
+  const root = await mkdtemp(join(SCRATCH, 'trovia-sync-'))
   const cloud = new LocalDirTarget(root)
   const phone = new MemoryStore()
   const laptop = new MemoryStore()

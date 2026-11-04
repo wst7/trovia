@@ -12,7 +12,7 @@ RUN npm ci
 COPY packages/api ./packages/api
 COPY packages/shared ./packages/shared
 COPY apps/web ./apps/web
-RUN npm run build -w @xunji/web
+RUN npm run build -w @trovia/web
 
 FROM nginx:1.27-alpine
 

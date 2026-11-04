@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", case_sensitive=False)
 
     # 基础
-    database_url: str = "postgresql+psycopg://xunji:xunji@localhost:5432/xunji"
+    database_url: str = "postgresql+psycopg://trovia:trovia@localhost:5432/trovia"
     app_secret: str = ""
     log_level: str = "INFO"
 

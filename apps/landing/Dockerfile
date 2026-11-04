@@ -20,11 +20,11 @@ COPY packages/shared/package.json packages/shared/
 RUN npm ci
 
 COPY apps/landing ./apps/landing
-RUN npm run build -w @xunji/landing
+RUN npm run build -w @trovia/landing
 
 FROM nginx:1.27-alpine
 # 运行时地址注入：官方镜像会在启动时执行 /docker-entrypoint.d/ 下的可执行脚本
-COPY apps/landing/docker-entrypoint.d/40-xunji-urls.sh /docker-entrypoint.d/40-xunji-urls.sh
-RUN chmod +x /docker-entrypoint.d/40-xunji-urls.sh
+COPY apps/landing/docker-entrypoint.d/40-trovia-urls.sh /docker-entrypoint.d/40-trovia-urls.sh
+RUN chmod +x /docker-entrypoint.d/40-trovia-urls.sh
 COPY --from=build /app/apps/landing/dist /usr/share/nginx/html
 EXPOSE 80

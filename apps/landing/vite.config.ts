@@ -22,10 +22,10 @@ export default defineConfig({
   preview: { port: 5174 },
   plugins: [
     {
-      name: 'xunji-url-tokens',
+      name: 'trovia-url-tokens',
       transformIndexHtml(html) {
         // 运行时模式下原样保留 __APP_URL__ / __SITE_URL__，
-        // 交给容器启动脚本替换（见 apps/landing/docker-entrypoint.d/40-xunji-urls.sh）。
+        // 交给容器启动脚本替换（见 apps/landing/docker-entrypoint.d/40-trovia-urls.sh）。
         if (runtimeUrls) return html
         return html.split('__APP_URL__').join(appUrl).split('__SITE_URL__').join(siteUrl)
       },

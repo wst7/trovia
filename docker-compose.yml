@@ -5,13 +5,13 @@ services:
   db:
     image: pgvector/pgvector:pg16
     environment:
-      POSTGRES_USER: xunji
-      POSTGRES_PASSWORD: xunji
-      POSTGRES_DB: xunji
+      POSTGRES_USER: trovia
+      POSTGRES_PASSWORD: trovia
+      POSTGRES_DB: trovia
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U xunji -d xunji"]
+      test: ["CMD-SHELL", "pg_isready -U trovia -d trovia"]
       interval: 5s
       timeout: 5s
       retries: 12
@@ -23,7 +23,7 @@ services:
       args:
         PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
     environment:
-      DATABASE_URL: postgresql+psycopg://xunji:xunji@db:5432/xunji
+      DATABASE_URL: postgresql+psycopg://trovia:trovia@db:5432/trovia
       APP_SECRET: ${APP_SECRET:-dev-secret-change-me}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       AI_PROVIDER: ${AI_PROVIDER:-extractive}
@@ -49,7 +49,7 @@ services:
       args:
         PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
     environment:
-      DATABASE_URL: postgresql+psycopg://xunji:xunji@db:5432/xunji
+      DATABASE_URL: postgresql+psycopg://trovia:trovia@db:5432/trovia
       APP_SECRET: ${APP_SECRET:-dev-secret-change-me}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       AI_PROVIDER: ${AI_PROVIDER:-extractive}

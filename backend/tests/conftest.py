@@ -1,4 +1,4 @@
-"""pytest 共享基建：真实 PostgreSQL（xunji_test 库）+ FastAPI TestClient。"""
+"""pytest 共享基建：真实 PostgreSQL（trovia_test 库）+ FastAPI TestClient。"""
 from __future__ import annotations
 
 import os
@@ -6,9 +6,9 @@ import uuid
 
 # 必须在导入任何 app 模块之前设置环境变量；测试强制使用独立库，绝不触碰开发库。
 # 并行跑不同测试进程时用 XUNJI_TEST_DB 指定不同库，避免相互清表。
-TEST_DB_NAME = os.environ.get("XUNJI_TEST_DB", "xunji_test")
+TEST_DB_NAME = os.environ.get("XUNJI_TEST_DB", "trovia_test")
 os.environ["DATABASE_URL"] = (
-    f"postgresql+psycopg://xunji:xunji@localhost:5432/{TEST_DB_NAME}"
+    f"postgresql+psycopg://trovia:trovia@localhost:5432/{TEST_DB_NAME}"
 )
 os.environ.setdefault("AI_PROVIDER", "extractive")
 os.environ.setdefault("EMBEDDING_PROVIDER", "local")
@@ -81,7 +81,7 @@ def client(app_instance, db_session):
 
 @pytest.fixture()
 def auth_headers(client) -> dict[str, str]:
-    email = f"tester-{uuid.uuid4().hex[:8]}@xunji.test"
+    email = f"tester-{uuid.uuid4().hex[:8]}@trovia.test"
     response = client.post(
         "/api/v1/auth/register", json={"email": email, "password": "password123"}
     )
@@ -91,7 +91,7 @@ def auth_headers(client) -> dict[str, str]:
 
 @pytest.fixture()
 def second_auth_headers(client) -> dict[str, str]:
-    email = f"other-{uuid.uuid4().hex[:8]}@xunji.test"
+    email = f"other-{uuid.uuid4().hex[:8]}@trovia.test"
     response = client.post(
         "/api/v1/auth/register", json={"email": email, "password": "password123"}
     )

@@ -12,9 +12,9 @@
  * 换云盘 = 换一个 adapter，不动协议，不动数据库。
  *
  * 存储布局（一个文档一个文件，避免整库覆盖冲突）：
- *   xunji/docs/<doc_id>.json        文档本体 + 元信息
- *   xunji/blobs/<sha256>            图片等附件，按内容寻址，重复不重传
- *   xunji/devices/<device_id>.json  设备最后同步时间，仅用于排障
+ *   trovia/docs/<doc_id>.json        文档本体 + 元信息
+ *   trovia/blobs/<sha256>            图片等附件，按内容寻址，重复不重传
+ *   trovia/devices/<device_id>.json  设备最后同步时间，仅用于排障
  */
 
 export { WebDavTarget } from './webdav'

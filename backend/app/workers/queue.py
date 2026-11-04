@@ -12,7 +12,7 @@ from app.config import get_settings
 from app.logging import get_logger
 from app.models import Document, ProcessingJob
 
-logger = get_logger("xunji.queue")
+logger = get_logger("trovia.queue")
 
 ACTIVE_STATUSES = ("queued", "running", "retrying")
 TERMINAL_STATUSES = ("completed", "failed", "cancelled")

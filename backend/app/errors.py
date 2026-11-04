@@ -8,7 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-logger = logging.getLogger("xunji.errors")
+logger = logging.getLogger("trovia.errors")
 
 
 class ApiError(Exception):

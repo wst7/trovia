@@ -20,7 +20,7 @@ from app.logging import get_logger, setup_logging
 from app.models import Document, ProcessingJob
 from app.workers import queue
 
-logger = get_logger("xunji.worker")
+logger = get_logger("trovia.worker")
 
 # 未知异常的兜底错误码（契约错误码表内）
 UNEXPECTED_ERROR_CODE = "PARSE_ERROR"
