@@ -1,4 +1,7 @@
+import * as FileSystem from 'expo-file-system/legacy'
 import * as SQLite from 'expo-sqlite'
+
+import { DB_NAME, moveLegacyDatabase } from './db-migrate'
 
 /**
  * 本地数据库：收藏的唯一真相在手机上，不依赖任何服务器。
@@ -14,8 +17,21 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
   return opening
 }
 
+
+async function migrateLegacyDatabase(): Promise<void> {
+  try {
+    await moveLegacyDatabase(`${FileSystem.documentDirectory}SQLite`, {
+      exists: async (path) => (await FileSystem.getInfoAsync(path)).exists,
+      move: (from, to) => FileSystem.moveAsync({ from, to }),
+    })
+  } catch {
+    // 搬不动就当没有老库：至少不会因为一次失败打不开 App。
+  }
+}
+
 async function open(): Promise<SQLite.SQLiteDatabase> {
-  const db = await SQLite.openDatabaseAsync('xunji.db')
+  await migrateLegacyDatabase()
+  const db = await SQLite.openDatabaseAsync(DB_NAME)
   await db.execAsync(`
 PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;

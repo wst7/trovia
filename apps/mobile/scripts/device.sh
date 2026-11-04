@@ -1,7 +1,7 @@
 #!/bin/bash
 # 小工具：确认前台是寻迹，再执行 tap / 截图，避免盲点落到浏览器或桌面。
 export PATH="$PATH:$HOME/Library/Android/sdk/platform-tools:$HOME/Library/Android/sdk/emulator"
-PKG=com.xunji.app
+PKG=com.trovia.app
 
 focused() {
   adb shell dumpsys window 2>/dev/null | grep -m1 "mCurrentFocus" | grep -q "$PKG"

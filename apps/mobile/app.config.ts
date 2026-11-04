@@ -5,7 +5,7 @@ const isProduction = process.env.APP_VARIANT === 'production'
 
 // 版本号跟发布 tag 走：CI 打 v* 标签时注入 XUNJI_APP_VERSION（v0.3.1 → 0.3.1）。
 // 本地构建回退到这里的默认值。Android 的 versionCode 由版本号推导，升级安装不会退版。
-const rawVersion: string = process.env.XUNJI_APP_VERSION ?? '0.9.1'
+const rawVersion: string = process.env.XUNJI_APP_VERSION ?? '0.10.0'
 const appVersion = rawVersion.replace(/^v/, '')
 const [versionMajor = 0, versionMinor = 0, versionPatch = 0] = appVersion
   .split('.')
@@ -29,7 +29,7 @@ const config: ExpoConfig = {
   backgroundColor: LIGHT_SURFACE,
   ios: {
     supportsTablet: false,
-    bundleIdentifier: 'com.xunji.app',
+    bundleIdentifier: 'com.trovia.app',
     buildNumber: String(versionCode),
     infoPlist: {
       NSLocalNetworkUsageDescription: 'Trovia 会直接读取你保存的链接，也可能连接你自己配置的大模型服务。',
@@ -43,7 +43,7 @@ const config: ExpoConfig = {
     },
   },
   android: {
-    package: 'com.xunji.app',
+    package: 'com.trovia.app',
     versionCode,
     predictiveBackGestureEnabled: false,
     adaptiveIcon: {
