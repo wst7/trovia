@@ -385,4 +385,15 @@ export const en: Dictionary = {
   'settings.theme.system': 'Follow system',
   'settings.theme.light': 'Light',
   'settings.theme.dark': 'Dark',
+
+  'import.format.trovia-json': 'Trovia backup (JSON)',
+  'import.restoreHint':
+    'This is Trovia\'s own backup: text, summary, keywords and save time are restored as they were, with no re-fetch.',
+  'import.restoreCount': 'Restore {count}',
+  'import.restored': 'Restored {count}{extra}.',
+  'import.restoredDuplicate': ', {count} were already here',
+
+  'detail.origin.import': 'Imported from {file}',
+  'detail.origin.restore': 'Restored from {file}',
+  'detail.origin.backup': 'Restored from a backup',
 }

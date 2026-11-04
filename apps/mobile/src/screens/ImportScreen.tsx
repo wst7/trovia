@@ -4,7 +4,7 @@ import { ScrollView, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { addedRange } from '../local/import/parse'
-import { pickAndParse, runImport } from '../local/import/service'
+import { pickAndParse, runImport, runRestore } from '../local/import/service'
 import type { ImportProgress, ImportSummary, PickedFile } from '../local/import/service'
 import { processPendingQueue } from '../local/pipeline'
 import { useToast } from '../providers/ToastProvider'
@@ -61,14 +61,29 @@ export function ImportScreen() {
 
   async function handleImport() {
     if (!picked || busy) return
+    const restoring = (picked.documents?.length ?? 0) > 0
     setBusy(true)
-    setProgress({ done: 0, total: picked.fresh.length })
+    setProgress({ done: 0, total: restoring ? picked.documents!.length : picked.fresh.length })
     try {
-      const result = await runImport(picked.fresh, setProgress, picked.name)
+      // 备份文件带着正文，直接落库；普通书签只带链接，才需要重新整理。
+      const result = restoring
+        ? await runRestore(picked.documents!, setProgress, picked.name)
+        : await runImport(picked.fresh, setProgress, picked.name)
       setSummary(result)
       setPicked(null)
-      void processPendingQueue()
-      toast(t('import.added', { count: result.created }), { type: 'success' })
+      if (!restoring) void processPendingQueue()
+      toast(
+        restoring
+          ? t('import.restored', {
+              count: result.created,
+              extra:
+                result.duplicate > 0
+                  ? t('import.restoredDuplicate', { count: result.duplicate })
+                  : '',
+            })
+          : t('import.added', { count: result.created }),
+        { type: 'success' },
+      )
       // 导入完直接去收藏页并打开「只看导入的」：否则用户回到列表只看到一排「整理中」，
       // 分不清哪些是刚进来的。
       if (result.created > 0) router.replace('/documents?imported=1')
@@ -125,6 +140,9 @@ export function ImportScreen() {
               {picked.name}
             </Text>
             <Text className="mt-1 text-caption text-faint">{t(`import.format.${picked.format}`)}</Text>
+            {picked.documents?.length ? (
+              <Text className="mt-2 text-caption text-muted">{t('import.restoreHint')}</Text>
+            ) : null}
 
             <View className="mt-6 gap-2">
               <Line
@@ -172,7 +190,9 @@ export function ImportScreen() {
                 label={
                   progress
                     ? t('import.importing', { done: progress.done, total: progress.total })
-                    : t('import.importCount', { count: picked.fresh.length })
+                    : picked.documents?.length
+                      ? t('import.restoreCount', { count: picked.documents.length })
+                      : t('import.importCount', { count: picked.fresh.length })
                 }
                 onPress={() => void handleImport()}
                 loading={busy && Boolean(progress)}

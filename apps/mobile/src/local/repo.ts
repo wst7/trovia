@@ -12,6 +12,7 @@ import type { ExtractedArticle } from './article'
 import { passesCoverage } from './coverage'
 import { getDb } from './db'
 import { resolveImportedSavedAt } from './import/dates'
+import type { RestoreDocument } from './import/parse'
 import { RETRYABLE_CODES } from './retry'
 import { SEMANTIC_MIN_SCORE, cosine, embedTexts, loadEmbedConfig, loadVectors } from './embed'
 import type { Completer } from './intent'
@@ -95,13 +96,74 @@ function toDetail(row: DocumentRow): DocumentDetail {
  * 保存一条链接；同一条链接（规范化后）已存在时返回已有条目。
  * titleHint 来自分享文字或剪贴板：抓不到正文时至少保留用户当时看到的标题。
  */
+/**
+ * 从 Trovia 自己的导出文件恢复一篇：正文、摘要、关键词、收藏时间都照抄，
+ * 不再重新抓网页。站点挂了、文章删了，备份里的那一份仍然在。
+ *
+ * 链接已经在库里就跳过，返回 'duplicate'——恢复不该覆盖现在更新的版本。
+ */
+export async function restoreDocument(
+  doc: RestoreDocument,
+  origin: string,
+): Promise<'created' | 'duplicate'> {
+  const db = await getDb()
+  const existing = await db.getFirstAsync<{ id: string }>(
+    'SELECT id FROM documents WHERE url = ? AND deleted_at IS NULL LIMIT 1',
+    doc.url,
+  )
+  if (existing) return 'duplicate'
+
+  const now = nowIso()
+  const body = doc.contentMarkdown ?? doc.plainText ?? null
+  const hasBody = Boolean(body && body.trim())
+  const savedAt = doc.savedAt ? new Date(doc.savedAt).toISOString() : now
+  await db.runAsync(
+    `INSERT INTO documents (id, url, canonical_url, source_type, title, site_name, author,
+       published_at, description, summary_short, summary_long, keywords, content_markdown,
+       plain_text, images, search_text, parse_status, saved_at, last_parsed_at, updated_at, metadata)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    newId(),
+    doc.url,
+    doc.url,
+    doc.sourceType ?? sourceTypeOf(doc.url),
+    doc.title,
+    doc.siteName,
+    doc.author,
+    doc.publishedAt,
+    doc.description,
+    doc.summaryShort,
+    doc.summaryLong,
+    JSON.stringify(doc.keywords),
+    doc.contentMarkdown,
+    doc.plainText,
+    JSON.stringify(doc.images),
+    searchTextOf({
+      title: doc.title,
+      siteName: doc.siteName,
+      summary: doc.summaryLong ?? doc.summaryShort,
+      keywords: doc.keywords,
+      plainText: doc.plainText ?? '',
+    }),
+    // 有正文的直接算整理完成；没有正文的交给解析队列重新抓。
+    hasBody ? 'completed' : 'pending',
+    savedAt,
+    hasBody ? now : null,
+    now,
+    JSON.stringify({ origin_kind: 'restore', origin_file: origin, savedAtFromFile: true }),
+  )
+  return 'created'
+}
+
 export async function createDocument(
   rawUrl: string,
   titleHint?: string | null,
   /** 导入时带上原收藏时间：2019 年存的书签不该全都变成「今天」。 */
   savedAt?: number | null,
-  /** 来源，例如「从 pocket.csv 导入」；写进 metadata，详情页会如实说明。 */
-  origin?: string | null,
+  /**
+   * 来源。只记「哪种来源 + 文件名」，具体怎么说由详情页按界面语言翻译——
+   * 在这里拼一句中文，英文界面上就会露出半句中文。
+   */
+  origin?: { kind: 'import' | 'restore'; file: string } | null,
   /** 收藏时间是否取自导入文件（没有时间列的文件不该这么声称）。 */
   savedAtFromFile?: boolean,
 ): Promise<{ id: string; duplicate: boolean }> {
@@ -140,7 +202,11 @@ export async function createDocument(
     hint,
     saved,
     now,
-    JSON.stringify(origin ? { origin, savedAtFromFile: Boolean(savedAtFromFile) } : {}),
+    JSON.stringify(
+      origin
+        ? { origin_kind: origin.kind, origin_file: origin.file, savedAtFromFile: Boolean(savedAtFromFile) }
+        : {},
+    ),
   )
   return { id, duplicate: false }
 }

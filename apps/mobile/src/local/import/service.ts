@@ -8,7 +8,7 @@ import * as DocumentPicker from 'expo-document-picker'
 
 import * as repo from '../repo'
 import { normalizeUrl, parseImport } from './parse'
-import type { ImportFormat, ImportItem } from './parse'
+import type { ImportFormat, ImportItem, RestoreDocument } from './parse'
 
 type FileSystemModule = typeof import('expo-file-system/legacy')
 
@@ -25,6 +25,8 @@ export interface PickedFile {
   name: string
   format: ImportFormat
   items: ImportItem[]
+  /** 只有 Trovia 备份有：带正文的那份，恢复时直接落库。 */
+  documents: RestoreDocument[] | undefined
   skipped: { line: string; reason: string }[]
   /** 已经在本机收藏里的条数（按归一化后的链接判断）。 */
   existing: number
@@ -58,6 +60,7 @@ export async function pickAndParse(): Promise<PickedFile | null> {
     skipped: parsed.skipped,
     existing: parsed.items.length - fresh.length,
     fresh,
+    documents: parsed.documents,
   }
 }
 
@@ -73,6 +76,35 @@ export interface ImportSummary {
 }
 
 /** 逐条写入队列；交给调用方节流展示进度。 */
+/**
+ * 从自己的备份恢复：不抓网页，直接按备份里的内容落库。
+ *
+ * 这跟 runImport 是两条路：普通导入只有链接，得重新整理；备份里有正文，
+ * 站点挂了也还在。
+ */
+export async function runRestore(
+  documents: RestoreDocument[],
+  onProgress?: (progress: ImportProgress) => void,
+  fileName?: string,
+): Promise<ImportSummary> {
+  let created = 0
+  let duplicate = 0
+  let failed = 0
+
+  for (let index = 0; index < documents.length; index += 1) {
+    try {
+      const result = await repo.restoreDocument(documents[index], fileName ?? '')
+      if (result === 'duplicate') duplicate += 1
+      else created += 1
+    } catch {
+      failed += 1
+    }
+    onProgress?.({ done: index + 1, total: documents.length })
+  }
+
+  return { created, duplicate, failed }
+}
+
 export async function runImport(
   items: ImportItem[],
   onProgress?: (progress: ImportProgress) => void,
@@ -90,7 +122,7 @@ export async function runImport(
         item.url,
         item.title,
         item.addedAt,
-        fileName ? `从 ${fileName} 导入` : null,
+        fileName ? { kind: 'import' as const, file: fileName } : null,
         typeof item.addedAt === 'number',
       )
       if (result.duplicate) duplicate += 1

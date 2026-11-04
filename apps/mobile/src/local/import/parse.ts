@@ -10,7 +10,32 @@
  * 这里只做「文本 → 条目」，不碰数据库，方便用真实导出文件做回归测试。
  */
 
-export type ImportFormat = 'bookmarks-html' | 'bookmarks-json' | 'csv' | 'urls' | 'unknown'
+export type ImportFormat =
+  | 'bookmarks-html'
+  | 'bookmarks-json'
+  | 'csv'
+  | 'urls'
+  /** Trovia 自己的导出文件：不只是链接，正文、摘要、关键词、收藏时间都在里面。 */
+  | 'trovia-json'
+  | 'unknown'
+
+/** 备份里的一篇，字段与 documents 表对齐，恢复时不再重新抓取。 */
+export interface RestoreDocument {
+  url: string
+  title: string | null
+  savedAt: number | null
+  siteName: string | null
+  author: string | null
+  publishedAt: string | null
+  description: string | null
+  summaryShort: string | null
+  summaryLong: string | null
+  keywords: string[]
+  contentMarkdown: string | null
+  plainText: string | null
+  images: string[]
+  sourceType: string | null
+}
 
 export interface ImportItem {
   url: string
@@ -22,6 +47,8 @@ export interface ImportItem {
 export interface ImportParseResult {
   format: ImportFormat
   items: ImportItem[]
+  /** 只有 trovia-json 有：可以直接落库的完整内容。 */
+  documents?: RestoreDocument[]
   /** 看着像链接但被跳过的行，附带原因，导入前要给用户看。 */
   skipped: { line: string; reason: string }[]
 }
@@ -62,6 +89,8 @@ function decodeEntities(text: string): string {
 
 export function detectFormat(content: string): ImportFormat {
   const head = content.slice(0, 4000)
+  // 自己的导出放在最前面判断：它里面也有 http 链接，落到 urls 会把正文和标题全丢掉。
+  if (/"documents"\s*:\s*\[/.test(head)) return 'trovia-json'
   if (/<a\s+href=/i.test(head) && /<\/a>/i.test(head)) return 'bookmarks-html'
   if (/^\s*\[/.test(head) || /"roots"\s*:/.test(head) || /"bookmark_bar"\s*:/.test(head)) return 'bookmarks-json'
   if (/^\s*[^{[]/.test(head) && head.split('\n')[0].includes(',') && /url/i.test(head.split('\n')[0])) return 'csv'
@@ -252,13 +281,83 @@ function parseUrls(content: string, skipped: ImportParseResult['skipped']): Impo
   return items
 }
 
+/**
+ * Trovia 导出的 JSON：{ version, exported_at, count, documents: [...] }。
+ *
+ * 空链接或非法链接的条目跳过并记下原因；正文缺失的条目照样恢复，
+ * 落库时会被标成待整理，交给解析队列重新抓。
+ */
+export function parseTroviaJson(
+  content: string,
+  skipped: ImportParseResult['skipped'],
+): { items: ImportItem[]; documents: RestoreDocument[] } {
+  let bundle: unknown
+  try {
+    bundle = JSON.parse(content)
+  } catch {
+    skipped.push({ line: content.slice(0, 60), reason: '不是合法的 JSON' })
+    return { items: [], documents: [] }
+  }
+  const raw = (bundle as { documents?: unknown }).documents
+  if (!Array.isArray(raw)) {
+    skipped.push({ line: content.slice(0, 60), reason: '文件里没有 documents 列表' })
+    return { items: [], documents: [] }
+  }
+
+  const items: ImportItem[] = []
+  const documents: RestoreDocument[] = []
+  for (const entry of raw) {
+    if (!entry || typeof entry !== 'object') continue
+    const doc = entry as Record<string, unknown>
+    const rawUrl = typeof doc.url === 'string' ? doc.url : ''
+    const url = normalizeUrl(rawUrl)
+    if (!url) {
+      skipped.push({ line: rawUrl || String(doc.title ?? ''), reason: '不是可以收藏的网页链接' })
+      continue
+    }
+    const text = (value: unknown): string | null =>
+      typeof value === 'string' && value.trim() ? value : null
+    const savedAt = typeof doc.saved_at === 'string' ? Date.parse(doc.saved_at) : Number.NaN
+    const title = text(doc.title)
+    documents.push({
+      url,
+      title,
+      savedAt: Number.isNaN(savedAt) ? null : savedAt,
+      siteName: text(doc.site_name),
+      author: text(doc.author),
+      publishedAt: text(doc.published_at),
+      description: text(doc.description),
+      summaryShort: text(doc.summary_short),
+      summaryLong: text(doc.summary_long),
+      keywords: Array.isArray(doc.keywords)
+        ? doc.keywords.filter((word): word is string => typeof word === 'string')
+        : [],
+      contentMarkdown: text(doc.content_markdown),
+      plainText: text(doc.plain_text),
+      images: Array.isArray(doc.images)
+        ? doc.images.filter((image): image is string => typeof image === 'string')
+        : [],
+      sourceType: text(doc.source_type),
+    })
+    items.push({ url, title, addedAt: Number.isNaN(savedAt) ? null : savedAt })
+  }
+  return { items, documents }
+}
+
 /** 解析入口：自动识别格式，去重后按上限截断。 */
 export function parseImport(content: string): ImportParseResult {
   const format = detectFormat(content)
   const skipped: ImportParseResult['skipped'] = []
   let items: ImportItem[] = []
+  let documents: RestoreDocument[] | undefined
 
   switch (format) {
+    case 'trovia-json': {
+      const parsed = parseTroviaJson(content, skipped)
+      items = parsed.items
+      documents = parsed.documents
+      break
+    }
     case 'bookmarks-html':
       items = parseBookmarksHtml(content, skipped)
       break
@@ -287,7 +386,15 @@ export function parseImport(content: string): ImportParseResult {
     skipped.push({ line: `共 ${unique.length} 条`, reason: `单次最多导入 ${MAX_IMPORT_ITEMS} 条，多余的先跳过` })
   }
 
-  return { format, items: unique.slice(0, MAX_IMPORT_ITEMS), skipped }
+  const kept = new Set(unique.map((item) => item.url))
+  const keptDocuments = documents?.filter((doc) => kept.has(doc.url))
+
+  return {
+    format,
+    items: unique.slice(0, MAX_IMPORT_ITEMS),
+    documents: keptDocuments,
+    skipped,
+  }
 }
 
 export const FORMAT_LABELS: Record<ImportFormat, string> = {
@@ -295,5 +402,6 @@ export const FORMAT_LABELS: Record<ImportFormat, string> = {
   'bookmarks-json': 'Chrome / Edge 书签（JSON）',
   csv: '表格（CSV）',
   urls: '链接列表',
+  'trovia-json': 'Trovia 备份（JSON）',
   unknown: '无法识别',
 }

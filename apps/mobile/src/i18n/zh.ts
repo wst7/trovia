@@ -386,4 +386,14 @@ export const zh: Dictionary = {
   'settings.theme.system': '跟随系统',
   'settings.theme.light': '浅色',
   'settings.theme.dark': '深色',
+
+  'import.format.trovia-json': 'Trovia 备份（JSON）',
+  'import.restoreHint': '这是 Trovia 自己的备份：正文、摘要、关键词和收藏时间都会原样恢复，不会再抓一次网页。',
+  'import.restoreCount': '恢复 {count} 条',
+  'import.restored': '已恢复 {count} 条{extra}。',
+  'import.restoredDuplicate': '，另有 {count} 条已在库里',
+
+  'detail.origin.import': '从 {file} 导入',
+  'detail.origin.restore': '从 {file} 恢复',
+  'detail.origin.backup': '从备份恢复',
 }

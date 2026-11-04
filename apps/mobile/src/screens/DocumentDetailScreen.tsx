@@ -193,7 +193,16 @@ export function DocumentDetailScreen() {
   const summary = summaryShort ?? summaryLong
   // 抽取式摘要对短文就等于全文：这时候摘要块只是把原文又说一遍，直接不显示。
   // 导入进来的条目要能说明来历：用户看到 2019 年的时间，得知道那不是 App 记错了。
-  const origin = typeof doc.metadata?.origin === 'string' ? doc.metadata.origin : null
+  // 老的条目只存了一句写死的中文；新的存「来源类型 + 文件名」，按界面语言说。
+  const originText = (() => {
+    const kind = doc.metadata?.origin_kind
+    const file = doc.metadata?.origin_file
+    if (kind === 'import' || kind === 'restore') {
+      const name = typeof file === 'string' ? file : ''
+      return name ? t(`detail.origin.${kind}`, { file: name }) : t('detail.origin.backup')
+    }
+    return typeof doc.metadata?.origin === 'string' ? doc.metadata.origin : null
+  })()
   const savedFromFile = doc.metadata?.savedAtFromFile === true
   const summaryRepeatsBody = Boolean(summary && bodySource && flat(bodySource).includes(flat(summary)))
   // 长摘要常常是短摘要的完整版，两句一起显示等于同一段话印两遍。
@@ -234,9 +243,9 @@ export function DocumentDetailScreen() {
           {doc.title || doc.url}
         </Text>
 
-        {origin ? (
+        {originText ? (
           <Text className="mt-2 text-caption text-faint">
-            {origin}
+            {originText}
             {savedFromFile ? t('detail.savedFromFile') : ''}
           </Text>
         ) : null}
