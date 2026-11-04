@@ -29,7 +29,13 @@
  <body>
   <header class="bar">
    <a class="brand" href="./">Trovia · 寻迹</a>
-   <a class="btn" href="__APP_URL__">下载 App</a>
+   <div class="bar-actions">
+    <div class="lang-switch" role="group" aria-label="语言 / Language">
+     <button type="button" data-lang="zh">中文</button>
+     <button type="button" data-lang="en">EN</button>
+    </div>
+    <a class="btn" href="__APP_URL__">下载 App</a>
+   </div>
   </header>
 
   <main>
@@ -356,7 +362,7 @@
     <p class="cta">
      <a class="btn btn-primary btn-lg" href="__APP_URL__">下载 Android App</a>
     </p>
-    <p class="closing-note">数据保存在本机，不需要注册；多端同步在计划中。</p>
+    <p class="closing-note">数据保存在本机，不需要注册；多端同步走你自己的 WebDAV。</p>
    </section>
   </main>
 
@@ -364,5 +370,6 @@
    <span>Trovia · Save anything. Find it by memory.</span>
    <a class="btn" href="__APP_URL__">下载 App</a>
   </footer>
+  <script src="/i18n.js" defer></script>
  </body>
 </html>

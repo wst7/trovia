@@ -468,3 +468,58 @@ tr:last-child td {
     margin-top: 26px;
   }
 }
+
+/* 语言开关：两档中性色，选中只表现为墨色 + 一条发丝下划线。 */
+.bar-actions {
+ display: flex;
+ align-items: center;
+ gap: 16px;
+}
+
+.lang-switch {
+ display: flex;
+ align-items: center;
+ gap: 12px;
+}
+
+.lang-switch button {
+ -webkit-appearance: none;
+ appearance: none;
+ background: none;
+ border: 0;
+ padding: 0 0 2px;
+ font: inherit;
+ font-size: 13px;
+ line-height: 1.2;
+ color: var(--ink-soft);
+ cursor: pointer;
+ border-bottom: 1px solid transparent;
+}
+
+.lang-switch button:hover {
+ color: var(--ink);
+}
+
+.lang-switch button.is-active {
+ color: var(--ink);
+ border-bottom-color: var(--ink);
+}
+
+/* 英文标题长短不一，交给浏览器把行长摊平，别留一行特别短。 */
+.intro h1 {
+ text-wrap: balance;
+}
+
+@media (max-width: 560px) {
+ .bar-actions {
+  gap: 10px;
+ }
+
+ .lang-switch {
+  gap: 8px;
+ }
+
+ .lang-switch button {
+  font-size: 12px;
+ }
+}
