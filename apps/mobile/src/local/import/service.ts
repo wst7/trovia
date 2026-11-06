@@ -7,6 +7,7 @@
 import * as DocumentPicker from 'expo-document-picker'
 
 import { emitChange } from '../bus'
+import { decodeBackupBase64 } from '../export-codec'
 import * as repo from '../repo'
 import { normalizeUrl, parseImport } from './parse'
 import type { ImportFormat, ImportItem, RestoreDocument } from './parse'
@@ -37,7 +38,18 @@ export interface PickedFile {
 /** 打开系统文件选择器并解析；用户取消时返回 null。 */
 export async function pickAndParse(): Promise<PickedFile | null> {
   const picked = await DocumentPicker.getDocumentAsync({
-    type: ['text/html', 'application/json', 'text/csv', 'text/plain', 'application/octet-stream'],
+    type: [
+      'text/html',
+      'application/json',
+      'text/csv',
+      'text/plain',
+      'application/octet-stream',
+      // 自己导出的备份：zip（新）与 gzip（过渡期），不同系统报的 mime 不一样
+      'application/zip',
+      'application/x-zip-compressed',
+      'application/gzip',
+      'application/x-gzip',
+    ],
     copyToCacheDirectory: true,
     multiple: false,
   })
@@ -47,7 +59,9 @@ export async function pickAndParse(): Promise<PickedFile | null> {
   const module = fs()
   if (!module) throw new Error('这台设备上暂时无法读取文件')
 
-  const content = await module.readAsStringAsync(asset.uri)
+  // 按字节读、按文件头判断容器：zip / gzip / 纯文本走同一个入口。
+  const base64 = await module.readAsStringAsync(asset.uri, { encoding: 'base64' })
+  const { text: content } = decodeBackupBase64(base64)
   const parsed = parseImport(content)
 
   const existingUrls = await repo.listUrls()

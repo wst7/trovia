@@ -19,9 +19,21 @@ export type ImportFormat =
   | 'trovia-json'
   | 'unknown'
 
-/** 备份里的一篇，字段与 documents 表对齐，恢复时不再重新抓取。 */
+/**
+ * 备份里的一篇，字段与 documents 表对齐，恢复时不再重新抓取。
+ *
+ * 「导出再导入数据不能变」是硬要求，所以这里不只是内容字段：
+ * id、原始链接、状态、时间戳、rev 全都带过来。老备份（v1）没有的字段留 null，
+ * 落库时按新收藏处理，不会因为缺字段而报错。
+ */
 export interface RestoreDocument {
+  /** 原样保留的链接：不做规范化，规范化后的结果在 dedupeKey 里用于判重。 */
   url: string
+  /** 判重用的规范化链接。 */
+  dedupeKey: string
+  /** 备份里的主键；新库直接沿用，避免恢复后变成「另一条」。 */
+  id: string | null
+  canonicalUrl: string | null
   title: string | null
   savedAt: number | null
   siteName: string | null
@@ -31,10 +43,20 @@ export interface RestoreDocument {
   summaryShort: string | null
   summaryLong: string | null
   keywords: string[]
+  topics: string[]
+  language: string | null
   contentMarkdown: string | null
   plainText: string | null
   images: string[]
+  imageFiles: string[]
   sourceType: string | null
+  parseStatus: string | null
+  parseStage: string | null
+  parseErrorCode: string | null
+  updatedAt: string | null
+  lastParsedAt: string | null
+  rev: number | null
+  metadata: Record<string, unknown> | null
 }
 
 export interface ImportItem {
@@ -317,10 +339,15 @@ export function parseTroviaJson(
     }
     const text = (value: unknown): string | null =>
       typeof value === 'string' && value.trim() ? value : null
+    const strings = (value: unknown): string[] =>
+      Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
     const savedAt = typeof doc.saved_at === 'string' ? Date.parse(doc.saved_at) : Number.NaN
     const title = text(doc.title)
     documents.push({
-      url,
+      url: rawUrl,
+      dedupeKey: url,
+      id: text(doc.id),
+      canonicalUrl: text(doc.canonical_url),
       title,
       savedAt: Number.isNaN(savedAt) ? null : savedAt,
       siteName: text(doc.site_name),
@@ -329,15 +356,24 @@ export function parseTroviaJson(
       description: text(doc.description),
       summaryShort: text(doc.summary_short),
       summaryLong: text(doc.summary_long),
-      keywords: Array.isArray(doc.keywords)
-        ? doc.keywords.filter((word): word is string => typeof word === 'string')
-        : [],
+      keywords: strings(doc.keywords),
+      topics: strings(doc.topics),
+      language: text(doc.language),
       contentMarkdown: text(doc.content_markdown),
       plainText: text(doc.plain_text),
-      images: Array.isArray(doc.images)
-        ? doc.images.filter((image): image is string => typeof image === 'string')
-        : [],
+      images: strings(doc.images),
+      imageFiles: strings(doc.image_files),
       sourceType: text(doc.source_type),
+      parseStatus: text(doc.parse_status),
+      parseStage: text(doc.parse_stage),
+      parseErrorCode: text(doc.parse_error_code),
+      updatedAt: text(doc.updated_at),
+      lastParsedAt: text(doc.last_parsed_at),
+      rev: typeof doc.rev === 'number' && Number.isFinite(doc.rev) ? doc.rev : null,
+      metadata:
+        doc.metadata && typeof doc.metadata === 'object' && !Array.isArray(doc.metadata)
+          ? (doc.metadata as Record<string, unknown>)
+          : null,
     })
     items.push({ url, title, addedAt: Number.isNaN(savedAt) ? null : savedAt })
   }
@@ -387,7 +423,8 @@ export function parseImport(content: string): ImportParseResult {
   }
 
   const kept = new Set(unique.map((item) => item.url))
-  const keptDocuments = documents?.filter((doc) => kept.has(doc.url))
+  // 用判重键匹配：documents 里存的是原样链接，判重用的是规范化之后的那个。
+  const keptDocuments = documents?.filter((doc) => kept.has(doc.dedupeKey ?? doc.url))
 
   return {
     format,
@@ -402,6 +439,6 @@ export const FORMAT_LABELS: Record<ImportFormat, string> = {
   'bookmarks-json': 'Chrome / Edge 书签（JSON）',
   csv: '表格（CSV）',
   urls: '链接列表',
-  'trovia-json': 'Trovia 备份（JSON）',
+  'trovia-json': 'Trovia 备份（.zip）',
   unknown: '无法识别',
 }

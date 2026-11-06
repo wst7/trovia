@@ -52,6 +52,7 @@ interface DocumentRow {
   saved_at: string
   last_parsed_at: string | null
   updated_at: string
+  rev: number
   deleted_at: string | null
   metadata: string
 }
@@ -105,27 +106,40 @@ function toDetail(row: DocumentRow): DocumentDetail {
  */
 export async function restoreDocument(
   doc: RestoreDocument,
-  origin: string,
+  // 以前会把来源写进 metadata；那会让「导出 → 导入 → 再导出」多出一个字段，所以不再落库。
+  _origin: string,
 ): Promise<'created' | 'duplicate'> {
   const db = await getDb()
   const existing = await db.getFirstAsync<{ id: string }>(
-    'SELECT id FROM documents WHERE url = ? AND deleted_at IS NULL LIMIT 1',
+    'SELECT id FROM documents WHERE (url = ? OR url = ?) AND deleted_at IS NULL LIMIT 1',
     doc.url,
+    doc.dedupeKey,
   )
   if (existing) return 'duplicate'
 
+  // 备份里的时间戳原样用，缺了才补当前时间——「导出再导入数据不能变」。
   const now = nowIso()
+  const isoOr = (value: string | null | undefined) => (value && value.trim() ? value : null)
+  const savedAt = doc.savedAt ? new Date(doc.savedAt).toISOString() : (isoOr(doc.updatedAt) ?? now)
+  const updatedAt = isoOr(doc.updatedAt) ?? savedAt
   const body = doc.contentMarkdown ?? doc.plainText ?? null
   const hasBody = Boolean(body && body.trim())
-  const savedAt = doc.savedAt ? new Date(doc.savedAt).toISOString() : now
+
+  // id 也照搬：新库里没有就用它，有冲突才换一个。
+  let id = doc.id?.trim() || newId()
+  const clash = await db.getFirstAsync<{ id: string }>('SELECT id FROM documents WHERE id = ?', id)
+  if (clash) id = newId()
+
+  const metadata = doc.metadata ?? {}
   await db.runAsync(
     `INSERT INTO documents (id, url, canonical_url, source_type, title, site_name, author,
-       published_at, description, summary_short, summary_long, keywords, content_markdown,
-       plain_text, images, search_text, parse_status, saved_at, last_parsed_at, updated_at, metadata)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    newId(),
+       published_at, description, summary_short, summary_long, keywords, topics, language,
+       content_markdown, plain_text, images, image_files, search_text, parse_status, parse_stage,
+       parse_error_code, saved_at, last_parsed_at, updated_at, rev, metadata)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    id,
     doc.url,
-    doc.url,
+    isoOr(doc.canonicalUrl) ?? doc.url,
     doc.sourceType ?? sourceTypeOf(doc.url),
     doc.title,
     doc.siteName,
@@ -135,9 +149,12 @@ export async function restoreDocument(
     doc.summaryShort,
     doc.summaryLong,
     JSON.stringify(doc.keywords),
+    JSON.stringify(doc.topics),
+    doc.language,
     doc.contentMarkdown,
     doc.plainText,
     JSON.stringify(doc.images),
+    JSON.stringify(doc.imageFiles),
     searchTextOf({
       title: doc.title,
       siteName: doc.siteName,
@@ -145,12 +162,18 @@ export async function restoreDocument(
       keywords: doc.keywords,
       plainText: doc.plainText ?? '',
     }),
-    // 有正文的直接算整理完成；没有正文的交给解析队列重新抓。
-    hasBody ? 'completed' : 'pending',
+    // 备份里写了状态就照抄（completed / failed / partial 都是真实历史）；
+    // 只有老备份没写时才按有没有正文推断。
+    doc.parseStatus ?? (hasBody ? 'completed' : 'pending'),
+    doc.parseStage,
+    doc.parseErrorCode,
     savedAt,
-    hasBody ? now : null,
-    now,
-    JSON.stringify({ origin_kind: 'restore', origin_file: origin, savedAtFromFile: true }),
+    // 备份里的解析时间照抄（可能是 null，那就保持 null）；
+    // 只有极老的备份连状态都没写时，才按「有正文就算刚整理完」推断。
+    isoOr(doc.lastParsedAt) ?? (doc.parseStatus ? null : hasBody ? now : null),
+    updatedAt,
+    doc.rev ?? 1,
+    JSON.stringify(metadata),
   )
   return 'created'
 }
@@ -511,12 +534,21 @@ export async function listUrls(): Promise<string[]> {
 }
 
 /** 导出用：全部有效收藏（含正文与图片路径），按收藏时间正序。 */
-export async function listAllForExport(): Promise<DocumentDetail[]> {
+/**
+ * 备份专用的整行视图：在 Detail 之上多带 updated_at 与 rev，
+ * 否则「导出 → 导入 → 再导出」会在这两列上漂移。
+ */
+export interface ExportDocument extends DocumentDetail {
+  updated_at: string
+  rev: number
+}
+
+export async function listAllForExportFidelity(): Promise<ExportDocument[]> {
   const db = await getDb()
   const rows = await db.getAllAsync<DocumentRow>(
     'SELECT * FROM documents WHERE deleted_at IS NULL ORDER BY saved_at ASC',
   )
-  return rows.map(toDetail)
+  return rows.map((row) => ({ ...toDetail(row), updated_at: row.updated_at, rev: row.rev }))
 }
 
 /** 图片落盘后回写本地路径，与 images 按下标对齐。 */

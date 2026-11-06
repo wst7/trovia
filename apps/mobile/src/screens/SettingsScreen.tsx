@@ -17,8 +17,8 @@ import { isSyncConfigured } from '../local/auto-sync'
 import { clearAllDocuments } from '../local/db'
 import { relativeTime } from '../local/dates'
 import { lastSyncAt } from '../local/sync-config'
-import { writeExport } from '../local/exporter'
-import { listAllForExport } from '../local/repo'
+import { formatBytes, writeExport } from '../local/exporter'
+import { listAllForExportFidelity } from '../local/repo'
 import { loadLlmState } from '../local/llm'
 import * as repo from '../local/repo'
 import type { DocumentStats } from '../local/repo'
@@ -203,7 +203,7 @@ export function SettingsScreen() {
     if (exporting) return
     setExporting(true)
     try {
-      const docs = await listAllForExport()
+      const docs = await listAllForExportFidelity()
       if (docs.length === 0) {
         toast(t('settings.export.empty'), { type: 'warning' })
         return
@@ -215,9 +215,16 @@ export function SettingsScreen() {
       }
       const Sharing = await import('expo-sharing')
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(result.jsonPath, { mimeType: 'application/json', dialogTitle: t('settings.export.dialog') })
+        await Sharing.shareAsync(result.path, { mimeType: 'application/zip', dialogTitle: t('settings.export.dialog') })
       }
-      toast(t('settings.export.done', { count: docs.length }), { type: 'success' })
+      toast(
+        t('settings.export.done', {
+          count: docs.length,
+          size: formatBytes(result.zipBytes),
+          raw: formatBytes(result.rawBytes),
+        }),
+        { type: 'success' },
+      )
     } catch {
       toast(t('settings.export.failed'), { type: 'error' })
     } finally {

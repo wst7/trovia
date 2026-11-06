@@ -111,12 +111,12 @@ export const en: Dictionary = {
   'settings.import.title': 'Import',
   'settings.import.subtitle': 'Browser bookmarks, CSV or a list of links',
   'settings.export.title': 'Export everything',
-  'settings.export.subtitle': 'A JSON backup plus readable Markdown',
+  'settings.export.subtitle': 'One .zip: full backup plus readable Markdown',
   'settings.export.writing': 'Writing files…',
   'settings.export.empty': 'Nothing to export yet.',
   'settings.export.noWrite': 'This device cannot write files right now.',
   'settings.export.dialog': 'Export saved items',
-  'settings.export.done': 'Exported {count}. JSON and Markdown are both written.',
+  'settings.export.done': 'Exported {count} · {size} (was {raw}); importing restores everything.',
   'settings.export.failed': 'Export failed. Try again in a moment.',
   'settings.rebulk.title': 'Re-read every article',
   'settings.rebulk.stop': 'Stop re-reading',
@@ -386,7 +386,7 @@ export const en: Dictionary = {
   'settings.theme.light': 'Light',
   'settings.theme.dark': 'Dark',
 
-  'import.format.trovia-json': 'Trovia backup (JSON)',
+  'import.format.trovia-json': 'Trovia backup (.zip)',
   'import.restoreHint':
     'This is Trovia\'s own backup: text, summary, keywords and save time are restored as they were, with no re-fetch.',
   'import.restoreCount': 'Restore {count}',
