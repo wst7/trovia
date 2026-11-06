@@ -6,6 +6,13 @@ const isProduction = process.env.APP_VARIANT === 'production'
 // 版本号跟发布 tag 走：CI 打 v* 标签时注入 XUNJI_APP_VERSION（v0.3.1 → 0.3.1）。
 // 本地构建回退到这里的默认值。Android 的 versionCode 由版本号推导，升级安装不会退版。
 const rawVersion: string = process.env.XUNJI_APP_VERSION ?? '0.12.2'
+
+/**
+ * 热更新（expo-updates）的托管地址来自 EAS 项目 id。
+ * 没配就整个关掉——本地构建、没登录过 Expo 的机器照样能出包，
+ * 只是这个包不带热更新能力（`Updates.isEnabled` 为 false）。
+ */
+const expoProjectId = process.env.EXPO_PROJECT_ID?.trim() ?? ''
 const appVersion = rawVersion.replace(/^v/, '')
 const [versionMajor = 0, versionMinor = 0, versionPatch = 0] = appVersion
   .split('.')
@@ -41,6 +48,22 @@ const config: ExpoConfig = {
             },
           }),
     },
+  },
+  updates: {
+    enabled: Boolean(expoProjectId),
+    ...(expoProjectId
+      ? {
+          url: `https://u.expo.dev/${expoProjectId}`,
+          checkAutomatically: 'ON_LOAD' as const,
+          // 先让用户看到内嵌的旧版本，新包在后台下好，下次启动生效。
+          fallbackToCacheTimeout: 0,
+        }
+      : {}),
+  },
+  // 原生一改就得重发 APK：版本号绑在 appVersion 上，不同版本的包不会互相串更新。
+  runtimeVersion: { policy: 'appVersion' as const },
+  extra: {
+    ...(expoProjectId ? { eas: { projectId: expoProjectId } } : {}),
   },
   android: {
     package: 'com.trovia.app',

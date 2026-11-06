@@ -13,6 +13,8 @@ import { useT } from '../i18n'
 import { checkForUpdate } from '../local/update'
 import type { CheckResult } from '../local/update'
 import { downloadApk, formatMb, installApk } from '../local/update-install'
+import { applyOta, checkOta, readOtaState } from '../local/ota'
+import type { OtaState } from '../local/ota'
 import type { DownloadProgress } from '../local/update-install'
 import { useToast } from '../providers/ToastProvider'
 import { GUTTER, Screen } from '../ui/Screen'
@@ -33,6 +35,11 @@ export function UpdateScreen() {
   const [progress, setProgress] = useState<DownloadProgress | null>(null)
   // 失败原因留在页面上：toast 一闪就没了，用户回头看不到为什么没装上。
   const [failure, setFailure] = useState<string | null>(null)
+  // 热更新：只换 JS，不用下整包；原生没改时优先走这条路。
+  const [ota, setOta] = useState<OtaState | null>(null)
+  const [otaBusy, setOtaBusy] = useState(false)
+  const [otaNote, setOtaNote] = useState<string | null>(null)
+  const [otaReady, setOtaReady] = useState(false)
 
   const check = useCallback(
     async (force: boolean) => {
@@ -49,7 +56,27 @@ export function UpdateScreen() {
 
   useEffect(() => {
     void check(false)
+    void readOtaState().then(setOta)
   }, [check])
+
+  async function handleOta() {
+    if (otaBusy) return
+    setOtaBusy(true)
+    setOtaNote(null)
+    try {
+      const outcome = await checkOta()
+      if (outcome.kind === 'unavailable') setOtaNote(t('update.ota.off'))
+      else if (outcome.kind === 'latest') setOtaNote(t('update.ota.latest'))
+      else {
+        setOtaReady(true)
+        setOtaNote(t('update.ota.ready', { id: outcome.id ?? '—' }))
+      }
+    } catch (error) {
+      setOtaNote(error instanceof Error ? error.message : t('update.ota.failed'))
+    } finally {
+      setOtaBusy(false)
+    }
+  }
 
   async function handleInstall() {
     const asset = result?.latest?.asset
@@ -91,6 +118,16 @@ export function UpdateScreen() {
           <Text className="text-body text-muted">{t('update.current')}</Text>
           <Text className="text-[24px] font-semibold text-ink">v{current}</Text>
         </View>
+        <View className="mt-2 flex-row items-baseline justify-between">
+          <Text className="text-caption text-muted">{t('update.ota.state')}</Text>
+          <Text className="text-caption text-faint">
+            {ota?.enabled
+              ? ota.runningUpdate
+                ? t('update.ota.running', { id: ota.updateId ?? '—' })
+                : t('update.ota.embedded')
+              : t('update.ota.off')}
+          </Text>
+        </View>
         <Divider className="mt-4" />
 
         {phase === 'checking' ? (
@@ -116,6 +153,23 @@ export function UpdateScreen() {
             <Pressable onPress={() => void check(true)} hitSlop={8} className="mt-5">
               <Text className="text-body text-accent">{t('update.checkAgain')}</Text>
             </Pressable>
+          </View>
+        ) : null}
+
+        {ota?.enabled ? (
+          <View className="mt-6">
+            <Divider />
+            <Pressable
+              onPress={() => (otaReady ? void applyOta() : void handleOta())}
+              disabled={otaBusy}
+              className="mt-4"
+              hitSlop={8}
+            >
+              <Text className={otaBusy ? 'text-body text-faint' : 'text-body text-accent'}>
+                {otaReady ? t('update.ota.restart') : otaBusy ? t('update.ota.checking') : t('update.ota.check')}
+              </Text>
+            </Pressable>
+            {otaNote ? <Text className="mt-2 text-caption text-muted">{otaNote}</Text> : null}
           </View>
         ) : null}
 

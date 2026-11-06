@@ -27,6 +27,8 @@ jobs:
     env:
       CI: '1'
       APP_VARIANT: production
+      # 建包时把 EAS 项目 id 打进去，包才具备热更新能力；没配就是普通包。
+      EXPO_PROJECT_ID: ${{ secrets.EXPO_PROJECT_ID }}
 
     steps:
       - uses: actions/checkout@v4
@@ -88,6 +90,18 @@ jobs:
           path: trovia-*-arm64.apk
           if-no-files-found: error
           retention-days: 30
+
+      # 热更新：只换 JS，用户不用重装 APK。原生改了仍然要走上面的 APK。
+      - name: 发布热更新
+        if: startsWith(github.ref, 'refs/tags/v') && env.EXPO_PROJECT_ID != ''
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "没有 EXPO_TOKEN，跳过（去 expo.dev 建一个再放到仓库 Secrets）"
+            exit 0
+          fi
+          npx eas-cli@latest update --branch production --message "$GITHUB_REF_NAME" --non-interactive
 
       # 打 v* 标签时把 APK 发布到 Release，说明页的 releases/latest 入口才点得动。
       - name: 发布到 Release
