@@ -13,6 +13,8 @@ const rawVersion: string = process.env.XUNJI_APP_VERSION ?? '0.12.2'
  * 只是这个包不带热更新能力（`Updates.isEnabled` 为 false）。
  */
 const expoProjectId = process.env.EXPO_PROJECT_ID?.trim() ?? ''
+/** 账号 slug：eas-cli 找项目要用，没它就把 projectId 忽略了。 */
+const expoOwner = process.env.EXPO_OWNER?.trim() || 'wst7s-team'
 const appVersion = rawVersion.replace(/^v/, '')
 const [versionMajor = 0, versionMinor = 0, versionPatch = 0] = appVersion
   .split('.')
@@ -54,6 +56,8 @@ const config: ExpoConfig = {
     ...(expoProjectId
       ? {
           url: `https://u.expo.dev/${expoProjectId}`,
+          // 服务端要靠 expo-channel-name 找分支；本地 prebuild 的包不会自动带。
+          requestHeaders: { 'expo-channel-name': 'production' },
           checkAutomatically: 'ON_LOAD' as const,
           // 先让用户看到内嵌的旧版本，新包在后台下好，下次启动生效。
           fallbackToCacheTimeout: 0,
@@ -71,6 +75,7 @@ const config: ExpoConfig = {
   extra: {
     ...(expoProjectId ? { eas: { projectId: expoProjectId } } : {}),
   },
+  owner: expoProjectId ? expoOwner : undefined,
   android: {
     package: 'com.trovia.app',
     versionCode,

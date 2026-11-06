@@ -29,6 +29,7 @@ jobs:
       APP_VARIANT: production
       # 建包时把 EAS 项目 id 打进去，包才具备热更新能力；没配就是普通包。
       EXPO_PROJECT_ID: ${{ secrets.EXPO_PROJECT_ID }}
+      EXPO_OWNER: ${{ secrets.EXPO_OWNER }}
 
     steps:
       - uses: actions/checkout@v4
@@ -103,7 +104,9 @@ jobs:
             echo "没有 EXPO_TOKEN，跳过（去 expo.dev 建一个再放到仓库 Secrets）"
             exit 0
           fi
-          npx eas-cli@latest update --branch production --message "$GITHUB_REF_NAME" --non-interactive
+          # 通道要和包里的 expo-channel-name 对上，否则客户端请求会被 400 拒掉。
+          npx eas-cli@latest channel:create production --branch production --non-interactive || true
+          npx eas-cli@latest update --branch production --message "$GITHUB_REF_NAME" --non-interactive --auto
 
       # 打 v* 标签时把 APK 发布到 Release，说明页的 releases/latest 入口才点得动。
       - name: 发布到 Release
