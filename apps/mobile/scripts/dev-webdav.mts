@@ -41,19 +41,26 @@ const server = createServer((req: IncomingMessage, res: ServerResponse) => {
   const disk = toDisk(path)
 
   if (req.method === 'MKCOL') {
+    // 照坚果云来：父目录不存在就 409，已存在也回 201（不是 405）。
     if (existsSync(disk)) {
-      res.writeHead(405).end()
+      res.writeHead(201).end()
       return
     }
-    mkdirSync(disk, { recursive: true })
-    console.log('MKCOL', path)
+    if (!existsSync(dirname(disk))) {
+      console.log('MKCOL', path, '→ 409 父目录不存在')
+      res.writeHead(409).end()
+      return
+    }
+    mkdirSync(disk, { recursive: false })
+    console.log('MKCOL', path, '→ 201')
     res.writeHead(201).end()
     return
   }
 
   if (req.method === 'PROPFIND') {
     if (!existsSync(disk) || !statSync(disk).isDirectory()) {
-      res.writeHead(404).end()
+      // 目录不存在：父目录在 → 404；父目录也没有 → 409（坚果云就是这么回的）。
+      res.writeHead(existsSync(dirname(disk)) ? 404 : 409).end()
       return
     }
     const entries = readdirSync(disk).filter((name) => statSync(join(disk, name)).isFile())

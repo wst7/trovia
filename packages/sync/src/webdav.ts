@@ -86,15 +86,26 @@ export class WebDavTarget implements SyncTarget {
     }
   }
 
-  /** 目录不存在就建（WebDAV 的 MKCOL 是幂等的，405/301 都算已存在）。 */
+  /**
+   * 目录不存在就建，一次建整条链。
+   *
+   * 两个真实世界的坑：
+   *   1. 用户填的根目录（例如 /dav/test）本身可能不存在。只建 docs/ 会得到 409，
+   *      因为 WebDAV 不允许跳过父目录建子目录——所以先建 base 自己。
+   *   2. MKCOL 的返回各服务器不一样：已存在时坚果云回 201、Nextcloud 回 405、
+   *      有的回 301。这些都不算错误；409 才是「父目录没有」，必须报出来。
+   */
   async ensureDir(path: string): Promise<void> {
-    const parts = path.split('/').filter(Boolean)
-    for (let i = 1; i <= parts.length; i += 1) {
-      const dir = parts.slice(0, i).join('/')
+    const steps = ['', ...path.split('/').filter(Boolean).map((_, index, all) => all.slice(0, index + 1).join('/'))]
+    for (const dir of steps) {
       const response = await this.request('MKCOL', dir)
-      if (![201, 405, 301, 409].includes(response.status)) {
-        throw new Error(`MKCOL ${dir} 失败：${response.status} ${response.statusText}`)
+      if ([201, 204, 301, 405].includes(response.status)) continue
+      if (response.status === 409) {
+        throw new Error(
+          `服务器上没有 ${dir || '根'} 目录，且上级目录不存在（409）。检查设置里的地址与文件夹是否存在、有没有写权限。`,
+        )
       }
+      throw new Error(`MKCOL ${dir || '根'} 失败：${response.status} ${response.statusText}`)
     }
   }
 
@@ -102,21 +113,33 @@ export class WebDavTarget implements SyncTarget {
     const dir = prefix.replace(/\/+$/, '')
     const response = await this.request('PROPFIND', dir, undefined)
     // 目录刚建好、还没文件：207 里没有 <d:response>，当作空。
-    if (response.status === 404) return []
+    // 404 = 没有这个目录；409 = 父目录都没有（坚果云就是 409）。
+    // 两种情况都当成「暂时还没有内容」，不要让它把整次同步顶掉。
+    if (response.status === 404 || response.status === 409) return []
     if (response.status !== 207) {
       throw new Error(`PROPFIND ${dir} 失败：${response.status} ${response.statusText}`)
     }
     const xml = await response.text()
     const entries: SyncEntry[] = []
     // 只取 href 与内容长度，够引擎用了；不引入 XML 解析器。
+    const basePath = dir.replace(/^\/+|\/+$/g, '')
+    const marker = `/${basePath}/`
     for (const block of xml.split(/<\/d:response>|<\/D:response>/i).slice(0, -1)) {
       const href = /<(?:d|D):href>([^<]+)</i.exec(block)?.[1]
       if (!href) continue
-      const decoded = decodeURIComponent(href)
-      if (decoded.endsWith('/')) continue
-      const marker = `/${dir}/`
-      const index = decoded.indexOf(marker)
-      const relative = index >= 0 ? decoded.slice(index + 1) : decoded.replace(/^\/+/, '')
+      const path = decodeURIComponent(href).split('?')[0]
+      const trimmed = path.replace(/\/+$/, '')
+      if (!trimmed) continue
+      // 集合自己也在 207 里（坚果云的 href 末尾还可能没有斜杠），必须跳过，
+      // 否则它会变成一条 path 为整串地址的假条目，同步时还会去 GET 它。
+      if (trimmed === basePath || trimmed.endsWith(`/${basePath}`)) continue
+      // 子目录不参与同步（我们只用一层 docs/）。
+      if (path.endsWith('/')) continue
+      // 路径相对**根目录**返回（docs/a.json），因为读取时引擎直接拿它去 GET；
+      // 只剥到 docs/ 之后会变成 a.json，GET 就打到根上去了。
+      const index = path.indexOf(marker)
+      const relative = index >= 0 ? path.slice(index + 1) : path.replace(/^\/+/, '')
+      if (!relative) continue
       const size = Number(/<(?:d|D):getcontentlength>(\d+)</i.exec(block)?.[1] ?? 0)
       const etag = /<(?:d|D):getetag>([^<]+)</i.exec(block)?.[1]
       entries.push({ path: relative, size, etag })
