@@ -438,4 +438,6 @@ export const zh: Dictionary = {
   'update.hint': '下载完成后由系统的安装界面接手；第一次需要在系统设置里允许 Trovia 安装应用。',
   'update.toast.prompt': '已交给系统安装界面',
   'update.toast.failed': '更新失败',
+  'sync.report.emptyRemote': '云端这个文件夹里还没有数据，本机也没有新内容要上传。',
+  'sync.report.uptodate': '已是最新：云端 {count} 份文件，本机没有新改动。',
 }

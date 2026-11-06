@@ -438,4 +438,6 @@ export const en: Dictionary = {
   'update.hint': 'The system installer takes over after the download; the first time you must allow Trovia to install apps.',
   'update.toast.prompt': 'Handed over to the system installer',
   'update.toast.failed': 'Update failed',
+  'sync.report.emptyRemote': 'The remote folder is empty and this device has nothing new to upload.',
+  'sync.report.uptodate': 'Up to date: {count} files in the cloud, no local changes.',
 }
