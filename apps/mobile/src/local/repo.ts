@@ -58,7 +58,22 @@ interface DocumentRow {
   metadata: string
 }
 
-function toSummary(row: DocumentRow): DocumentSummary {
+type SummaryRow = Pick<
+  DocumentRow,
+  | 'id'
+  | 'url'
+  | 'title'
+  | 'site_name'
+  | 'source_type'
+  | 'summary_short'
+  | 'parse_status'
+  | 'parse_error_code'
+  | 'saved_at'
+  | 'images'
+  | 'image_files'
+>
+
+function toSummary(row: SummaryRow): DocumentSummary {
   return {
     id: row.id,
     url: row.url,
@@ -260,7 +275,7 @@ export async function getSeededTitle(id: string): Promise<string | null> {
   return row?.title ?? null
 }
 
-export async function listDocuments(options: {
+export interface ListQuery {
   page: number
   pageSize: number
   keyword?: string
@@ -268,20 +283,18 @@ export async function listDocuments(options: {
   failedOnly?: boolean
   /** 只看从文件导入的条目：导入 300 条之后总得能找回这一批。 */
   importedOnly?: boolean
-}): Promise<{ items: DocumentSummary[]; total: number }> {
-  const db = await getDb()
-  const keyword = options.keyword?.trim() ?? ''
-  const page = Math.max(1, options.page)
-  const pageSize = Math.max(1, options.pageSize)
-  const offset = (page - 1) * pageSize
+}
 
+/** 列表真正用得到的列。正文动辄十几 KB，`SELECT *` 会把它一起读出来，纯粹浪费。 */
+const SUMMARY_COLUMNS =
+  'id, url, title, site_name, source_type, summary_short, parse_status, parse_error_code, saved_at, images, image_files'
+
+function buildListWhere(options: ListQuery): { where: string; params: (string | number)[] } {
+  const keyword = options.keyword?.trim() ?? ''
   const clauses: string[] = ['deleted_at IS NULL']
   const params: (string | number)[] = []
   if (options.failedOnly) clauses.push("parse_status = 'failed'")
-  // metadata 里的 origin 是导入时写下的；用 LIKE 而不是 json_extract，
-  // 免得依赖 SQLite 是否编译了 JSON1。
-  // 老条目存的是 "origin"（当时拼好的中文），新条目存 origin_kind + origin_file；
-  // 两种都要算「导入的」，否则恢复完切到这个筛选会看到空列表。
+  // imported_at 是新列；老行只在 metadata 里留了 origin/origin_kind，两种都要认。
   if (options.importedOnly) {
     clauses.push(
       "(imported_at IS NOT NULL OR metadata LIKE '%\"origin\"%' OR metadata LIKE '%\"origin_kind\"%')",
@@ -291,19 +304,38 @@ export async function listDocuments(options: {
     clauses.push('(title LIKE ? OR summary_short LIKE ? OR search_text LIKE ?)')
     params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`)
   }
-  const where = clauses.join(' AND ')
+  return { where: clauses.join(' AND '), params }
+}
 
-  const totalRow = await db.getFirstAsync<{ total: number }>(
+/**
+ * 只要一页。**不顺手算总数**：那是一次额外的全表扫描，
+ * 和取这一页一样贵。总数交给 countDocuments 异步补上，列表先出来。
+ */
+export async function listDocuments(options: ListQuery): Promise<{ items: DocumentSummary[] }> {
+  const db = await getDb()
+  const { where, params } = buildListWhere(options)
+  const page = Math.max(1, options.page)
+  const pageSize = Math.max(1, options.pageSize)
+  const rows = await db.getAllAsync<SummaryRow>(
+    `SELECT ${SUMMARY_COLUMNS} FROM documents WHERE ${where} ORDER BY saved_at DESC LIMIT ? OFFSET ?`,
+    ...params,
+    pageSize,
+    (page - 1) * pageSize,
+  )
+  return { items: rows.map(toSummary) }
+}
+
+/** 命中总数：筛选栏上的「N 条」。和列表分开，慢一点不挡内容。 */
+export async function countMatchingDocuments(
+  options: Omit<ListQuery, 'page' | 'pageSize'>,
+): Promise<number> {
+  const db = await getDb()
+  const { where, params } = buildListWhere({ ...options, page: 1, pageSize: 1 })
+  const row = await db.getFirstAsync<{ total: number }>(
     `SELECT COUNT(*) AS total FROM documents WHERE ${where}`,
     ...params,
   )
-  const rows = await db.getAllAsync<DocumentRow>(
-    `SELECT * FROM documents WHERE ${where} ORDER BY saved_at DESC LIMIT ? OFFSET ?`,
-    ...params,
-    pageSize,
-    offset,
-  )
-  return { items: rows.map(toSummary), total: totalRow?.total ?? 0 }
+  return row?.total ?? 0
 }
 
 export async function getDocument(id: string): Promise<DocumentDetail | null> {

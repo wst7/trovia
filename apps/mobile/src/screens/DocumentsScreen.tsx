@@ -33,7 +33,8 @@ export function DocumentsScreen() {
 
   const [keywordInput, setKeywordInput] = useState('')
   const [items, setItems] = useState<DocumentSummary[]>([])
-  const [total, setTotal] = useState(0)
+  // null = 还没数完：列表先显示，总数晚一拍补上
+  const [total, setTotal] = useState<number | null>(null)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -86,9 +87,15 @@ export function DocumentsScreen() {
         })
         if (seq !== requestSeq.current) return
         setItems((current) => (mode === 'replace' ? res.items : [...current, ...res.items]))
-        setTotal(res.total)
         setPage(nextPage)
         setError(null)
+        // 总数单独跑：它要扫全表，不该挡住列表出现。
+        void repo
+          .countMatchingDocuments({ keyword, failedOnly, importedOnly })
+          .then((next) => {
+            if (seq === requestSeq.current) setTotal(next)
+          })
+          .catch(() => undefined)
         void repo
           .documentStats()
           .then((stats) => {
@@ -220,7 +227,7 @@ export function DocumentsScreen() {
     reload()
   }
 
-  const hasMore = items.length < total
+  const hasMore = total === null ? items.length >= 20 : items.length < total
   const unit = loading
     ? t('list.unitLoading')
     : keyword || failedOnly || importedOnly
@@ -269,7 +276,7 @@ export function DocumentsScreen() {
             ) : (
               <View className="mt-4 flex-row items-baseline gap-2">
                 <Text className="text-[24px] font-semibold leading-[30px] tracking-[-0.3px] text-ink">
-                  {loading ? '—' : total}
+                  {loading ? '—' : (total ?? '—')}
                 </Text>
                 <Text className="flex-1 text-body-sm text-muted">{unit}</Text>
                 <View className="flex-row items-center gap-3">
@@ -301,7 +308,7 @@ export function DocumentsScreen() {
                 <Text className="flex-1 text-body-sm text-muted" onPress={() => setFailedOnly((on) => !on)}>
                   {failedOnly
                     ? t('list.failedOnlyOn')
-                    : t('list.failedCount', { count: failed, total: libraryTotal || total })}
+                    : t('list.failedCount', { count: failed, total: libraryTotal || total || 0 })}
                 </Text>
                 <TextButton
                   label={retrying ? t('list.requeuing') : t('list.retryAll')}
