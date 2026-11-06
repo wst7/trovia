@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS documents (
   images            TEXT NOT NULL DEFAULT '[]',
   image_files       TEXT NOT NULL DEFAULT '[]',
   search_text       TEXT NOT NULL DEFAULT '',
+  imported_at       TEXT,
   parse_status      TEXT NOT NULL DEFAULT 'pending',
   parse_stage       TEXT,
   parse_error_code  TEXT,

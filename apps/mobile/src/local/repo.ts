@@ -53,6 +53,7 @@ interface DocumentRow {
   last_parsed_at: string | null
   updated_at: string
   rev: number
+  imported_at: string | null
   deleted_at: string | null
   metadata: string
 }
@@ -135,8 +136,8 @@ export async function restoreDocument(
     `INSERT INTO documents (id, url, canonical_url, source_type, title, site_name, author,
        published_at, description, summary_short, summary_long, keywords, topics, language,
        content_markdown, plain_text, images, image_files, search_text, parse_status, parse_stage,
-       parse_error_code, saved_at, last_parsed_at, updated_at, rev, metadata)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       parse_error_code, saved_at, last_parsed_at, updated_at, rev, metadata, imported_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     id,
     doc.url,
     isoOr(doc.canonicalUrl) ?? doc.url,
@@ -174,6 +175,7 @@ export async function restoreDocument(
     updatedAt,
     doc.rev ?? 1,
     JSON.stringify(metadata),
+    doc.importedAt ?? nowIso(),
   )
   return 'created'
 }
@@ -217,8 +219,8 @@ export async function createDocument(
   // 导入文件里的时间可能很旧；只在合理范围内采用（见 import/dates.ts）。
   const saved = resolveImportedSavedAt(savedAt, Date.now())
   await db.runAsync(
-    `INSERT INTO documents (id, url, canonical_url, source_type, title, parse_status, parse_stage, saved_at, updated_at, metadata)
-     VALUES (?, ?, ?, ?, ?, 'pending', 'fetch', ?, ?, ?)`,
+    `INSERT INTO documents (id, url, canonical_url, source_type, title, parse_status, parse_stage, saved_at, updated_at, metadata, imported_at)
+     VALUES (?, ?, ?, ?, ?, 'pending', 'fetch', ?, ?, ?, ?)`,
     id,
     url,
     url,
@@ -231,6 +233,7 @@ export async function createDocument(
         ? { origin_kind: origin.kind, origin_file: origin.file, savedAtFromFile: Boolean(savedAtFromFile) }
         : {},
     ),
+    origin ? now : null,
   )
   return { id, duplicate: false }
 }
@@ -280,7 +283,9 @@ export async function listDocuments(options: {
   // 老条目存的是 "origin"（当时拼好的中文），新条目存 origin_kind + origin_file；
   // 两种都要算「导入的」，否则恢复完切到这个筛选会看到空列表。
   if (options.importedOnly) {
-    clauses.push("(metadata LIKE '%\"origin\"%' OR metadata LIKE '%\"origin_kind\"%')")
+    clauses.push(
+      "(imported_at IS NOT NULL OR metadata LIKE '%\"origin\"%' OR metadata LIKE '%\"origin_kind\"%')",
+    )
   }
   if (keyword) {
     clauses.push('(title LIKE ? OR summary_short LIKE ? OR search_text LIKE ?)')
@@ -541,6 +546,7 @@ export async function listUrls(): Promise<string[]> {
 export interface ExportDocument extends DocumentDetail {
   updated_at: string
   rev: number
+  imported_at: string | null
 }
 
 export async function listAllForExportFidelity(): Promise<ExportDocument[]> {
@@ -548,7 +554,12 @@ export async function listAllForExportFidelity(): Promise<ExportDocument[]> {
   const rows = await db.getAllAsync<DocumentRow>(
     'SELECT * FROM documents WHERE deleted_at IS NULL ORDER BY saved_at ASC',
   )
-  return rows.map((row) => ({ ...toDetail(row), updated_at: row.updated_at, rev: row.rev }))
+  return rows.map((row) => ({
+    ...toDetail(row),
+    updated_at: row.updated_at,
+    rev: row.rev,
+    imported_at: row.imported_at,
+  }))
 }
 
 /** 图片落盘后回写本地路径，与 images 按下标对齐。 */

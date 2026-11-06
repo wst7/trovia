@@ -55,6 +55,7 @@ export interface RestoreDocument {
   parseErrorCode: string | null
   updatedAt: string | null
   lastParsedAt: string | null
+  importedAt: string | null
   rev: number | null
   metadata: Record<string, unknown> | null
 }
@@ -76,6 +77,13 @@ export interface ImportParseResult {
 }
 
 export const MAX_IMPORT_ITEMS = 500
+
+/**
+ * 备份恢复的上限另算：普通导入是「一堆链接要排队去抓」，500 条是给队列兜底；
+ * 备份是直接落库、不抓网页，限 500 会让「1000 篇的备份恢复不全」，
+ * 那就违背了「导出的东西一定导得回来」。
+ */
+export const MAX_RESTORE_ITEMS = 20000
 
 /** 只保留 http(s)，其余（javascript:、chrome://、file://）都不是能收藏的内容。 */
 export function normalizeUrl(raw: string): string | null {
@@ -369,6 +377,7 @@ export function parseTroviaJson(
       parseErrorCode: text(doc.parse_error_code),
       updatedAt: text(doc.updated_at),
       lastParsedAt: text(doc.last_parsed_at),
+      importedAt: text(doc.imported_at),
       rev: typeof doc.rev === 'number' && Number.isFinite(doc.rev) ? doc.rev : null,
       metadata:
         doc.metadata && typeof doc.metadata === 'object' && !Array.isArray(doc.metadata)
@@ -418,17 +427,18 @@ export function parseImport(content: string): ImportParseResult {
     unique.push(item)
   }
 
-  if (unique.length > MAX_IMPORT_ITEMS) {
-    skipped.push({ line: `共 ${unique.length} 条`, reason: `单次最多导入 ${MAX_IMPORT_ITEMS} 条，多余的先跳过` })
+  const limit = format === 'trovia-json' ? MAX_RESTORE_ITEMS : MAX_IMPORT_ITEMS
+  if (unique.length > limit) {
+    skipped.push({ line: `共 ${unique.length} 条`, reason: `单次最多导入 ${limit} 条，多余的先跳过` })
   }
 
-  const kept = new Set(unique.map((item) => item.url))
+  const kept = new Set(unique.slice(0, limit).map((item) => item.url))
   // 用判重键匹配：documents 里存的是原样链接，判重用的是规范化之后的那个。
   const keptDocuments = documents?.filter((doc) => kept.has(doc.dedupeKey ?? doc.url))
 
   return {
     format,
-    items: unique.slice(0, MAX_IMPORT_ITEMS),
+    items: unique.slice(0, limit),
     documents: keptDocuments,
     skipped,
   }

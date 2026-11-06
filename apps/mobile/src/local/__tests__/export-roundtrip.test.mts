@@ -44,6 +44,7 @@ function doc(overrides: Partial<ExportDocument> = {}): ExportDocument {
     saved_at: '2026-11-01T09:00:00.000Z',
     updated_at: '2026-11-01T09:03:11.000Z',
     rev: 4,
+    imported_at: null,
     ...overrides,
   }
 }
@@ -118,6 +119,7 @@ for (const original of docs) {
   assert.equal(got.savedAt, Date.parse(original.saved_at), `${original.id}.saved_at`)
   assert.equal(got.updatedAt, original.updated_at, `${original.id}.updated_at`)
   assert.equal(got.rev, original.rev, `${original.id}.rev`)
+  assert.equal(got.importedAt, original.imported_at, `${original.id}.imported_at`)
   assert.deepEqual(got.metadata, original.metadata, `${original.id}.metadata`)
   // 判重键只用于跳过重复，不影响落库的值
   assert.ok(got.dedupeKey.startsWith('https://'), `${original.id}.dedupeKey`)
