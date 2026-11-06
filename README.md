@@ -39,4 +39,6 @@ npm install && npm run dev:mobile   # the phone app (Expo)
 docker compose up --build           # web + API + worker (self-hosted)
 ```
 
+Hot updates are published on every tag. `runtimeVersion` in `apps/mobile/app.config.ts` is a hand-bumped constant (`native-1`): raise it only when native code, permissions or the package name change, and ship a matching APK with it.
+
 Product scope: [`docs/PRODUCT.md`](docs/PRODUCT.md). API and database conventions: [`docs/ENGINEERING.md`](docs/ENGINEERING.md).

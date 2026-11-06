@@ -60,8 +60,14 @@ const config: ExpoConfig = {
         }
       : {}),
   },
-  // 原生一改就得重发 APK：版本号绑在 appVersion 上，不同版本的包不会互相串更新。
-  runtimeVersion: { policy: 'appVersion' as const },
+  /**
+   * 原生运行时版本：**只有原生依赖、权限、包名这类东西变了才加一**。
+   *
+   * 不能绑 appVersion——那样每个补丁版本都是独立运行时，只改 JS 的更新
+   * 永远装不进用户手上的旧包，热更新就白做了。改这里时必须重发一次 APK，
+   * 否则旧包会收到为「新原生版本」打的 JS，可能直接崩。
+   */
+  runtimeVersion: 'native-1',
   extra: {
     ...(expoProjectId ? { eas: { projectId: expoProjectId } } : {}),
   },
