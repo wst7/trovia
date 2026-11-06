@@ -102,6 +102,14 @@ export async function loadLlmKey(): Promise<string | null> {
   }
 }
 
+/**
+ * 本地服务（Ollama、LM Studio、局域网里的 vLLM）通常不校验 key。
+ * 这类地址允许留空，否则「在自己电脑上跑模型」这条路会被必填项堵死。
+ */
+export function isLocalEndpoint(baseUrl: string): boolean {
+  return /localhost|127\.0\.0\.1|0\.0\.0\.0|10\.0\.2\.2|192\.168\.|\b10\.\d+\.\d+\.\d+|\.local\b/i.test(baseUrl)
+}
+
 function endpointOf(baseUrl: string): string {
   const base = baseUrl.trim().replace(/\/+$/, '')
   return base.endsWith('/chat/completions') ? base : `${base}/chat/completions`
@@ -151,6 +159,90 @@ export async function chat(
     const content = payload.choices?.[0]?.message?.content
     if (!content || !content.trim()) throw new Error('服务没有返回内容')
     return content
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') throw new Error('请求超时')
+    throw error
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+export interface ChatToolCall {
+  id: string
+  type: 'function'
+  function: { name: string; arguments: string }
+}
+
+export interface ChatMessage {
+  role: 'system' | 'user' | 'assistant' | 'tool'
+  content: string | null
+  tool_calls?: ChatToolCall[]
+  tool_call_id?: string
+  name?: string
+}
+
+export interface ChatTool {
+  type: 'function'
+  function: { name: string; description: string; parameters: Record<string, unknown> }
+}
+
+export interface ChatStep {
+  /** 模型要说的话；调工具时通常为空。 */
+  content: string | null
+  toolCalls: ChatToolCall[]
+}
+
+/**
+ * 带工具的一步。工具调用要原样传回模型，所以不能复用 chat() 的「只要文本」。
+ * 超时按步算：一次问答可能走三四步。
+ */
+export async function chatStep(
+  config: LlmConfig,
+  key: string,
+  messages: ChatMessage[],
+  tools: ChatTool[],
+  maxTokens: number,
+  timeoutMs = 60_000,
+): Promise<ChatStep> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const response = await fetch(endpointOf(config.baseUrl), {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${key}`,
+      },
+      body: JSON.stringify({
+        model: config.model,
+        messages,
+        temperature: 0.2,
+        max_tokens: maxTokens,
+        tools,
+        tool_choice: 'auto',
+      }),
+    })
+
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '')
+      const hint =
+        response.status === 401 || response.status === 403
+          ? '密钥无效或没有权限'
+          : response.status === 404
+            ? '地址或模型名不对'
+            : response.status === 429
+              ? '请求太频繁或额度用完了'
+              : '服务返回了错误'
+      throw new Error(`${hint}（HTTP ${response.status}${detail ? `：${detail.slice(0, 120)}` : ''}）`)
+    }
+
+    const payload = (await response.json()) as {
+      choices?: { message?: { content?: string | null; tool_calls?: ChatToolCall[] } }[]
+    }
+    const message = payload.choices?.[0]?.message
+    const calls = Array.isArray(message?.tool_calls) ? message!.tool_calls.filter((c) => c?.function?.name) : []
+    return { content: message?.content ?? null, toolCalls: calls }
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') throw new Error('请求超时')
     throw error

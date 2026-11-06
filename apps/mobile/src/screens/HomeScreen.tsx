@@ -11,6 +11,7 @@ import { TAB_BAR_HEIGHT } from '../components/AppTabBar'
 import { Composer } from '../components/Composer'
 import type { SaveResult } from '../components/Composer'
 import { RecentRow, ResultRow } from '../components/RecordRow'
+import { loadLlmState } from '../local/llm'
 import { processPendingQueue } from '../local/pipeline'
 import * as repo from '../local/repo'
 import { useLocalRevision } from '../local/useLocalRevision'
@@ -46,6 +47,9 @@ export function HomeScreen() {
   const [recent, setRecent] = useState<DocumentSummary[]>([])
   const [stats, setStats] = useState<repo.DocumentStats | null>(null)
   const [writing, setWriting] = useState(false)
+  // 「问模型」开关：默认关，交给用户显式打开（大模型是可选项）。
+  const [askMode, setAskMode] = useState(false)
+  const [llmReady, setLlmReady] = useState(false)
 
   const inResults = lastQuery.length > 0
   const bottomPad = insets.bottom + TAB_BAR_HEIGHT + 24
@@ -56,6 +60,12 @@ export function HomeScreen() {
       void processPendingQueue()
     }, []),
   )
+
+  useEffect(() => {
+    void loadLlmState()
+      .then((state) => setLlmReady(state.enabled))
+      .catch(() => setLlmReady(false))
+  }, [revision])
 
   // 最近收藏：只在首页空态出现，四条，够「想起来」即可。
   useEffect(() => {
@@ -107,6 +117,11 @@ export function HomeScreen() {
   async function runSearch(text?: string) {
     const q = (text ?? query).trim()
     if (!q || searching) return
+    // 开了「问模型」：不像链接的输入交给模型，在收藏里找完再答。
+    if (askMode) {
+      router.push(`/ask?q=${encodeURIComponent(q)}`)
+      return
+    }
     setSearching(true)
     setSearchError(null)
     setLastQuery(q)
@@ -176,6 +191,16 @@ export function HomeScreen() {
       value={query}
       onChangeText={setQuery}
       onSearch={() => void runSearch()}
+      ask={askMode}
+      onToggleAsk={() => {
+        if (!llmReady) {
+          toast(t('ask.off'), {
+            action: { label: t('ask.openSettings'), onPress: () => router.push('/settings/llm') },
+          })
+          return
+        }
+        setAskMode((on) => !on)
+      }}
       onSave={handleSave}
       searching={searching || writing}
     />

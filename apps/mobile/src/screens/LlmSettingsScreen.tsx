@@ -4,7 +4,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, Switch, Text, View } from '
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { buildVectors, loadEmbedConfig, vectorStats } from '../local/embed'
-import { DEFAULT_LLM, loadLlmState, saveLlmState, testLlmConnection } from '../local/llm'
+import { DEFAULT_LLM, isLocalEndpoint, loadLlmState, saveLlmState, testLlmConnection } from '../local/llm'
 import { useToast } from '../providers/ToastProvider'
 import { Button, IconButton, TextButton } from '../ui/Button'
 import { Screen } from '../ui/Screen'
@@ -99,7 +99,8 @@ export function LlmSettingsScreen() {
         toast(t('llm.needModel'), { type: 'error' })
         return
       }
-      if (!hasKey && !apiKey.trim()) {
+      // 本地服务不需要 key；只有远端地址才强制要求。
+      if (!hasKey && !apiKey.trim() && !isLocalEndpoint(baseUrl)) {
         toast(t('llm.needKey'), { type: 'error' })
         return
       }

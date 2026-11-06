@@ -20,6 +20,11 @@ interface ComposerProps {
   onSave: (url: string, titleHint: string | null) => Promise<SaveResult | null>
   searching?: boolean
   onFocus?: () => void
+  /** 「问大模型」开关：开了之后，不像链接的输入交给模型去库里找。 */
+  ask?: boolean
+  onToggleAsk?: () => void
+  /** 大模型没配好时，点开关直接去设置。 */
+  onAskNeedsSetup?: () => void
 }
 
 /** 只输入了域名（没有协议）时补上 https://，避免用户被「没有链接」挡住。 */
@@ -44,6 +49,9 @@ export function Composer({
   onSave,
   searching = false,
   onFocus,
+  ask = false,
+  onToggleAsk,
+  onAskNeedsSetup,
 }: ComposerProps) {
   const p = usePalette()
   const t = useT()
@@ -117,6 +125,24 @@ export function Composer({
       />
 
       <View className="flex-row items-center justify-between gap-3 px-3 pb-2">
+        <Pressable
+          onPress={() => (onToggleAsk ? onToggleAsk() : onAskNeedsSetup?.())}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: ask }}
+          accessibilityLabel={t('composer.ask.a11y')}
+          hitSlop={6}
+          className={cx(
+            'flex-row items-center gap-1.5 rounded-full border px-2.5 py-1',
+            ask ? 'border-accent' : 'border-line',
+          )}
+        >
+          <View
+            className={cx('h-1.5 w-1.5 rounded-full', ask ? 'bg-accent' : 'bg-faint')}
+          />
+          <Text className={cx('text-caption', ask ? 'text-accent' : 'text-muted')}>
+            {t('composer.ask.label')}
+          </Text>
+        </Pressable>
         <Text
           // 必须显式给颜色：Text 不写颜色时是系统黑，深色模式下等于隐形。
           className={cx('flex-1 text-caption', error ? 'text-danger' : 'text-muted')}
