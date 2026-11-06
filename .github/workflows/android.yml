@@ -43,8 +43,11 @@ jobs:
           cache: npm
       - run: npm ci
       - name: 发布热更新
+        working-directory: apps/mobile
         run: |
-          npx eas-cli@latest channel:create production --branch production --non-interactive || true
+          # eas-cli 认 cwd 里的 app config，monorepo 必须在 apps/mobile 里跑。
+          npx eas-cli@latest channel:create production --non-interactive || true
+          npx eas-cli@latest channel:edit production --branch production --non-interactive || true
           npx eas-cli@latest update --branch production --message "${GITHUB_SHA::7} hot" --non-interactive --auto
 
   apk:
@@ -126,13 +129,15 @@ jobs:
         continue-on-error: true
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        working-directory: apps/mobile
         run: |
           if [ -z "$EXPO_TOKEN" ]; then
             echo "没有 EXPO_TOKEN，跳过（去 expo.dev 建一个再放到仓库 Secrets）"
             exit 0
           fi
           # 通道要和包里的 expo-channel-name 对上，否则客户端请求会被 400 拒掉。
-          npx eas-cli@latest channel:create production --branch production --non-interactive || true
+          npx eas-cli@latest channel:create production --non-interactive || true
+          npx eas-cli@latest channel:edit production --branch production --non-interactive || true
           npx eas-cli@latest update --branch production --message "$GITHUB_REF_NAME" --non-interactive --auto
 
       # 打 v* 标签时把 APK 发布到 Release，说明页的 releases/latest 入口才点得动。
