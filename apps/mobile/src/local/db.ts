@@ -132,8 +132,16 @@ CREATE TABLE IF NOT EXISTS settings (
   return db
 }
 
-/** 测试与「清空数据」用：删掉所有收藏（保留表结构）。 */
+/**
+ * 测试与「清空数据」用：删掉所有收藏（保留表结构）。
+ *
+ * sync_base 必须一起删。它记的是「这条已经同步过、基准 rev 是几」——
+ * 只删 documents 而留着它，下次同步就会认为云端那些条目「本机已经有了」，
+ * 一条都不拉，界面还显示「两端已经一致」，而本地其实是空的。
+ */
 export async function clearAllDocuments(): Promise<void> {
   const db = await getDb()
   await db.runAsync('DELETE FROM documents')
+  await db.runAsync('DELETE FROM sync_base')
+  await db.runAsync('DELETE FROM doc_vectors')
 }

@@ -108,8 +108,18 @@ async function listDirty(): Promise<SyncRecord[]> {
   return rows.map(toRecord)
 }
 
+/**
+ * 基准 rev 只认「本机确实还有这条」的。
+ *
+ * 老版本「清空全部收藏」只删 documents、没删 sync_base，于是清空之后
+ * 云端的数据被当成「本机已经有了」而永远不再拉取——表现就是同步显示
+ * 「两端已经一致」，本地却是空的。这里顺手把孤儿行清掉，让老用户自愈。
+ */
 async function baseRevs(): Promise<Map<string, number>> {
   const db = await getDb()
+  await db
+    .runAsync('DELETE FROM sync_base WHERE doc_id NOT IN (SELECT id FROM documents)')
+    .catch(() => undefined)
   const rows = await db.getAllAsync<{ doc_id: string; rev: number }>('SELECT doc_id, rev FROM sync_base')
   return new Map(rows.map((row) => [row.doc_id, row.rev]))
 }
