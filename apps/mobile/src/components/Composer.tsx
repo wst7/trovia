@@ -128,7 +128,7 @@ export function Composer({
       />
 
       {/* 输入区与操作区之间一条发丝线：文字多了也不会跟模式、发送挤在一起。 */}
-      <View className="mt-1 border-t border-line px-3 pt-2 pb-2">
+      <View className="mt-1 border-t border-line px-3 pt-2.5 pb-4">
         {hint ? (
           <Text
             // 必须显式给颜色：Text 不写颜色时是系统黑，深色模式下等于隐形。
@@ -141,7 +141,7 @@ export function Composer({
 
         <View className="flex-row items-center justify-between">
           {/* 模式用两段文字，选中那段下面一条发丝线——和落地页的语言切换同一套。 */}
-          <View className="flex-row items-center gap-4">
+          <View className="flex-row items-center gap-5">
             {(['search', 'ai'] as const).map((mode) => {
               const active = mode === 'ai' ? ask : !ask
               return (
@@ -160,7 +160,7 @@ export function Composer({
                     mode === 'ai' ? t('composer.mode.aiA11y') : t('composer.mode.searchA11y')
                   }
                   hitSlop={8}
-                  className="items-center"
+                  className="items-center py-1"
                 >
                   <Text
                     className={cx(
@@ -171,7 +171,7 @@ export function Composer({
                     {mode === 'ai' ? t('composer.mode.ai') : t('composer.mode.search')}
                   </Text>
                   <View
-                    className={cx('mt-1 h-[2px] w-full', active ? 'bg-accent' : 'bg-transparent')}
+                    className={cx('mt-1.5 h-[2px] w-full', active ? 'bg-accent' : 'bg-transparent')}
                   />
                 </Pressable>
               )
