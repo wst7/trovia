@@ -94,6 +94,8 @@ jobs:
       # 热更新：只换 JS，用户不用重装 APK。原生改了仍然要走上面的 APK。
       - name: 发布热更新
         if: startsWith(github.ref, 'refs/tags/v') && env.EXPO_PROJECT_ID != ''
+        # 热更新发布失败不能连累 APK 出包，用户还能靠重装升级。
+        continue-on-error: true
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
