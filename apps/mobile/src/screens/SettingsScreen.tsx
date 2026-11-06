@@ -392,6 +392,12 @@ export function SettingsScreen() {
               subtitle={t('settings.about.local')}
               value={`v${Constants.expoConfig?.version ?? '—'}`}
             />
+            <Row
+              icon="cloud-download-outline"
+              title={t('update.title')}
+              subtitle={t('update.rowHint')}
+              onPress={() => router.push('/settings/update')}
+            />
           </Group>
         </View>
 

@@ -20,10 +20,12 @@ interface ComposerProps {
   onSave: (url: string, titleHint: string | null) => Promise<SaveResult | null>
   searching?: boolean
   onFocus?: () => void
-  /** 「问大模型」开关：开了之后，不像链接的输入交给模型去库里找。 */
+  /** 当前模式：普通检索，还是交给 AI 在库里找。 */
   ask?: boolean
-  onToggleAsk?: () => void
-  /** 大模型没配好时，点开关直接去设置。 */
+  onSelectMode?: (mode: 'search' | 'ai') => void
+  /** AI 是否可用（设置里打开且填了地址）。不可用时点它去设置。 */
+  askAvailable?: boolean
+  /** 大模型没配好时，点 AI 直接去设置。 */
   onAskNeedsSetup?: () => void
 }
 
@@ -50,8 +52,9 @@ export function Composer({
   searching = false,
   onFocus,
   ask = false,
-  onToggleAsk,
+  onSelectMode,
   onAskNeedsSetup,
+  askAvailable = false,
 }: ComposerProps) {
   const p = usePalette()
   const t = useT()
@@ -124,32 +127,57 @@ export function Composer({
         className="min-h-[52px] max-h-[132px] px-4 pt-4 text-body text-ink"
       />
 
-      <View className="flex-row items-center justify-between gap-3 px-3 pb-2">
-        <Pressable
-          onPress={() => (onToggleAsk ? onToggleAsk() : onAskNeedsSetup?.())}
-          accessibilityRole="switch"
-          accessibilityState={{ checked: ask }}
-          accessibilityLabel={t('composer.ask.a11y')}
-          hitSlop={6}
-          className={cx(
-            'flex-row items-center gap-1.5 rounded-full border px-2.5 py-1',
-            ask ? 'border-accent' : 'border-line',
-          )}
-        >
-          <View
-            className={cx('h-1.5 w-1.5 rounded-full', ask ? 'bg-accent' : 'bg-faint')}
-          />
-          <Text className={cx('text-caption', ask ? 'text-accent' : 'text-muted')}>
-            {t('composer.ask.label')}
+      {/* 输入区与操作区之间一条发丝线：文字多了也不会跟模式、发送挤在一起。 */}
+      <View className="mt-1 border-t border-line px-3 pt-2 pb-2">
+        {hint ? (
+          <Text
+            // 必须显式给颜色：Text 不写颜色时是系统黑，深色模式下等于隐形。
+            className={cx('mb-2 text-caption', error ? 'text-danger' : 'text-muted')}
+            numberOfLines={1}
+          >
+            {hint}
           </Text>
-        </Pressable>
-        <Text
-          // 必须显式给颜色：Text 不写颜色时是系统黑，深色模式下等于隐形。
-          className={cx('flex-1 text-caption', error ? 'text-danger' : 'text-muted')}
-          numberOfLines={1}
-        >
-          {hint}
-        </Text>
+        ) : null}
+
+        <View className="flex-row items-center justify-between">
+          {/* 模式用两段文字，选中那段下面一条发丝线——和落地页的语言切换同一套。 */}
+          <View className="flex-row items-center gap-4">
+            {(['search', 'ai'] as const).map((mode) => {
+              const active = mode === 'ai' ? ask : !ask
+              return (
+                <Pressable
+                  key={mode}
+                  onPress={() => {
+                    if (mode === 'ai' && !askAvailable) {
+                      onAskNeedsSetup?.()
+                      return
+                    }
+                    onSelectMode?.(mode)
+                  }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={
+                    mode === 'ai' ? t('composer.mode.aiA11y') : t('composer.mode.searchA11y')
+                  }
+                  hitSlop={8}
+                  className="items-center"
+                >
+                  <Text
+                    className={cx(
+                      'text-caption tracking-[0.08em]',
+                      active ? 'text-ink' : 'text-faint',
+                    )}
+                  >
+                    {mode === 'ai' ? t('composer.mode.ai') : t('composer.mode.search')}
+                  </Text>
+                  <View
+                    className={cx('mt-1 h-[2px] w-full', active ? 'bg-accent' : 'bg-transparent')}
+                  />
+                </Pressable>
+              )
+            })}
+          </View>
+
         <Pressable
           onPress={() => void submit()}
           disabled={!ready}
@@ -179,6 +207,7 @@ export function Composer({
             </View>
           )}
         </Pressable>
+        </View>
       </View>
     </View>
   )

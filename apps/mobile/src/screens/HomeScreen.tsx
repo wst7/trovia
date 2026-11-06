@@ -192,15 +192,13 @@ export function HomeScreen() {
       onChangeText={setQuery}
       onSearch={() => void runSearch()}
       ask={askMode}
-      onToggleAsk={() => {
-        if (!llmReady) {
-          toast(t('ask.off'), {
-            action: { label: t('ask.openSettings'), onPress: () => router.push('/settings/llm') },
-          })
-          return
-        }
-        setAskMode((on) => !on)
-      }}
+      askAvailable={llmReady}
+      onSelectMode={(mode) => setAskMode(mode === 'ai')}
+      onAskNeedsSetup={() =>
+        toast(t('ask.off'), {
+          action: { label: t('ask.openSettings'), onPress: () => router.push('/settings/llm') },
+        })
+      }
       onSave={handleSave}
       searching={searching || writing}
     />

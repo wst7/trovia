@@ -68,6 +68,8 @@ export interface SyncReport {
   /** 两端都改过、因此额外保留的副本。 */
   conflicts: number
   conflictNames: string[]
+  /** 云端 docs/ 里到底有多少份文件：0 和「已是最新」不是一回事，界面要能说清。 */
+  remoteFiles: number
   syncedAt: string
 }
 
@@ -122,7 +124,8 @@ export async function syncOnce(options: SyncOptions): Promise<SyncReport> {
   const dirtyById = new Map(dirty.map((record) => [record.id, record]))
   const baseRevs = await store.baseRevs()
 
-  const entries = (await target.list(DOCS_PREFIX)).slice(0, limit)
+  const allEntries = await target.list(DOCS_PREFIX)
+  const entries = allEntries.slice(0, limit)
   const remoteById = new Map<string, SyncRecord>()
   for (const entry of entries) {
     const raw = await target.read(entry.path)
@@ -220,7 +223,7 @@ export async function syncOnce(options: SyncOptions): Promise<SyncReport> {
   // 即使这次什么都没推进也要标记一次：界面上的「上次同步」应该是「上次尝试」。
   await store.markSynced([...pushedRecords, ...applied], syncedAt)
 
-  return { pushed, pulled, deleted, conflicts, conflictNames, syncedAt }
+  return { pushed, pulled, deleted, conflicts, conflictNames, remoteFiles: allEntries.length, syncedAt }
 }
 
 /** 冲突副本：新 id、标题带「冲突副本」，两端内容都不会被悄悄丢掉。 */
