@@ -1,41 +1,42 @@
-# Trovia · 寻迹
+# Trovia
 
-**中文** · [English](README.en.md)
+**English** · [中文](README.zh-CN.md)
 
-**你不需要记住收藏了什么，只需要记住你想找什么。**
+**You don't need to remember what you saved — only what you were looking for.**
 
-把链接丢进来，它读完、整理好、存在你自己手机上；以后用一句模糊的描述就能翻回来。
+Hand it a link; it reads the page, keeps it on your own phone, and months later a vague description is enough to get it back.
 
-[下载 Android 版](https://github.com/wst7/trovia/releases/latest) · [看看它长什么样](https://wst7.github.io/trovia/)
+[Download for Android](https://github.com/wst7/trovia/releases/latest) · [See what it looks like](https://wst7.github.io/trovia/?lang=en)
 
-## 能做什么
+## What it does
 
-- **存**：粘贴链接、系统分享，或打开应用时剪贴板里的链接；也能把浏览器书签、CSV、链接清单一次性搬进来。
-- **整**：抓正文、存正文图片、读图上的文字、写摘要和关键词。
-- **找**：整句描述、关键词、时间都能搜——「找找昨天的」「2022年发表的」也算，结果会标出为什么命中。
-- **本机**：不登录、不上传，断网也能翻已经存下的内容——正文图片会一起存到手机上。
-- **带走**：任何时候都能完整导出（一份 JSON 给机器读，一份 Markdown 给人看），不锁定在你这里。
-- **同步**：填自己的 WebDAV（坚果云、群晖、Nextcloud），内容直接进出你的网盘；两台设备都改过同一条时留一份「冲突副本」，不悄悄覆盖。
+- **Save** — paste a link, share from another app, or let it pick up a link on the clipboard. Browser bookmarks, CSV files and plain lists of links can move in at once.
+- **Read** — fetches the article text, keeps its images, reads the words inside those images, writes a summary and keywords.
+- **Find** — search by a full sentence, a keyword or a time range: "what I saved yesterday", "published in 2022". Every result says why it matched.
+- **On device** — no account, nothing uploaded. Saved text and images stay readable offline.
+- **Take it with you** — export everything at any time as one `.zip`: a full backup that restores field for field, plus a Markdown copy for people. It is not locked in here.
+- **Stay current** — the app checks GitHub for a newer build and installs it in place. Text and logic fixes arrive as hot updates; only native changes need a new APK.
+- **Sync** — point it at your own WebDAV (Nutstore, Synology, Nextcloud) and content moves between your phone and your cloud. If two devices both edited an item, the other version is kept as a conflict copy rather than silently overwritten.
 
-## 大模型（可选）
+## Model support (optional)
 
-配一个 OpenAI 兼容服务（OpenAI、OpenRouter、硅基流动、Ollama、LM Studio…），摘要把内容交给它；配上后搜索时也把那一句查询发给它理解。不配就用离线抽取，功能不缺。Key 只进系统钥匙串。
+Connect any OpenAI-compatible service (OpenAI, OpenRouter, SiliconFlow, Ollama, LM Studio…) and summaries are written by it; with one connected, a search sentence is also sent to it to read your intent. Without one, summaries are extracted offline — nothing is missing. The key only goes into the system keychain.
 
-## 安装
+## Install
 
-**Android**：到 [Releases](https://github.com/wst7/trovia/releases/latest) 下载 `trovia-*-arm64.apk`。调试密钥签名，自己装没问题，上架不行。
+**Android** — download `trovia-*-arm64.apk` from [Releases](https://github.com/wst7/trovia/releases/latest). It is signed with a debug key: fine for installing yourself, not for publishing.
 
-**iPhone**：没有现成安装包，需要 Xcode 或 EAS 自建。
+**iPhone** — there is no build to download; it needs Xcode or EAS.
 
-## 它的边界
+## Where it stops
 
-微信公众号、掘金、少数派、CSDN 这类能读全文；知乎、Medium、豆瓣、36 氪有登录墙或人机验证，只存链接。视频只存标题和简介，不做字幕。
+WeChat articles, Juejin, SSPAI, CSDN and similar sites are read in full. Zhihu, Medium, Douban and 36Kr sit behind a sign-in or a bot check, so only the link and title are kept. For video, the title and description are saved; no subtitles.
 
-## 开发
+## Development
 
 ```bash
-npm install && npm run dev:mobile   # 手机 App（Expo）
-docker compose up --build       # 网页版 + API + Worker（自托管）
+npm install && npm run dev:mobile   # the phone app (Expo)
+docker compose up --build           # web + API + worker (self-hosted)
 ```
 
-产品边界见 [`docs/PRODUCT.md`](docs/PRODUCT.md)，接口与数据库约定见 [`docs/ENGINEERING.md`](docs/ENGINEERING.md)。
+Product scope: [`docs/PRODUCT.md`](docs/PRODUCT.md). API and database conventions: [`docs/ENGINEERING.md`](docs/ENGINEERING.md).
