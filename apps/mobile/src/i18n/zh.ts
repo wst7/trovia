@@ -46,8 +46,7 @@ export const zh: Dictionary = {
   // 输入框
   'composer.placeholder': '粘贴链接，或描述你记得的那句话',
   'composer.a11y': '描述你想找回的内容，或粘贴要保存的链接',
-  'composer.hint.save': '保存这个链接',
-  'composer.hint.search': '按这句描述找回',
+  'composer.hint.aiLink': '这是链接 · 存进收藏，不问 AI',
   'composer.action.save': '保存链接',
   'composer.action.search': '开始查找',
   'composer.invalidUrl': '这不是一个可以保存的链接。',
@@ -55,7 +54,6 @@ export const zh: Dictionary = {
 
   // 首页
   'home.title': '想找点什么？',
-  'home.subtitle': '描述你还记得的那句话，或者直接粘一个链接。',
   'home.searching': '正在找回…',
   'home.found': '找到 {count} 条',
   'home.foundUnderstood': '{interpretation} {count} 条',
@@ -73,7 +71,6 @@ export const zh: Dictionary = {
   'home.stats.processing': '· {count} 条整理中',
   'home.stats.failed': '· {count} 条没读完',
   'home.recent': '最近收藏',
-  'home.emptyLibrary': '还没有收藏。把链接粘到上面，Trovia 替你读完再存好。',
   'home.toast.completed': '已完成整理，可以通过描述内容搜索它。',
   'home.toast.duplicate': '这篇内容已经保存过了。',
   'home.toast.openExisting': '打开已有收藏',
@@ -92,7 +89,7 @@ export const zh: Dictionary = {
 
   // 我的
   'settings.title': '我的',
-  'settings.subtitle': '本机 · 没有账号，内容不上传',
+  'settings.subtitle': '本机 · 没有账号',
   'settings.section.sync': '同步',
   'settings.sync.title': 'WebDAV 同步',
   'settings.sync.subtitle': '写进你自己的网盘，不经过我们的服务器',
@@ -139,7 +136,6 @@ export const zh: Dictionary = {
   'settings.language.en': 'English',
   'settings.section.about': '关于',
   'settings.about.local': '只保存在这台手机上',
-  'settings.footer': '链接与图片由本机解析，图片文字用端侧 OCR 识别，不会上传。',
   'settings.stats.loading': '读取中…',
   'settings.stats.empty': '还没有收藏',
   'settings.stats.total': '{count} 条',
@@ -274,8 +270,7 @@ export const zh: Dictionary = {
   'import.readFailed': '读取文件失败。',
   'import.added': '已加入 {count} 条，正在后台整理。',
   'import.interrupted': '导入中断了，已经写入的条目保留着。',
-  'import.intro':
-    '支持浏览器导出的书签 HTML、Chrome / Edge 的书签 JSON、CSV 表格，以及一行一个链接的纯文本。导入只加入待整理队列，正文会在后台慢慢抓取。',
+  'import.intro': '书签 HTML、Chrome / Edge 书签 JSON、CSV，或一行一个链接的纯文本。',
   'import.result': '已导入 {count} 条',
   'import.resultDuplicate': '，跳过重复 {count} 条',
   'import.resultFailed': '，失败 {count} 条',
@@ -302,17 +297,13 @@ export const zh: Dictionary = {
   'import.format.urls': '链接列表',
   'import.format.unknown': '无法识别',
 
-  'sync.intro':
-    '内容写进你自己的网盘，我们不经过任何服务器。坚果云、群晖、Nextcloud 这类支持 WebDAV 的都可以。',
+  'sync.intro': '写进你自己的网盘（坚果云、群晖、Nextcloud），我们不中转。',
   'sync.effective': '实际会访问：{url}/docs/',
   'sync.duplicated': '地址里已经带了「{folder}」，目录又填了一次。地址一般填到 /dav 为止。',
   'sync.lastAt': '上次同步 {when}',
   'sync.never': '还没有同步过。',
   'sync.whatTitle': '同步什么',
-  'sync.whatBody':
-    '收藏的标题、正文、摘要、关键词与来源链接。图片保存在本机，不会上传；换设备后图片会在重新解析时补上。',
-  'sync.conflictTitle': '冲突怎么办',
-  'sync.conflictBody': '两台设备都改过同一条时，新的那份占主位，另一份留成「（冲突副本）」，不会悄悄丢掉。',
+  'sync.whatBody': '标题、正文与摘要。图片留在本机。',
   'sync.report.pushed': '上传 {count} 条',
   'sync.report.pulled': '取回 {count} 条',
   'sync.report.deleted': '删除 {count} 条',
@@ -322,8 +313,7 @@ export const zh: Dictionary = {
 
   // 大模型设置
   'llm.title': '大模型',
-  'llm.intro':
-    '可选。打开后新收藏会交给你自己的模型写摘要与关键词；关闭时从原文离线抽取，不上传任何内容。搜索时会把那句话发给模型理解意图；语义检索还要把正文片段发去算向量——这一项可以在下面单独关掉。请求都直接发往你填的地址，我们不中转，也没有存这样的服务器。',
+  'llm.intro': '可选。摘要与关键词由你填的模型来写，请求直发那个地址。',
   'llm.indexed': '已为 {count} 篇建立语义索引。',
   'llm.indexNothing': '没有需要补建的条目。',
   'llm.indexFailed': '建立索引失败，请检查模型是否支持 embeddings。',

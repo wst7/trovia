@@ -221,10 +221,6 @@ export function SyncScreen() {
             <Text className="mt-1 text-caption text-faint">{t('sync.whatBody')}</Text>
           </View>
 
-          <View className="mt-6">
-            <Text className="text-caption text-muted">{t('sync.conflictTitle')}</Text>
-            <Text className="mt-1 text-caption text-faint">{t('sync.conflictBody')}</Text>
-          </View>
 
           <View className="mt-8">
             <TextButton

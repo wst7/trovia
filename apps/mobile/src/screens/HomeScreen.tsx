@@ -332,14 +332,11 @@ export function HomeScreen() {
                 <Text className="text-[30px] font-semibold leading-[38px] tracking-[-0.4px] text-ink">
                   {t('home.title')}
                 </Text>
-                <Text className="mt-3 text-body-sm text-muted">
-                  {t('home.subtitle')}
-                </Text>
               </View>
 
               <View className="mt-7">{composer}</View>
 
-              {stats ? (
+              {stats && stats.total > 0 ? (
                 <View className="mt-8 flex-row items-baseline gap-2">
                   <Text className="text-body-sm text-muted">
                     {t('home.stats.saved', { count: stats.total })}
@@ -375,13 +372,7 @@ export function HomeScreen() {
                     ))}
                   </View>
                 </View>
-              ) : (
-                <View className="mt-10">
-                  <Text className="text-body-sm text-muted">
-                    {t('home.emptyLibrary')}
-                  </Text>
-                </View>
-              )}
+              ) : null}
             </>
           )}
         </ScrollView>

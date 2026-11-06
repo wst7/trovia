@@ -47,15 +47,13 @@ export const en: Dictionary = {
 
   'composer.placeholder': 'Paste a link, or describe what you remember',
   'composer.a11y': 'Describe what you want to find again, or paste a link to save',
-  'composer.hint.save': 'Save this link',
-  'composer.hint.search': 'Find it by this description',
+  'composer.hint.aiLink': 'A link — saved, not asked of AI',
   'composer.action.save': 'Save link',
   'composer.action.search': 'Search',
   'composer.invalidUrl': 'That link cannot be saved.',
   'composer.saveFailed': 'Could not save. Try again in a moment.',
 
   'home.title': 'What are you looking for?',
-  'home.subtitle': 'Describe the sentence you remember, or paste a link.',
   'home.searching': 'Looking…',
   'home.found': '{count} found',
   'home.foundUnderstood': '{interpretation} · {count}',
@@ -74,7 +72,6 @@ export const en: Dictionary = {
   'home.stats.processing': '· {count} being read',
   'home.stats.failed': '· {count} unreadable',
   'home.recent': 'Recent',
-  'home.emptyLibrary': 'Nothing saved yet. Paste a link above and Trovia will read it before keeping it.',
   'home.toast.completed': 'Ready. You can find it by describing what it said.',
   'home.toast.duplicate': 'You already saved this one.',
   'home.toast.openExisting': 'Open it',
@@ -91,7 +88,7 @@ export const en: Dictionary = {
   'date.hoursAgo': '{count} h ago',
 
   'settings.title': 'You',
-  'settings.subtitle': 'On this device · no account, nothing uploaded',
+  'settings.subtitle': 'On this phone · no account',
   'settings.section.sync': 'SYNC',
   'settings.sync.title': 'WebDAV sync',
   'settings.sync.subtitle': 'Writes into your own cloud, never through ours',
@@ -137,8 +134,6 @@ export const en: Dictionary = {
   'settings.language.system': 'Follow system',
   'settings.section.about': 'ABOUT',
   'settings.about.local': 'Kept on this phone only',
-  'settings.footer':
-    'Links and images are read on this device, and text inside images is recognised on-device. Nothing is uploaded.',
   'settings.stats.loading': 'Reading…',
   'settings.stats.empty': 'Nothing saved yet',
   'settings.stats.total': '{count} items',
@@ -274,8 +269,7 @@ export const en: Dictionary = {
   'import.readFailed': 'Could not read the file.',
   'import.added': 'Added {count}; they are being read in the background.',
   'import.interrupted': 'The import stopped; what was already written is kept.',
-  'import.intro':
-    'Takes bookmarks HTML exported from a browser, Chrome / Edge bookmarks JSON, a CSV table, or plain text with one link per line. Import only queues them; the text is fetched in the background.',
+  'import.intro': 'Bookmark HTML, Chrome / Edge JSON, CSV, or one URL per line.',
   'import.result': 'Imported {count}',
   'import.resultDuplicate': ', skipped {count} duplicates',
   'import.resultFailed': ', {count} failed',
@@ -302,18 +296,13 @@ export const en: Dictionary = {
   'import.format.urls': 'List of links',
   'import.format.unknown': 'Not recognised',
 
-  'sync.intro':
-    'Content goes into your own cloud; nothing passes through a server of ours. Anything that speaks WebDAV works: Nutstore, Synology, Nextcloud.',
+  'sync.intro': 'Saved to your own drive (Nutstore, Synology, Nextcloud). Nothing goes through us.',
   'sync.effective': 'Will actually open: {url}/docs/',
   'sync.duplicated': 'The address already contains "{folder}" and the folder repeats it. The address usually stops at /dav.',
   'sync.lastAt': 'Last synced {when}',
   'sync.never': 'Not synced yet.',
   'sync.whatTitle': 'What is synced',
-  'sync.whatBody':
-    'Titles, text, summaries, keywords and source links. Images stay on this phone and are not uploaded; on a new device they are fetched again when an item is re-read.',
-  'sync.conflictTitle': 'When both sides changed',
-  'sync.conflictBody':
-    'If two devices both edited an item, the newer one takes the main slot and the other is kept as a "(conflict copy)" — nothing is dropped silently.',
+  'sync.whatBody': 'Titles, text and summaries. Images stay on this phone.',
   'sync.report.pushed': '{count} uploaded',
   'sync.report.pulled': '{count} received',
   'sync.report.deleted': '{count} deleted',
@@ -322,8 +311,7 @@ export const en: Dictionary = {
   'sync.report.join': ', ',
 
   'llm.title': 'Model',
-  'llm.intro':
-    'Optional. When on, new items are summarised by your own model; when off, summaries are extracted offline from the text and nothing leaves the phone. Searches send that sentence to the model so it can read your intent, and semantic search also sends passage snippets to compute vectors — that part can be switched off below. Every request goes straight to the address you entered; we do not relay it and have no server that stores it.',
+  'llm.intro': 'Optional. Summaries and keywords come from the model you point at.',
   'llm.indexed': 'Indexed {count} articles.',
   'llm.indexNothing': 'Nothing needed indexing.',
   'llm.indexFailed': 'Indexing failed. Check whether the model supports embeddings.',

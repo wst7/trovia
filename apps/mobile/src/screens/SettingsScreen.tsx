@@ -400,10 +400,6 @@ export function SettingsScreen() {
             />
           </Group>
         </View>
-
-        <Text className="mt-2 text-center text-caption text-faint">
-          {t('settings.footer')}
-        </Text>
       </ScrollView>
       <ConfirmDialog
         visible={confirmingClear}

@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Ionicons } from '@expo/vector-icons'
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native'
+import { ActivityIndicator, Animated, Pressable, Text, TextInput, View } from 'react-native'
 import { extractHttpUrl, isValidHttpUrl } from '@trovia/shared'
 
 import { useT } from '../i18n'
 import { titleHintFrom } from '../local/util'
+import { composerHint } from '../local/composer-hint'
 import { cx } from '../ui/cx'
 import { usePalette } from '../ui/palette'
 
@@ -68,13 +69,13 @@ export function Composer({
   const busy = searching || saving
   const ready = trimmed.length > 0 && !busy
 
-  const hint = error
-    ? error
-    : saveMode
-      ? t('composer.hint.save')
-      : trimmed.length > 0
-        ? t('composer.hint.search')
-        : ''
+  const hint = composerHint({ ask, saveMode, error }, { aiLink: t('composer.hint.aiLink') })
+
+  // 开关的小方块：关在左，开在右，位移 16。
+  const knob = useRef(new Animated.Value(ask ? 1 : 0)).current
+  useEffect(() => {
+    Animated.timing(knob, { toValue: ask ? 1 : 0, duration: 140, useNativeDriver: true }).start()
+  }, [ask, knob])
 
   async function submit() {
     if (!ready) return
@@ -127,86 +128,100 @@ export function Composer({
         className="min-h-[52px] max-h-[132px] px-4 pt-4 text-body text-ink"
       />
 
-      {/* 输入区与操作区之间一条发丝线：文字多了也不会跟模式、发送挤在一起。 */}
+      {/* 输入区与操作区之间一条发丝线：文字多了也不会跟开关、发送挤在一起。 */}
       <View className="mt-1 border-t border-line px-3 pt-2.5 pb-4">
-        {hint ? (
-          <Text
-            // 必须显式给颜色：Text 不写颜色时是系统黑，深色模式下等于隐形。
-            className={cx('mb-2 text-caption', error ? 'text-danger' : 'text-muted')}
-            numberOfLines={1}
+        <View className="flex-row items-center">
+          {/*
+            左置开关：轨道 36×20，方块 12，位移 16。
+            开关本身说明「有没有开」，紧挨着的词说明「开的是什么」——
+            比并排两个词省一半宽度，也不会让人以为有两个地方能点。
+          */}
+          <Pressable
+            onPress={() => {
+              if (!ask && !askAvailable) {
+                onAskNeedsSetup?.()
+                return
+              }
+              onSelectMode?.(ask ? 'search' : 'ai')
+            }}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: ask, disabled: false }}
+            accessibilityLabel={ask ? t('composer.mode.aiA11y') : t('composer.mode.searchA11y')}
+            hitSlop={10}
+            className="flex-row items-center gap-2 py-1"
           >
-            {hint}
-          </Text>
-        ) : null}
-
-        <View className="flex-row items-center justify-between">
-          {/* 模式用两段文字，选中那段下面一条发丝线——和落地页的语言切换同一套。 */}
-          <View className="flex-row items-center gap-5">
-            {(['search', 'ai'] as const).map((mode) => {
-              const active = mode === 'ai' ? ask : !ask
-              return (
-                <Pressable
-                  key={mode}
-                  onPress={() => {
-                    if (mode === 'ai' && !askAvailable) {
-                      onAskNeedsSetup?.()
-                      return
-                    }
-                    onSelectMode?.(mode)
-                  }}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={
-                    mode === 'ai' ? t('composer.mode.aiA11y') : t('composer.mode.searchA11y')
-                  }
-                  hitSlop={8}
-                  className="items-center py-1"
-                >
-                  <Text
-                    className={cx(
-                      'text-caption tracking-[0.08em]',
-                      active ? 'text-ink' : 'text-faint',
-                    )}
-                  >
-                    {mode === 'ai' ? t('composer.mode.ai') : t('composer.mode.search')}
-                  </Text>
-                  <View
-                    className={cx('mt-1.5 h-[2px] w-full', active ? 'bg-accent' : 'bg-transparent')}
-                  />
-                </Pressable>
-              )
-            })}
-          </View>
-
-        <Pressable
-          onPress={() => void submit()}
-          disabled={!ready}
-          accessibilityRole="button"
-          accessibilityLabel={saveMode ? t('composer.action.save') : t('composer.action.search')}
-          accessibilityState={{ disabled: !ready, busy }}
-          hitSlop={8}
-          className="h-9 w-9 items-center justify-center rounded-sm"
-        >
-          {({ pressed }) => (
             <View
               className={cx(
-                'h-9 w-9 items-center justify-center rounded-sm',
-                ready ? 'bg-accent' : 'bg-sunken',
+                'h-[20px] w-[36px] justify-center rounded-full border px-[3px]',
+                ask ? 'border-ink bg-ink' : 'border-line bg-transparent',
               )}
-              style={{ opacity: pressed ? 0.7 : 1 }}
             >
-              {busy ? (
-                <ActivityIndicator size="small" color={ready ? p.onAccent : p.faint} />
-              ) : (
-                <Ionicons
-                  name={saveMode ? 'bookmark-outline' : 'arrow-up'}
-                  size={17}
-                  color={ready ? p.onAccent : p.faint}
-                />
-              )}
+              <Animated.View
+                className="h-3 w-3 rounded-full"
+                style={{
+                  backgroundColor: ask ? p.surface : p.muted,
+                  transform: [
+                    {
+                      translateX: knob.interpolate({ inputRange: [0, 1], outputRange: [0, 16] }),
+                    },
+                  ],
+                }}
+              />
             </View>
+            <Text
+              className={cx(
+                'text-caption tracking-[0.02em]',
+                ask ? 'font-semibold text-ink' : 'text-faint',
+              )}
+            >
+              {ask ? t('composer.mode.ai') : t('composer.mode.search')}
+            </Text>
+          </Pressable>
+
+          {hint ? (
+            <Text
+              // 必须显式给颜色：Text 不写颜色时是系统黑，深色模式下等于隐形。
+              className={cx(
+                'ml-3 flex-1 text-caption',
+                error ? 'text-danger' : 'text-muted',
+              )}
+              numberOfLines={1}
+            >
+              {hint}
+            </Text>
+          ) : (
+            <View className="flex-1" />
           )}
-        </Pressable>
+
+          <Pressable
+            onPress={() => void submit()}
+            disabled={!ready}
+            accessibilityRole="button"
+            accessibilityLabel={saveMode ? t('composer.action.save') : t('composer.action.search')}
+            accessibilityState={{ disabled: !ready, busy }}
+            hitSlop={8}
+            className="h-9 w-9 items-center justify-center rounded-sm"
+          >
+            {({ pressed }) => (
+              <View
+                className={cx(
+                  'h-9 w-9 items-center justify-center rounded-sm',
+                  ready ? 'bg-accent' : 'bg-sunken',
+                )}
+                style={{ opacity: pressed ? 0.7 : 1 }}
+              >
+                {busy ? (
+                  <ActivityIndicator size="small" color={ready ? p.onAccent : p.faint} />
+                ) : (
+                  <Ionicons
+                    name={saveMode ? 'bookmark-outline' : 'arrow-up'}
+                    size={17}
+                    color={ready ? p.onAccent : p.faint}
+                  />
+                )}
+              </View>
+            )}
+          </Pressable>
         </View>
       </View>
     </View>
