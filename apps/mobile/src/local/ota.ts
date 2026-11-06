@@ -41,6 +41,15 @@ export async function readOtaState(): Promise<OtaState> {
   }
 }
 
+/** 把 expo-updates 的原始报错换成一句人话：只有「还没发过」需要解释，其余都是重试。 */
+export function describeOtaError(error: unknown): 'noChannel' | 'misconfigured' | 'network' | 'other' {
+  const text = error instanceof Error ? error.message : String(error)
+  if (/no channel named|channel.*not found/i.test(text)) return 'noChannel'
+  if (/HTTP 400|expo-channel-name|expo-runtime-version/i.test(text)) return 'misconfigured'
+  if (/network|timeout|Unable to resolve host|Failed to fetch/i.test(text)) return 'network'
+  return 'other'
+}
+
 export type OtaOutcome =
   | { kind: 'unavailable' }
   | { kind: 'latest' }

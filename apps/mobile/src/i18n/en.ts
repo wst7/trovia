@@ -437,5 +437,7 @@ export const en: Dictionary = {
   'update.ota.latest': 'Already up to date.',
   'update.ota.ready': 'Downloaded {id}. Tap to restart',
   'update.ota.restart': 'Restart to apply',
-  'update.ota.failed': 'Hot update failed',
+  'update.ota.failed': 'Check failed. Try again later.',
+  'update.ota.noChannel': 'No hot update has been published yet.',
+  'update.ota.misconfigured': 'This build is missing its update channel.',
 }

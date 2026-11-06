@@ -13,7 +13,7 @@ import { useT } from '../i18n'
 import { checkForUpdate } from '../local/update'
 import type { CheckResult } from '../local/update'
 import { downloadApk, formatMb, installApk } from '../local/update-install'
-import { applyOta, checkOta, readOtaState } from '../local/ota'
+import { applyOta, checkOta, describeOtaError, readOtaState } from '../local/ota'
 import type { OtaState } from '../local/ota'
 import type { DownloadProgress } from '../local/update-install'
 import { useToast } from '../providers/ToastProvider'
@@ -72,7 +72,14 @@ export function UpdateScreen() {
         setOtaNote(t('update.ota.ready', { id: outcome.id ?? '—' }))
       }
     } catch (error) {
-      setOtaNote(error instanceof Error ? error.message : t('update.ota.failed'))
+      const kind = describeOtaError(error)
+      setOtaNote(
+        kind === 'noChannel'
+          ? t('update.ota.noChannel')
+          : kind === 'misconfigured'
+            ? t('update.ota.misconfigured')
+            : t('update.ota.failed'),
+      )
     } finally {
       setOtaBusy(false)
     }

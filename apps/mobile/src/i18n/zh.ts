@@ -439,5 +439,7 @@ export const zh: Dictionary = {
   'update.ota.latest': '已是最新。',
   'update.ota.ready': '已下载 {id}，点这里重启生效',
   'update.ota.restart': '重启生效',
-  'update.ota.failed': '热更新失败',
+  'update.ota.failed': '检查失败，稍后再试。',
+  'update.ota.noChannel': '云端还没有发布过热更新。',
+  'update.ota.misconfigured': '这个包没配好热更新通道。',
 }
