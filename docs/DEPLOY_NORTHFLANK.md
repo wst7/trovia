@@ -11,7 +11,7 @@
 
 | ref | 资源 | 规格 | 说明 |
 |---|---|---|---|
-| `project` | 项目 `Xunji` | 区域 `asia-east`（香港） | 入口流量仅限本项目 |
+| `project` | 项目 `Trovia` | 区域 `asia-east`（香港） | 入口流量仅限本项目 |
 | `db` | PostgreSQL **16** addon `trovia-db` | `nf-compute-50` + 6 GB 卷 | 只开内部访问，不开公网 |
 | `backend` | BuildService `trovia-backend` | 构建计划 `nf-compute-400-16` | 构建上下文 `/backend`，Dockerfile `/backend/Dockerfile` |
 | `env` | SecretGroup `trovia-env` | — | `APP_SECRET`、离线 AI 默认值；`DATABASE_URL` = addon 的 `POSTGRES_URI` 别名 |

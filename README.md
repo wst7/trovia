@@ -45,7 +45,7 @@ cd apps/mobile && npx expo prebuild --platform android --no-install
 cd android && ./gradlew assembleRelease -x lint -x test
 ```
 
-`npm test -w @trovia/mobile` and `npm test -w @trovia/sync` cover query parsing, migrations, the sync engine and the WebDAV adapter. Before a tag, `npm run smoke` runs the site list above through the same parser the app uses.
+`npm test -w @trovia/mobile` and `npm test -w @trovia/sync` cover query parsing, migrations, the sync engine and the WebDAV adapter. Before a tag, `npm run smoke -w @trovia/mobile` runs the site list above through the same parser the app uses.
 
 Product scope: [`docs/PRODUCT.md`](docs/PRODUCT.md). Conventions: [`docs/ENGINEERING.md`](docs/ENGINEERING.md). Changes: [`docs/CHANGELOG.md`](docs/CHANGELOG.md).
 

@@ -100,7 +100,7 @@ export default function Documents() {
 
       {!loading && !error && items.length === 0 && (
         <div className="empty-state">
-          {keyword ? '没有匹配的收藏。' : '还没有收藏。回到首页粘贴第一个链接或分享文字，寻迹会自动整理。'}
+          {keyword ? '没有匹配的收藏。' : '还没有收藏。回到首页粘贴第一个链接或分享文字，Trovia 会自动整理。'}
         </div>
       )}
 

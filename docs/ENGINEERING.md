@@ -1,6 +1,6 @@
-# 寻迹工程契约（ENGINEERING）
+# Trovia 工程契约（ENGINEERING）
 
-本文是寻迹的工程实现契约。所有实现必须遵守这里的文件路径、函数签名、数据结构和 API 契约。
+本文是 Trovia 的工程实现契约。所有实现必须遵守这里的文件路径、函数签名、数据结构和 API 契约。
 产品定位与边界见 `docs/PRODUCT.md`；涉及实现细节时以本文为准。
 
 ---
@@ -527,7 +527,7 @@ def search(session, user_id: str, query: str, limit: int = 10, settings=None) ->
 
 - 独立 iOS + Android App，不是 PWA，**不调用 `/api/v1`**，不需要后端、账号或网络配置。
   收藏、正文、摘要与索引全部保存在本机；服务端仅保留给自托管与未来的多端同步。
-- 本地库：`expo-sqlite` 打开 `xunji.db`（WAL）。`documents` 表字段与后端 DDL 对齐
+- 本地库：`expo-sqlite` 打开 `trovia.db`（WAL；首次启动时把旧的 `xunji.db` 连同 -wal/-shm 一起搬过来）。`documents` 表字段与后端 DDL 对齐
   （`url`、`canonical_url`、`title`、`site_name`、`source_type`、`summary_*`、`keywords`、
   `content_markdown`、`plain_text`、`search_text`、`parse_status`、`parse_stage`、
   `parse_error_code`、`saved_at`、`last_parsed_at`、`updated_at`、`deleted_at`、`metadata`）。
@@ -548,10 +548,11 @@ def search(session, user_id: str, query: str, limit: int = 10, settings=None) ->
   `{"summary","keywords"}`（容忍代码块包裹）；服务地址与模型名存 AsyncStorage
   （`trovia.llm.v1`），API Key 只存 `expo-secure-store`（`trovia.llm.key.v1`），
   不写日志、不上传。未启用或调用失败时退回抽取式摘要，流水线不中断。
-- 路由：`/`（首页）、`/documents`、`/documents/[id]`、`/settings`、`/share`。
+- 路由：`/`（首页）、`/documents`、`/documents/[id]`、`/settings`、`/share`，另有
+  `/ask`（连续追问）、`/diagnostics`（排障记录）与设置子页 `/settings/llm`、`/settings/sync`、`/settings/import`。
   首页 / 收藏 / 我的三栏底部导航（`components/AppTabBar.tsx`，`router.replace` 切换，不保留历史）；
-  详情与分享为无 Tab 的推入页。
-- 首页：搜索 + 保存 + 最近 6 条；保存重复链接返回已有条目；保存后立即 `pending` 并触发流水线。
+  其余页面均为无 Tab 的推入页。
+- 首页：搜索 + 保存 + 最近 4 条；保存重复链接返回已有条目；保存后立即 `pending` 并触发流水线。
 - `/documents`：关键词 300ms 防抖、20 条/页、触底加载。`/documents/[id]`：详情、Markdown、
   相关收藏、重新解析、删除确认、打开原文；非终态每 1.2s 读本地库状态（App 后台时暂停），
   终态停止并重载详情。

@@ -9,8 +9,8 @@
           "kind": "Project",
           "ref": "project",
           "spec": {
-            "name": "Xunji",
-            "description": "Xunji - save any link, find it again by memory.",
+            "name": "Trovia",
+            "description": "Trovia - save any link, find it again by memory.",
             "color": "#A0432E",
             "region": "asia-east",
             "networking": {

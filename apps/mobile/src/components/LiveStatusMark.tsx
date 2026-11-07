@@ -15,7 +15,7 @@ interface LiveStatusMarkProps {
 }
 
 /**
- * 非终态每 1.5s 查询一次状态，到达终态后停止并回调。
+ * 非终态每 1.2s 查询一次状态（见 useLiveStatus），到达终态后停止并回调。
  */
 export function LiveStatusMark({
   docId,

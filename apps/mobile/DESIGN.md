@@ -1,5 +1,5 @@
 ---
-name: 寻迹 Mobile
+name: Trovia Mobile
 description: 克制的找回工具 —— 两档中性色、一个输入框、一个强调色
 colors:
   canvas: "#f6f5f1"
@@ -67,7 +67,7 @@ components:
     inactive: "{colors.faint}"
 ---
 
-# Design System: 寻迹 Mobile
+# Design System: Trovia Mobile
 
 ## Overview
 
@@ -82,7 +82,7 @@ components:
 3. **一个输入框。** 首页不再并排「提问」和「收藏」两张卡。一个框，看得出是链接就存，看不出就当一句话去搜；框下方那行小字随输入变化，告诉用户这次会做什么。
 4. **状态用形状，不用颜色也读得懂。** 实心小圆＝已完成、空心＝整理中、实心带色＝部分/失败。已完成的条目不带任何状态文字——默认状态不占用眼力。
 
-技术实现是 **NativeWind（Tailwind 4 / react-native-css-interop）**：色彩走 CSS 变量（`global.css` 的 `:root` 与 `@media (prefers-color-scheme: dark)`），明暗随系统切换；命令式取色（图标色、placeholder、RefreshControl）走 `src/ui/palette.ts`，两份值必须同步改。
+技术实现是 **NativeWind 4（Tailwind 3.4 / react-native-css-interop）**：色彩走 CSS 变量（`global.css` 的 `:root` 与 `@media (prefers-color-scheme: dark)`），明暗随系统切换；命令式取色（图标色、placeholder、RefreshControl）走 `src/ui/palette.ts`，两份值必须同步改。
 
 ## Colors
 
@@ -116,7 +116,7 @@ components:
 
 **字体：系统字族。** iOS SF Pro / Android Roboto，无字体包——中文字体包动辄几 MB，换来的收益不如把字距和字重调对。
 
-**Character:** 小步长、低对比。全站只有五档字阶：display 只出现在首页那一句问句和收藏页的数字上；title 给页面标题与详情标题；heading 给品牌名与小节标题；body 是正文；caption 承载元信息。中文大字号一律负字距（-0.2 ~ -0.5px）才紧实，正文 0，label 是唯一带正字距的字（+0.3px，栏目名与按钮），因为它要和正文拉开呼吸。
+**Character:** 小步长、低对比。全站只有这几个命名档位：display 只出现在首页那一句问句和收藏页的数字上；title 给页面标题与详情标题；heading 给品牌名与小节标题；body 是正文；caption 承载元信息。中文大字号一律负字距（-0.2 ~ -0.5px）才紧实，正文 0，label 是唯一带正字距的字（+0.3px，栏目名与按钮），因为它要和正文拉开呼吸。
 
 ### Hierarchy
 
@@ -155,7 +155,7 @@ components:
 首页唯一的输入面。`surface` 底 + 1px 描边（聚焦变 `line-strong`），14dp 圆角，最小 52dp、最高 132dp（约五行）。右下角一个 36dp 方块提交键：未就绪时 `sunken` 底 + 极淡图标，就绪时朱红底 + 白图标；识别到链接时图标是书签，否则是向上箭头。框下一行 caption 随状态变化：空 → 提示语；有字 → 「按这句描述找回」；识别到链接 → 「保存这个链接」；出错 → 朱红错误句。
 
 ### List rows
-- **RecentRow**：标题 1 行（body/500）+ 元信息 1 行（caption）+ 右侧状态标记；最小 60dp，行间 1px 发丝线。
+- **RecentRow**：左侧 34dp 缩略图（文章首图铺满；没图时退回首字母，套一条 1px `line` 描边）+ 标题 1 行（body/500）+ 元信息 1 行（caption）+ 右侧状态标记；最小 60dp，行间 1px 发丝线。多选时勾选圈原地替换缩略图，左列不位移。
 - **ResultRow**：标题 2 行（heading/600）+ 元信息 + 摘要 2 行 + 「为什么找到它」1–2 行 + 斜体摘录 2 行。没有卡片底色、没有缩略图、没有箭头。
 
 ### Fields
@@ -187,5 +187,5 @@ components:
 - **Don't** 加阴影、渐变、齿孔、印章、贴纸、倾斜文字——上一版的集邮世界已经收起来了。
 - **Don't** 在首页重新放两个输入框，也不要给保存单独开一张卡。
 - **Don't** 用颜色单独表达状态；没有形状差异就不算状态。
-- **Don't** 给列表加卡片底、缩略图、箭头——一行就是一条内容。
+- **Don't** 给列表加卡片底或箭头——一行就是一条内容；缩略图只作为左侧 34dp 的固定瓦片，不做大图。
 - **Don't** 手写 `StyleSheet` 或 `makeStyles`：样式一律走 `className`，只有原生 prop 需要的字符串才用 `usePalette()`。

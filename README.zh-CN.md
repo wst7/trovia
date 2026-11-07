@@ -1,4 +1,4 @@
-# Trovia · 寻迹
+# Trovia
 
 [![最新版本](https://img.shields.io/github/v/release/wst7/trovia?sort=semver)](https://github.com/wst7/trovia/releases/latest)
 [![Android 构建](https://github.com/wst7/trovia/actions/workflows/android.yml/badge.svg)](https://github.com/wst7/trovia/actions/workflows/android.yml)
@@ -45,7 +45,7 @@ cd apps/mobile && npx expo prebuild --platform android --no-install
 cd android && ./gradlew assembleRelease -x lint -x test
 ```
 
-`npm test -w @trovia/mobile` 和 `npm test -w @trovia/sync` 覆盖查询解析、库迁移、同步引擎与 WebDAV 适配。打 tag 前跑 `npm run smoke`，用同一份抓取代码过一遍上面的站点。
+`npm test -w @trovia/mobile` 和 `npm test -w @trovia/sync` 覆盖查询解析、库迁移、同步引擎与 WebDAV 适配。打 tag 前跑 `npm run smoke -w @trovia/mobile`，用同一份抓取代码过一遍上面的站点。
 
 产品边界见 [`docs/PRODUCT.md`](docs/PRODUCT.md)，接口约定见 [`docs/ENGINEERING.md`](docs/ENGINEERING.md)，每个版本改了什么见 [`docs/CHANGELOG.md`](docs/CHANGELOG.md)。
 

@@ -62,7 +62,7 @@ export default function Settings() {
         </dl>
       )}
 
-      <p className="account-note">你的收藏只属于你。寻迹只在你自己的收藏中检索，不做公开索引。</p>
+      <p className="account-note">你的收藏只属于你。Trovia 只在你自己的收藏中检索，不做公开索引。</p>
 
       <button type="button" className="btn btn-quiet" onClick={handleLogout} disabled={loggingOut}>
         {loggingOut ? '退出中…' : '退出登录'}

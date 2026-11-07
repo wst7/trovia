@@ -17,8 +17,8 @@ function AppLayout({ children }: { children: ReactElement }) {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <Link to="/" className="brand" aria-label="寻迹首页">
-          寻迹
+        <Link to="/" className="brand" aria-label="Trovia 首页">
+          Trovia
         </Link>
         <nav className="topnav" aria-label="主导航">
           <NavLink to="/settings" className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}>

@@ -137,7 +137,7 @@ export default function Home() {
           </div>
           {recentError && <div className="notice notice--error">{recentError}</div>}
           {recent.length === 0 && !recentError ? (
-            <div className="empty-state">还没有收藏。粘贴第一个链接或一段分享文字，寻迹会自动整理。</div>
+            <div className="empty-state">还没有收藏。粘贴第一个链接或一段分享文字，Trovia 会自动整理。</div>
           ) : (
             <div className="list">
               {recent.map((doc) => (
