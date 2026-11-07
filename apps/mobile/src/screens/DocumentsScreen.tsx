@@ -411,7 +411,8 @@ export function DocumentsScreen() {
               }}
               onLongPress={() => (selecting ? toggleSelected(item.id) : enterSelection(item.id))}
               onTerminal={handleTerminal}
-              showDate={false}
+              // 按天分组时日期在组标题上；按站点分组时行内必须补回日期。
+              showDate={groupBy === 'site'}
               selecting={selecting}
               selected={selected.has(item.id)}
               onRetry={

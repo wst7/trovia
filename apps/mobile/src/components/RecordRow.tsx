@@ -99,27 +99,42 @@ export function RecentRow({
       accessibilityRole="button"
       accessibilityState={selecting ? { selected: Boolean(selected) } : undefined}
       accessibilityLabel={
-        selected
-          ? t('row.selected', { title: item.title || item.url })
-          : item.title || item.url
+        selected ? t('row.selected', { title: item.title || item.url }) : item.title || item.url
       }
-      className="py-3"
+      className="min-h-[60px] justify-center"
     >
       {({ pressed }) => (
-        // 勾选圈用「有没有」表达，不换父节点：切换多选时保持树的形状不变。
-        <View style={{ opacity: pressed ? 0.55 : 1 }} className="flex-row items-center gap-3">
+        // 按压反馈用底色，不用整体降透明度：整行变淡时字先糊掉，而这一页是拿来扫读的。
+        // 底色正好铺满这一行，不加水平内边距，避免行内内容和分组标题错位。
+        <View
+          className={
+            pressed
+              ? 'flex-row items-center gap-3 rounded-sm bg-sunken py-3'
+              : 'flex-row items-center gap-3 py-3'
+          }
+        >
           {/* 真图标和字母占位共用同一个 34×34 容器：favicon 有方有横，
-              不套容器时左列看着「直」但重量不齐，扫视时会跳。 */}
+              不套容器时左列看着「直」但重量不齐，扫视时会跳。
+              多选时这个容器原地换成勾选圈，左列宽度不变，整列文字不会横跳。 */}
           <View
-            className="items-center justify-center overflow-hidden rounded-sm border border-line bg-sunken"
+            className={
+              selecting
+                ? 'items-center justify-center'
+                : 'items-center justify-center overflow-hidden rounded-sm bg-sunken'
+            }
             style={{ width: 34, height: 34 }}
           >
-            {thumbnail && !imageBroken ? (
-              // 图标内缩到 24：favicon 自带品牌底色，铺满 34 会比字母占位重得多，
-              // 一列里两种重量交替出现，扫视时会跳。
+            {selecting ? (
+              <Ionicons
+                name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+                size={22}
+                color={selected ? p.accent : p.faint}
+              />
+            ) : thumbnail && !imageBroken ? (
+              // 铺满瓦片：这是文章首图，不是站点图标；缩成小块再留白反而像缺了图。
               <Image
                 source={{ uri: thumbnail }}
-                style={{ width: 24, height: 24 }}
+                style={{ width: 34, height: 34 }}
                 resizeMode="cover"
                 onError={() => setImageBroken(true)}
               />
@@ -127,15 +142,8 @@ export function RecentRow({
               <Text className="text-caption font-medium text-faint">{initialOf(item)}</Text>
             )}
           </View>
-          {selecting ? (
-            <Ionicons
-              name={selected ? 'checkmark-circle' : 'ellipse-outline'}
-              size={22}
-              color={selected ? p.accent : p.faint}
-            />
-          ) : null}
           <View className="flex-1">
-            <Text className="text-[15px] font-medium leading-[21px] text-ink" numberOfLines={2}>
+            <Text className="text-body font-medium text-ink" numberOfLines={1}>
               {titleOf(item)}
             </Text>
             <View className="mt-1 flex-row items-center justify-between gap-2">
@@ -150,9 +158,14 @@ export function RecentRow({
                   onTerminal={onTerminal}
                 />
                 {onRetry ? (
-                  <Pressable onPress={onRetry} hitSlop={10} accessibilityRole="button" accessibilityLabel="{t('row.retryOne')}">
+                  <Pressable
+                    onPress={onRetry}
+                    hitSlop={10}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('row.retryOne')}
+                  >
                     {/* 行内重试不用强调色：一屏七个红字，强调色就失效了。 */}
-                    <Text className="text-caption text-ink">重试</Text>
+                    <Text className="text-caption text-ink">{t('common.retry')}</Text>
                   </Pressable>
                 ) : null}
               </View>
