@@ -17,6 +17,14 @@ import { useSyncExternalStore } from 'react'
  */
 export const SERIF_FAMILY = 'NotoSerifSC-Regular'
 
+/**
+ * 一键切换正文/标题字体，方便对比：
+ *   true  = 宋体（思源宋体子集）
+ *   false = 系统黑体
+ * 定下来之后把这个开关删掉，只留选中的那一套。
+ */
+export const SERIF_ENABLED = false
+
 // 原生已注册，随时可用；保留这套订阅是为了以后换成可变字体再加载。
 let ready = true
 const listeners = new Set<() => void>()
@@ -32,5 +40,6 @@ function subscribe(listener: () => void): () => void {
 
 /** 字体是否已经可用；加载完成会触发一次重渲染。 */
 export function useSerifReady(): boolean {
-  return useSyncExternalStore(subscribe, isSerifReady, isSerifReady)
+  const loaded = useSyncExternalStore(subscribe, isSerifReady, isSerifReady)
+  return SERIF_ENABLED && loaded
 }

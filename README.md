@@ -1,5 +1,9 @@
 # Trovia
 
+[![Latest release](https://img.shields.io/github/v/release/wst7/trovia?sort=semver)](https://github.com/wst7/trovia/releases/latest)
+[![Android build](https://github.com/wst7/trovia/actions/workflows/android.yml/badge.svg)](https://github.com/wst7/trovia/actions/workflows/android.yml)
+![Platform](https://img.shields.io/badge/platform-Android-3DDC84?logo=android&logoColor=white)
+
 **English** · [中文](README.zh-CN.md)
 
 **You don't need to remember what you saved — only what you were looking for.**
@@ -7,6 +11,12 @@
 Hand it a link; it reads the page, keeps it on your own phone, and months later a vague description is enough to get it back.
 
 [Download for Android](https://github.com/wst7/trovia/releases/latest) · [See what it looks like](https://wst7.github.io/trovia/?lang=en)
+
+<p align="center">
+  <img src="docs/screenshots/home.png" width="31%" alt="Search by a sentence, or paste a link" />
+  <img src="docs/screenshots/search.png" width="31%" alt="Results say why they matched" />
+  <img src="docs/screenshots/article.png" width="31%" alt="The page itself, kept on the phone" />
+</p>
 
 ## What it does
 
@@ -32,11 +42,27 @@ Connect any OpenAI-compatible service (OpenAI, OpenRouter, SiliconFlow, Ollama, 
 
 WeChat articles, Juejin, SSPAI, CSDN and similar sites are read in full. Zhihu, Medium, Douban and 36Kr sit behind a sign-in or a bot check, so only the link and title are kept. For video, the title and description are saved; no subtitles.
 
-## Development
+## Build from source
+
+Requirements: Node 22+, JDK 17, and the Android SDK (only for building the APK).
 
 ```bash
-npm install && npm run dev:mobile   # the phone app (Expo)
-docker compose up --build           # web + API + worker (self-hosted)
+npm install
+
+# run on a connected device / emulator
+npm run dev:mobile
+
+# release APK (JS bundled in, signed with the debug key)
+cd apps/mobile && npx expo prebuild --platform android --no-install
+cd android && ./gradlew assembleRelease -x lint -x test
+```
+
+Tests and type checks:
+
+```bash
+npm test -w @trovia/mobile      # query parsing, composer hints, db migration, i18n
+npm test -w @trovia/sync        # sync engine, WebDAV adapter, large-cloud behaviour
+cd apps/mobile && npx tsc --noEmit
 ```
 
 Before a release, `npm run smoke` fetches a handful of real sites (WeChat, SSPAI, Juejin, CSDN, GitHub, Martin Fowler) through the same parser the app uses and fails if any of them stops being readable. The tag build runs it as a gate, so a site that starts blocking us cannot ship quietly.

@@ -1,5 +1,9 @@
 # Trovia · 寻迹
 
+[![最新版本](https://img.shields.io/github/v/release/wst7/trovia?sort=semver)](https://github.com/wst7/trovia/releases/latest)
+[![Android 构建](https://github.com/wst7/trovia/actions/workflows/android.yml/badge.svg)](https://github.com/wst7/trovia/actions/workflows/android.yml)
+![平台](https://img.shields.io/badge/平台-Android-3DDC84?logo=android&logoColor=white)
+
 **中文** · [English](README.md)
 
 **你不需要记住收藏了什么，只需要记住你想找什么。**
@@ -7,6 +11,12 @@
 把链接丢进来，它读完、整理好、存在你自己手机上；以后用一句模糊的描述就能翻回来。
 
 [下载 Android 版](https://github.com/wst7/trovia/releases/latest) · [看看它长什么样](https://wst7.github.io/trovia/)
+
+<p align="center">
+  <img src="docs/screenshots/home.zh.png" width="31%" alt="一句话描述就能找回，也能直接粘链接" />
+  <img src="docs/screenshots/search.zh.png" width="31%" alt="结果会说明为什么命中" />
+  <img src="docs/screenshots/article.zh.png" width="31%" alt="正文留在手机里，断网也能读" />
+</p>
 
 ## 能做什么
 
@@ -32,11 +42,33 @@
 
 微信公众号、掘金、少数派、CSDN 这类能读全文；知乎、Medium、豆瓣、36 氪有登录墙或人机验证，只存链接。视频只存标题和简介，不做字幕。
 
-## 开发
+## 从源码构建
+
+需要 Node 22+、JDK 17，出 APK 还需要 Android SDK。
 
 ```bash
-npm install && npm run dev:mobile   # 手机 App（Expo）
-docker compose up --build       # 网页版 + API + Worker（自托管）
+npm install
+
+# 跑到连着的设备或模拟器上
+npm run dev:mobile
+
+# 出正式 APK（JS 打进包，模板 debug 密钥签名）
+cd apps/mobile && npx expo prebuild --platform android --no-install
+cd android && ./gradlew assembleRelease -x lint -x test
 ```
 
-产品边界见 [`docs/PRODUCT.md`](docs/PRODUCT.md)，接口与数据库约定见 [`docs/ENGINEERING.md`](docs/ENGINEERING.md)。
+测试与类型检查：
+
+```bash
+npm test -w @trovia/mobile      # 查询解析、输入框提示、库迁移、文案对齐
+npm test -w @trovia/sync        # 同步引擎、WebDAV 适配、大库同步
+cd apps/mobile && npx tsc --noEmit
+```
+
+## 发版前
+
+`npm run smoke` 用 App 里同一份抓取代码跑一批真实站点（微信公众号、少数派、掘金、CSDN、GitHub、Martin Fowler，以及 Wikipedia、BBC、The Guardian、X 等），必选站点同时挂两个以上才拦发版——单个站点挂掉多半是它按来源 IP 变脸。
+
+热更新随每个 tag 发布。`apps/mobile/app.config.ts` 里的 `runtimeVersion` 是手写常量（现在是 `native-1`），只有原生依赖、权限或包名变了才加一，并同时发一次 APK。
+
+产品边界见 [`docs/PRODUCT.md`](docs/PRODUCT.md)，接口与数据库约定见 [`docs/ENGINEERING.md`](docs/ENGINEERING.md)，每个版本改了什么见 [`docs/CHANGELOG.md`](docs/CHANGELOG.md)。
