@@ -183,7 +183,7 @@ export const en: Dictionary = {
   'list.tapToSelect': 'Tap a row to select',
   'list.deleteTitleOne': 'Delete this item?',
   'list.deleteTitleMany': 'Delete these {count} items?',
-  'list.deleteBody': 'They cannot be recovered, and other devices will delete them on their next sync.',
+  'list.deleteBody': '"{title}" is removed from this phone; other synced devices drop it on their next sync.',
 
   'detail.notFound': 'This item no longer exists. It may have been deleted.',
   'detail.loadFailed': 'Could not load this item. Try again in a moment.',
@@ -482,4 +482,7 @@ export const en: Dictionary = {
   'update.state.restart': 'Update ready · tap to restart',
   'update.state.otaDownloading': 'Downloading the update…',
   'sync.filesNote': 'A deleted item still leaves one file in the cloud, so file counts often run 1–2 above your library.',
+  'list.delete': 'Delete',
+  'list.deleteTitle': 'Delete this one?',
+  'list.unitItemOne': 'item',
 }

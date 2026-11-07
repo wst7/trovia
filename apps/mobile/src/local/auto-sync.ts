@@ -22,6 +22,35 @@ export async function isSyncConfigured(): Promise<boolean> {
  * 满足条件才同步；失败一律静默——自动同步报错弹窗比不同步更烦人。
  * 手动同步仍然会把错误讲清楚。
  */
+/**
+ * 刚存了一条，顺手同步一次。
+ *
+ * 不等 5 分钟那个节流：用户刚存完，最想看的就是「另一台也能看到」。
+ * 但连着存几条时只跑最后一轮——8 秒内的多次保存合并成一次同步。
+ */
+let saveTimer: ReturnType<typeof setTimeout> | null = null
+
+export function scheduleSyncAfterSave(): void {
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => {
+    saveTimer = null
+    void syncAfterSave()
+  }, 8000)
+}
+
+export async function syncAfterSave(): Promise<void> {
+  if (running) return
+  if (!(await isSyncConfigured())) return
+  running = true
+  try {
+    await syncNow()
+  } catch {
+    // 存都存好了，同步失败不该在保存这条路上弹错；下次前台会再试。
+  } finally {
+    running = false
+  }
+}
+
 export async function maybeAutoSync(): Promise<void> {
   if (running) return
   if (!(await isSyncConfigured())) return

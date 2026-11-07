@@ -4,6 +4,7 @@ import { ActivityIndicator, KeyboardAvoidingView, ScrollView, Text, View } from 
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { DocumentSummary, ParseStatus, SearchResult } from '@trovia/shared'
 import { queryTerms } from '../local/terms'
+import { scheduleSyncAfterSave } from '../local/auto-sync'
 import { useT } from '../i18n'
 import { errorText } from '../i18n/errors'
 
@@ -160,6 +161,8 @@ export function HomeScreen() {
         setQuery('')
         toast(t('home.toast.saved'), { type: 'success' })
         void processPendingQueue()
+        // 存完稍后同步一次：8 秒内的多次保存合并成一轮。
+        scheduleSyncAfterSave()
       }
       return { id: res.id, duplicate: res.duplicate }
     } catch (e) {

@@ -21,6 +21,7 @@ import { Divider } from '../ui/Divider'
 import { GUTTER, Screen } from '../ui/Screen'
 import { usePalette } from '../ui/palette'
 import { useT } from '../i18n'
+import { SERIF_FAMILY } from '../ui/fonts'
 import { errorText } from '../i18n/errors'
 
 function bodyFallback(code: string | null, t: (key: string) => string): string {
@@ -238,8 +239,11 @@ export function DocumentDetailScreen() {
           </Text>
         ) : null}
 
-        {/* 标题用无衬线：中文衬线在大字号下笔画对比太强，读起来像印刷品而不是 App。 */}
-        <Text className="mt-2 text-[26px] font-semibold leading-[35px] tracking-[-0.3px] text-ink">
+        {/* 阅读页内统一用宋体：标题与正文同字形，只有字号字号与粗细的区别。 */}
+        <Text
+          className="mt-2 text-[25px] leading-[35px] tracking-[-0.2px] text-ink"
+          style={{ fontFamily: SERIF_FAMILY, fontWeight: '600' }}
+        >
           {doc.title || doc.url}
         </Text>
 

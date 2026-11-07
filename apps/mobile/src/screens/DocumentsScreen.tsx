@@ -7,6 +7,7 @@ import { domainOf } from '@trovia/shared'
 
 import { TAB_BAR_HEIGHT } from '../components/AppTabBar'
 import { RecentRow } from '../components/RecordRow'
+import { SwipeRow } from '../components/SwipeRow'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { subscribeChange } from '../local/bus'
 import { dayLabel } from '../local/dates'
@@ -44,6 +45,9 @@ export function DocumentsScreen() {
   // 整库条数：筛选后 total 会变，但「含在 N 条里」说的应该是整个库。
   const [libraryTotal, setLibraryTotal] = useState(0)
   const [retrying, setRetrying] = useState(false)
+  // 左滑删除：同一时刻只有一行是滑开的。
+  const [swipeId, setSwipeId] = useState<string | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null)
   const [selecting, setSelecting] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [confirmingDelete, setConfirmingDelete] = useState(false)
@@ -232,7 +236,9 @@ export function DocumentsScreen() {
     ? t('list.unitLoading')
     : keyword || failedOnly || importedOnly
       ? t('list.unitMatch')
-      : t('list.unitItem')
+      : total === 1
+        ? t('list.unitItemOne')
+        : t('list.unitItem')
 
   return (
     <Screen>
@@ -382,6 +388,16 @@ export function DocumentsScreen() {
                 </Text>
               </View>
             ) : null}
+            <SwipeRow
+              open={swipeId === item.id}
+              onOpen={() => setSwipeId(item.id)}
+              onClose={() => setSwipeId((current) => (current === item.id ? null : current))}
+              onDelete={() => {
+                setSwipeId(null)
+                setPendingDelete({ id: item.id, title: item.title ?? item.url })
+              }}
+              disabled={selecting}
+            >
             <RecentRow
               item={item}
               onPress={() => {
@@ -406,6 +422,7 @@ export function DocumentsScreen() {
                   : undefined
               }
             />
+            </SwipeRow>
           </View>
           )
         }}
@@ -496,6 +513,29 @@ export function DocumentsScreen() {
           onCancel={() => setConfirmingDelete(false)}
         />
       ) : null}
+          <ConfirmDialog
+        visible={pendingDelete !== null}
+        title={t('list.deleteTitle')}
+        message={pendingDelete ? t('list.deleteBody', { title: pendingDelete.title }) : ''}
+        confirmLabel={t('list.delete')}
+        destructive
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          const target = pendingDelete
+          setPendingDelete(null)
+          if (!target) return
+          void (async () => {
+            try {
+              await repo.deleteDocument(target.id)
+              toast(t('list.deletedOne'), { type: 'success' })
+            } catch {
+              toast(t('list.deletePartial'), { type: 'error' })
+            } finally {
+              reload()
+            }
+          })()
+        }}
+      />
     </Screen>
   )
 }

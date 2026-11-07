@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { isValidHttpUrl } from '@trovia/shared'
 
+import { scheduleSyncAfterSave } from '../local/auto-sync'
 import { processPendingQueue } from '../local/pipeline'
 import * as repo from '../local/repo'
 import { useToast } from '../providers/ToastProvider'
@@ -47,6 +48,8 @@ export function ShareScreen() {
         } else {
           toast(t('home.toast.saved'), { type: 'success' })
           void processPendingQueue()
+          // 存完稍后同步一次：另一台设备刷新就能看到。
+          scheduleSyncAfterSave()
         }
         router.replace(`/documents/${res.id}`)
       } catch (e) {

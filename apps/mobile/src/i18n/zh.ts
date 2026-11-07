@@ -183,7 +183,7 @@ export const zh: Dictionary = {
   'list.tapToSelect': '点一行来选中',
   'list.deleteTitleOne': '删除这 1 条收藏？',
   'list.deleteTitleMany': '删除这 {count} 条收藏？',
-  'list.deleteBody': '删除后无法恢复，其它设备下次同步时也会跟着删除。',
+  'list.deleteBody': '「{title}」会从本机删除；同步过的设备下次同步也会删掉它。',
 
   // 详情页
   'detail.notFound': '这篇收藏不存在，可能已经被删除。',
@@ -484,4 +484,7 @@ export const zh: Dictionary = {
   'update.state.restart': '新版本已下好 · 点这里重启生效',
   'update.state.otaDownloading': '正在下载更新…',
   'sync.filesNote': '删除的条目在云端也留一个文件，所以这里的文件数常比收藏多 1–2 个。',
+  'list.delete': '删除',
+  'list.deleteTitle': '删除这一条？',
+  'list.unitItemOne': '条内容',
 }
