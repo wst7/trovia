@@ -39,6 +39,8 @@ npm install && npm run dev:mobile   # the phone app (Expo)
 docker compose up --build           # web + API + worker (self-hosted)
 ```
 
+Before a release, `npm run smoke` fetches a handful of real sites (WeChat, SSPAI, Juejin, CSDN, GitHub, Martin Fowler) through the same parser the app uses and fails if any of them stops being readable. The tag build runs it as a gate, so a site that starts blocking us cannot ship quietly.
+
 Hot updates are published on every tag. `runtimeVersion` in `apps/mobile/app.config.ts` is a hand-bumped constant (`native-1`): raise it only when native code, permissions or the package name change, and ship a matching APK with it.
 
 Product scope: [`docs/PRODUCT.md`](docs/PRODUCT.md). API and database conventions: [`docs/ENGINEERING.md`](docs/ENGINEERING.md).

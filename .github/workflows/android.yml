@@ -90,6 +90,10 @@ jobs:
       - name: 接受 Android SDK 许可
         run: yes | sdkmanager --licenses > /dev/null || true
 
+      - name: 发版前跑真实站点
+        working-directory: apps/mobile
+        run: npm run smoke
+
       - name: 类型检查
         run: npm run mobile:typecheck
 
