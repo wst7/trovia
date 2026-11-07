@@ -479,4 +479,6 @@ export const en: Dictionary = {
   'settings.dev.off': 'Off',
   'settings.dev.logTitle': 'View log',
   'settings.dev.logSubtitle': 'Environment, crashes and save log',
+  'update.state.restart': 'Update ready · tap to restart',
+  'update.state.otaDownloading': 'Downloading the update…',
 }

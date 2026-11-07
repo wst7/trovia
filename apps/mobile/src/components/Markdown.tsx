@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { Image, Linking, Pressable, Text, View } from 'react-native'
 import { t } from '../i18n'
+import { SERIF_FAMILY, useSerifReady } from '../ui/fonts'
 
 /**
  * 受限 Markdown 渲染器：标题、段落、列表、引用、代码块、行内代码/粗体/斜体、
@@ -142,7 +143,9 @@ export function Markdown({
   const normalized = source.replace(/(!\[[^\]]*\]\([^)\s]+\))/g, '\n\n$1\n\n')
   const images = [...new Set([...source.matchAll(/!\[[^\]]*\]\(([^)\s]+)\)/g)].map((match) => match[1]))]
   const resolved = images.map((url) => resolveImage?.(url) ?? url)
-  return <View>{renderBlocks(normalized, onImagePress, resolved, resolveImage)}</View>
+  // 正文用宋体；标题、列表序号留在系统黑体，层级靠字形区分而不是靠粗细。
+  const serif = useSerifReady()
+  return <View>{renderBlocks(normalized, onImagePress, resolved, resolveImage, serif)}</View>
 }
 
 const HEADING_CLASS = [
@@ -159,7 +162,9 @@ function renderBlocks(
   onImagePress?: (url: string, images: string[]) => void,
   images: string[] = [],
   resolveImage?: (url: string) => string,
+  serif = false,
 ): ReactNode[] {
+  const bodyFont = serif ? { fontFamily: SERIF_FAMILY } : undefined
   const lines = source.split(/\r?\n/)
   const blocks: ReactNode[] = []
   const state = {
@@ -182,7 +187,11 @@ function renderBlocks(
     const key = nextKey('p')
     blocks.push(
       // 长文阅读：行距比界面文案松一档，段间留白也比列表大，眼睛才不会粘行。
-      <Text key={key} className="mb-4 text-ink" style={{ fontSize: 16.5, lineHeight: 30 }}>
+      <Text
+        key={key}
+        className="text-ink"
+        style={[{ fontSize: 17, lineHeight: 31, marginBottom: 14 }, bodyFont]}
+      >
         {renderInline(state.paragraph.join(' '), key)}
       </Text>,
     )
@@ -197,7 +206,7 @@ function renderBlocks(
         <Text className={state.ordered ? 'w-6 text-body-sm text-muted' : 'w-3 text-body text-faint'}>
           {state.ordered ? `${i + 1}.` : '·'}
         </Text>
-        <Text className="flex-1 text-body text-ink" style={{ lineHeight: 26 }}>
+        <Text className="flex-1 text-ink" style={[{ fontSize: 16.5, lineHeight: 28 }, bodyFont]}>
           {renderInline(item, `${key}-${i}`)}
         </Text>
       </View>
@@ -283,7 +292,9 @@ function renderBlocks(
       const key = nextKey('q')
       blocks.push(
         <View key={key} className="mb-4 border-l-2 border-line-strong pl-3">
-          <Text className="text-body-sm text-muted">{renderInline(quote[1], key)}</Text>
+          <Text className="text-muted" style={[{ fontSize: 16, lineHeight: 28 }, bodyFont]}>
+            {renderInline(quote[1], key)}
+          </Text>
         </View>,
       )
       continue

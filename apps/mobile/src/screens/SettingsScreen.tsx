@@ -18,6 +18,7 @@ import { clearAllDocuments } from '../local/db'
 import { relativeTime } from '../local/dates'
 import { lastSyncAt } from '../local/sync-config'
 import { formatBytes, writeExport } from '../local/exporter'
+import { applyOta, checkOta } from '../local/ota'
 import { checkForUpdate, type CheckResult } from '../local/update'
 import { downloadApk, formatMb, installApk, type DownloadProgress } from '../local/update-install'
 import { listAllForExportFidelity } from '../local/repo'
@@ -86,6 +87,7 @@ function Row({
   title,
   subtitle,
   value,
+  valueIcon,
   onPress,
   danger = false,
   accessibilityLabel,
@@ -94,6 +96,8 @@ function Row({
   title: string
   subtitle?: string
   value?: string
+  /** 值前面的小图标：有新版本时用一个小箭头，而不是加一句文案。 */
+  valueIcon?: IconName
   onPress?: () => void
   danger?: boolean
   accessibilityLabel?: string
@@ -108,6 +112,7 @@ function Row({
         </Text>
         {subtitle ? <Text className="mt-0.5 text-caption text-muted">{subtitle}</Text> : null}
       </View>
+      {valueIcon ? <Ionicons name={valueIcon} size={13} color={p.accent} /> : null}
       {value ? (
         <Text className="max-w-[52%] text-caption text-muted" numberOfLines={1}>
           {value}
@@ -150,6 +155,8 @@ export function SettingsScreen() {
   const [update, setUpdate] = useState<CheckResult | null>(null)
   const [updatePhase, setUpdatePhase] = useState<'idle' | 'checking' | 'downloading' | 'installing' | 'error'>('idle')
   const [progress, setProgress] = useState<DownloadProgress | null>(null)
+  // 热更新下好了但还没重启：这一状态要一直摆着，直到用户自己点。
+  const [otaReady, setOtaReady] = useState(false)
   // 开发者模式：默认关；开着才在这一页出现「查看日志」。
   const [devOn, setDevOn] = useState(false)
   const [sync, setSync] = useState<{ configured: boolean; at: string | null } | null>(null)
@@ -162,6 +169,7 @@ export function SettingsScreen() {
 
   /** 版本行的副标题就是更新状态，一句话说完。 */
   const updateSubtitle = (): string => {
+    if (otaReady) return t('update.state.restart')
     if (updatePhase === 'checking') return t('update.state.checking')
     if (updatePhase === 'downloading') {
       const percent = progress && progress.ratio >= 0 ? Math.round(progress.ratio * 100) : null
@@ -177,6 +185,35 @@ export function SettingsScreen() {
     }
     // 没更新、也没出错的时候不多话：这一行本来是「只保存在这台手机上」。
     return t('settings.about.local')
+  }
+
+  /**
+   * 用户主动点的更新入口。
+   *
+   * 先问热更新（几 MB、下完重启即生效）；没有热更新再下整包（几十 MB、走系统安装器）。
+   * 全程只有用户点了才会下载——自动下载被关掉了。
+   */
+  const handleUpdate = async () => {
+    if (otaReady) {
+      try {
+        await applyOta()
+      } catch {
+        setUpdatePhase('error')
+      }
+      return
+    }
+    setUpdatePhase('downloading')
+    try {
+      const outcome = await checkOta()
+      if (outcome.kind === 'downloaded') {
+        setOtaReady(true)
+        setUpdatePhase('idle')
+        return
+      }
+    } catch {
+      // 热更新不可用（没配通道、离线）时继续往下走整包。
+    }
+    await startUpdate()
   }
 
   /** 下载 + 交系统安装器。中途失败要把原因留在副标题上，别一闪而过。 */
@@ -444,7 +481,8 @@ export function SettingsScreen() {
               title={APP_NAME}
               subtitle={updateSubtitle()}
               value={`v${version ?? '—'}`}
-              onPress={update?.hasUpdate ? () => void startUpdate() : undefined}
+              valueIcon={update?.hasUpdate || otaReady ? 'arrow-up-circle' : undefined}
+              onPress={update?.hasUpdate || otaReady ? () => void handleUpdate() : undefined}
             />
             <Row
               icon="code-slash-outline"

@@ -481,4 +481,6 @@ export const zh: Dictionary = {
   'settings.dev.off': '关闭',
   'settings.dev.logTitle': '查看日志',
   'settings.dev.logSubtitle': '环境、崩溃记录与保存日志',
+  'update.state.restart': '新版本已下好 · 点这里重启生效',
+  'update.state.otaDownloading': '正在下载更新…',
 }

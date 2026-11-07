@@ -58,7 +58,8 @@ const config: ExpoConfig = {
           url: `https://u.expo.dev/${expoProjectId}`,
           // 服务端要靠 expo-channel-name 找分支；本地 prebuild 的包不会自动带。
           requestHeaders: { 'expo-channel-name': 'production' },
-          checkAutomatically: 'ON_LOAD' as const,
+          // 不自动下载：是否更新由用户在「我的」里点，下载完再自己决定何时重启。
+          checkAutomatically: 'NEVER' as const,
           // 先让用户看到内嵌的旧版本，新包在后台下好，下次启动生效。
           fallbackToCacheTimeout: 0,
         }
@@ -91,6 +92,13 @@ const config: ExpoConfig = {
   },
   plugins: [
     'expo-router',
+    // 正文字体打进去：Android 没有中文衬线字体，随包带一份 2.3MB 的子集。
+    [
+      'expo-font',
+      {
+        fonts: ['./assets/fonts/NotoSerifSC-Regular.ttf'],
+      },
+    ],
     [
       'expo-media-library',
       {
