@@ -33,6 +33,24 @@ const CASES: Case[] = [
   { label: 'GitHub', url: 'https://github.com/facebook/react', minChars: 200 },
   { label: 'V2EX', url: 'https://v2ex.com/t/1254622', minChars: 100, optional: true },
   { label: 'Martin Fowler', url: 'https://martinfowler.com/articles/patterns-of-distributed-systems/', minChars: 1500 },
+
+  // 外网常读的几类页面：百科、聚合站、开发者社区、老牌媒体、个人博客。
+  { label: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/Transformer_(deep_learning_architecture)', minChars: 3000 },
+  { label: 'Hacker News', url: 'https://news.ycombinator.com/item?id=38000000', minChars: 200 },
+  { label: 'DEV', url: 'https://dev.to/', minChars: 1000 },
+  { label: 'BBC', url: 'https://www.bbc.com/news', minChars: 1000 },
+  { label: 'The Guardian', url: 'https://www.theguardian.com/international', minChars: 1500 },
+  { label: 'Simon Willison', url: 'https://simonwillison.net/', minChars: 1500 },
+  { label: 'Paul Graham', url: 'https://paulgraham.com/greatwork.html', minChars: 3000 },
+
+  // 已知被挡的站点：列在这里是为了「哪天通了」能被发现，不拦发版。
+  { label: 'Ars Technica（405）', url: 'https://arstechnica.com/', minChars: 800, optional: true },
+  {
+    label: 'Stack Overflow（403）',
+    url: 'https://stackoverflow.com/questions/11227809/why-is-processing-a-sorted-array-faster-than-processing-an-unsorted-array',
+    minChars: 500,
+    optional: true,
+  },
 ]
 
 const args = process.argv.slice(2)

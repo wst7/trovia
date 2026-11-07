@@ -37,13 +37,22 @@ jobs:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # 要取得到 tag：版本号从最新发布标签来。
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
       - name: 用最新发布标签当版本号
-        run: echo "XUNJI_APP_VERSION=$(git describe --tags --abbrev=0 | sed 's/^v//')" >> "$GITHUB_ENV"
+        run: |
+          version="$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || true)"
+          if [ -n "$version" ]; then
+            echo "XUNJI_APP_VERSION=$version" >> "$GITHUB_ENV"
+          else
+            echo "取不到标签，用 app.config 里的兜底版本"
+          fi
       - name: 发布热更新
         working-directory: apps/mobile
         run: |

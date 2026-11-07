@@ -5,7 +5,7 @@ const isProduction = process.env.APP_VARIANT === 'production'
 
 // 版本号跟发布 tag 走：CI 打 v* 标签时注入 XUNJI_APP_VERSION（v0.3.1 → 0.3.1）。
 // 本地构建回退到这里的默认值。Android 的 versionCode 由版本号推导，升级安装不会退版。
-const rawVersion: string = process.env.XUNJI_APP_VERSION ?? '0.13.3'
+const rawVersion: string = process.env.XUNJI_APP_VERSION?.trim() || '0.13.3'
 
 /**
  * 热更新（expo-updates）的托管地址来自 EAS 项目 id。
