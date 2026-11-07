@@ -22,7 +22,6 @@ import { Divider } from '../ui/Divider'
 import { GUTTER, Screen } from '../ui/Screen'
 import { usePalette } from '../ui/palette'
 import { useT } from '../i18n'
-import { SERIF_ENABLED, SERIF_FAMILY } from '../ui/fonts'
 import { errorText } from '../i18n/errors'
 
 function bodyFallback(code: string | null, t: (key: string) => string): string {
@@ -245,7 +244,7 @@ export function DocumentDetailScreen() {
         {/* 阅读页内统一用宋体：标题与正文同字形，只有字号字号与粗细的区别。 */}
         <Text
           className="mt-2 text-[25px] leading-[35px] tracking-[-0.2px] text-ink"
-          style={SERIF_ENABLED ? { fontFamily: SERIF_FAMILY, fontWeight: '600' } : undefined}
+          
         >
           {doc.title || doc.url}
         </Text>

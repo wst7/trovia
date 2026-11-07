@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react'
 import { Image, Linking, Pressable, View } from 'react-native'
 import { Text } from '../ui/text'
 import { t } from '../i18n'
-import { SERIF_FAMILY, useSerifReady } from '../ui/fonts'
 
 /**
  * 受限 Markdown 渲染器：标题、段落、列表、引用、代码块、行内代码/粗体/斜体、
@@ -144,9 +143,7 @@ export function Markdown({
   const normalized = source.replace(/(!\[[^\]]*\]\([^)\s]+\))/g, '\n\n$1\n\n')
   const images = [...new Set([...source.matchAll(/!\[[^\]]*\]\(([^)\s]+)\)/g)].map((match) => match[1]))]
   const resolved = images.map((url) => resolveImage?.(url) ?? url)
-  // 正文用宋体；标题、列表序号留在系统黑体，层级靠字形区分而不是靠粗细。
-  const serif = useSerifReady()
-  return <View>{renderBlocks(normalized, onImagePress, resolved, resolveImage, serif)}</View>
+  return <View>{renderBlocks(normalized, onImagePress, resolved, resolveImage)}</View>
 }
 
 const HEADING_CLASS = [
@@ -163,9 +160,8 @@ function renderBlocks(
   onImagePress?: (url: string, images: string[]) => void,
   images: string[] = [],
   resolveImage?: (url: string) => string,
-  serif = false,
 ): ReactNode[] {
-  const bodyFont = serif ? { fontFamily: SERIF_FAMILY } : undefined
+  const bodyFont = undefined
   const lines = source.split(/\r?\n/)
   const blocks: ReactNode[] = []
   const state = {

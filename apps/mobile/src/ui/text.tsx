@@ -1,18 +1,13 @@
 /**
- * 全 app 的 Text：默认字体在这里定，不在每个屏幕里各写一遍。
+ * 全 app 的 Text：统一在这里出口，但不再指定字族。
  *
- * 分工只有两条：
- *   界面（导航、按钮、列表、设置、表单）→ 黑体
- *   阅读（正文、标题、摘要）→ 宋体，由 Markdown 和详情页显式覆盖
- *
- * 包一层的原因是 RN 没有全局默认字体，OEM 系统各自换掉 sans 之后，
- * 同一个界面在不同机器上字重和字宽都不一样；这里显式点名，至少
- * Android 上不会跟着厂商皮肤走。
+ * 之前为了「纸面阅读」自带了一份思源宋体，问题是它的字面比系统字体大一号，
+ * 固定行高的地方会被撑破、压到相邻元素上。现在全部改用手机默认字体：
+ * 中文在 Android 上是 Noto Sans CJK，在 iOS 上是苹方，系统会自己处理
+ * 字重和行高，界面不再和布局算法对着干。
  */
 import { Text as RNText, type TextProps } from 'react-native'
 
-import { APP_FAMILY } from './fonts'
-
-export function Text({ style, ...rest }: TextProps) {
-  return <RNText {...rest} style={[{ fontFamily: APP_FAMILY }, style]} />
+export function Text(props: TextProps) {
+  return <RNText {...props} />
 }
