@@ -3,8 +3,8 @@ import { View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 /**
- * 一屏的底：纸白画布 + 顶部安全区。底部安全区由各屏自己处理，
- * 因为列表要滚到导航栏下面去。
+ * The base of a screen: paper-white canvas plus the top safe area. Each screen handles the bottom safe area itself,
+ * because lists need to scroll under the navigation bar.
  */
 export function Screen({ children }: { children: ReactNode }) {
   return (
@@ -14,5 +14,5 @@ export function Screen({ children }: { children: ReactNode }) {
   )
 }
 
-/** 页面左右 gutter：16dp。 */
+/** Page left/right gutter: 16dp. */
 export const GUTTER = 22

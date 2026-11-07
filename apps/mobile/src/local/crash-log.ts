@@ -1,9 +1,9 @@
 /**
- * 崩溃留痕。
+ * Crash trail.
  *
- * Release 包里 JS 抛了没人接的错误，系统会直接把进程带走，什么都不显示——
- * 用户只看到「点一下就退出」，我们这边拿不到任何东西。这里把最后几次
- * 未捕获错误的调用栈写进本机文件，用户回来点「导出诊断」就能发出来。
+ * When JS throws an unhandled error in a release build, the system takes the process down with nothing displayed —
+ * the user only sees "it quits when I tap", and we get nothing at all. This writes the stack traces of the last few
+ * uncaught errors to a local file, so the user can come back and tap "export diagnostics" to send them out.
  */
 type FileSystemModule = typeof import('expo-file-system/legacy')
 
@@ -30,7 +30,7 @@ function format(error: unknown, fatal: boolean): string {
   return oneLine.replace(/\s+/g, ' ').slice(0, 4000)
 }
 
-/** 崩溃之后进程随时会被收掉，所以这里不等 promise：写完算数，写不完也只能算。 */
+/** After a crash the process can be reaped at any moment, so this does not wait for the promise: whatever is written is written. */
 async function append(line: string): Promise<void> {
   const module = fs()
   if (!module) return
@@ -41,11 +41,11 @@ async function append(line: string): Promise<void> {
     const previous = info.exists ? await module.readAsStringAsync(path) : ''
     await module.writeAsStringAsync(path, `${previous}${line}\n`.slice(-MAX_CHARS))
   } catch {
-    // 记录本身不能再抛：吞掉。
+    // The record itself must not throw again: swallow it.
   }
 }
 
-/** 读回记录，给「导出诊断」用。 */
+/** Read the records back, for "export diagnostics". */
 export async function readCrashLog(): Promise<string | null> {
   const module = fs()
   if (!module) return null
@@ -61,8 +61,8 @@ export async function readCrashLog(): Promise<string | null> {
 }
 
 /**
- * 记录一次「没崩但失败了」的操作——保存失败最常见。
- * 用户报「保存失败」时，这一行能说明到底是数据库、存储还是重复。
+ * Record an operation that "did not crash but failed" — save failures are the most common.
+ * When a user reports "the save failed", this line says whether it was the database, storage, or a duplicate.
  */
 export function recordProblem(scope: string, error: unknown): void {
   const message = error instanceof Error ? error.message : String(error)
@@ -70,7 +70,7 @@ export function recordProblem(scope: string, error: unknown): void {
   void append(`${new Date().toISOString()} fatal=false ${scope} ${message} ${stack}`.replace(/\s+/g, ' ').slice(0, 4000))
 }
 
-/** 有没有留下过崩溃记录，用来决定首页要不要提一句。 */
+/** Whether a crash record was ever left behind, used to decide whether the home screen should mention it. */
 export async function hasCrashLog(): Promise<boolean> {
   const module = fs()
   if (!module) return false
@@ -84,7 +84,7 @@ export async function hasCrashLog(): Promise<boolean> {
   }
 }
 
-/** 清空崩溃记录：用户把日志发出去之后，没有理由继续留着。 */
+/** Clear the crash records: once the user has sent the log out, there is no reason to keep them. */
 export async function clearCrashLog(): Promise<void> {
   const module = fs()
   if (!module) return
@@ -93,13 +93,13 @@ export async function clearCrashLog(): Promise<void> {
   try {
     await module.writeAsStringAsync(path, '')
   } catch {
-    // 清不掉也只能算了。
+    // If it cannot be cleared, so be it.
   }
 }
 
 let installed = false
 
-/** 装一次全局兜底，必须在 App 最外层尽早调用。 */
+/** Install the global fallback once; it must be called as early as possible at the outermost layer of the app. */
 export function installCrashLogger(): void {
   if (installed) return
   installed = true
@@ -115,7 +115,7 @@ export function installCrashLogger(): void {
 
   ErrorUtils.setGlobalHandler((error, isFatal) => {
     void append(format(error, Boolean(isFatal)))
-    // 原来的处理（红屏 / 退出）照旧。
+    // The original handling (red box / exit) stays as before.
     previous(error, isFatal)
   })
 }

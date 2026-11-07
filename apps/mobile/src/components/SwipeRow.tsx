@@ -1,11 +1,11 @@
 /**
- * 左滑露出「删除」的行容器。
+ * Row container that reveals "Delete" on a left swipe.
  *
- * 只用 PanResponder + Animated，不引入手势库：这套交互只要求「横向拖、
- * 松手吸附」，多引一个原生依赖不划算，也会让热更新多一层风险。
+ * PanResponder + Animated only, no gesture library: this interaction only needs "drag sideways,
+ * snap on release", and another native dependency isn't worth it, plus it adds risk to hot updates.
  *
- * 同一时刻只允许一行打开——由父组件的 openId 决定，滑开任意一行时别的行
- * 会自动合上，避免一排红按钮摊在屏幕上。
+ * Only one row may be open at a time — the parent's openId decides it, so opening any row
+ * closes the others, keeping a row of red buttons from spreading across the screen.
  */
 import { useEffect, useMemo, useRef } from 'react'
 import { Animated, PanResponder, Pressable, View } from 'react-native'
@@ -29,7 +29,7 @@ export function SwipeRow({
   onOpen: () => void
   onClose: () => void
   onDelete: () => void
-  /** 多选模式下不响应滑动：那一行整块都是「选中/取消」。 */
+  /** No swipe in multi-select mode: that whole row is "select/deselect". */
   disabled?: boolean
 }) {
   const t = useT()
@@ -50,7 +50,7 @@ export function SwipeRow({
   const pan = useMemo(
     () =>
       PanResponder.create({
-        // 横向意图足够明显才接管，竖着滑动仍然是滚动列表。
+        // Take over only when the horizontal intent is clear; a vertical drag still scrolls the list.
         onMoveShouldSetPanResponder: (_, gesture) =>
           !disabled &&
           Math.abs(gesture.dx) > 8 &&
@@ -82,7 +82,7 @@ export function SwipeRow({
       <View
         className="absolute bottom-0 right-0 top-0 items-center justify-center bg-danger"
         style={{ width: ACTION_WIDTH }}
-        // 合上的时候不该被读屏和点击命中：它只是藏在行下面。
+        // While closed it shouldn't be hit by the screen reader or taps: it is only hidden under the row.
         pointerEvents={open ? 'auto' : 'none'}
         accessibilityElementsHidden={!open}
         importantForAccessibility={open ? 'auto' : 'no-hide-descendants'}
@@ -98,8 +98,8 @@ export function SwipeRow({
           </Text>
         </Pressable>
       </View>
-      {/* 底色用画布色而不是 surface：行是表格里的一行，不是一张卡片。
-          铺 surface 会在浅色模式下列表变成一张张白卡，和发丝线分隔的版式打架。 */}
+      {/* Background is the canvas color, not surface: a row is a row in a table, not a card.
+          Using surface would turn the list into a stack of white cards in light mode, fighting the hairline-separated layout. */}
       <Animated.View style={{ transform: [{ translateX: translate }], backgroundColor: p.canvas }} {...pan.panHandlers}>
         {children}
       </Animated.View>

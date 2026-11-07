@@ -11,7 +11,7 @@ export const SOURCE_TYPE_LABELS: Record<SourceType, string> = {
   twitter: 'X / Twitter',
 }
 
-// 状态文案映射（契约第 7 节）
+// Status copy mapping (contract section 7)
 export const STATUS_TEXT: Record<ParseStatus, string> = {
   pending: '等待整理',
   fetching: '读取网页中',
@@ -24,8 +24,8 @@ export const STATUS_TEXT: Record<ParseStatus, string> = {
 }
 
 /**
- * 失败也分原因：被站点拦下和网络不通，用户能做的事完全不同，
- * 所以不能都显示成「暂时无法解析」。
+ * Failures have reasons too: being blocked by the site and having no network leave the user with completely different options,
+ * so they must not all be shown as "temporarily unparseable".
  */
 export function statusText(status: ParseStatus, errorCode?: string | null): string {
   if (status === 'failed') {
@@ -42,8 +42,8 @@ export function statusText(status: ParseStatus, errorCode?: string | null): stri
         return STATUS_TEXT.failed
     }
   }
-  // 「部分内容无法读取」听起来像丢了大半；实际多数情况是只拿到了页面公开的那部分
-  // （推文、前言、标题），所以换个更准确的说法。
+  // "Part of the content could not be read" sounds like most of it was lost; in reality it usually means only the public part of the page was captured
+  // (the tweet, the foreword, the title), so a more accurate wording is used.
   if (status === 'partial') return '只读到部分内容'
   return STATUS_TEXT[status]
 }
@@ -54,7 +54,7 @@ export const RELATION_LABELS: Record<string, string> = {
   same_source: '同一来源',
 }
 
-// 后端可能按不同关系类型重复返回同一篇文档；同一 document_id 只保留分数最高的一条。
+// The backend may return the same document repeatedly under different relation types; keep only the highest-scoring entry per document_id.
 export function dedupeRelated(items: RelatedItem[]): RelatedItem[] {
   const byId = new Map<string, RelatedItem>()
   for (const item of items) {
@@ -68,7 +68,7 @@ function normalizeHost(value: string): string {
   return value.trim().toLowerCase().replace(/^www\./, '')
 }
 
-// 站点名与域名相同时只显示一次，避免 “example.org · example.org”。
+// Show the site name only once when it equals the domain, avoiding "example.org · example.org".
 export function sourceLabel(url: string, siteName: string | null | undefined, fallback: string): string {
   const domain = domainOf(url)
   if (!siteName) return `${domain} · ${fallback}`
@@ -111,7 +111,7 @@ export function formatDate(iso: string | null | undefined): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-/** 列表里用相对时间，减少需要读取的数字。 */
+/** Lists use relative time, so there are fewer numbers to read. */
 export function formatRelativeDate(iso: string | null | undefined): string {
   if (!iso) return '—'
   const d = new Date(iso)
@@ -138,16 +138,16 @@ export function isValidHttpUrl(value: string): boolean {
   }
 }
 
-// 分享按钮常常会附带标题、描述和短链，而不是纯 URL；保存时取第一段 http(s) 链接。
+// The share button often attaches a title, a description and a short link instead of a bare URL; on save, take the first http(s) link.
 const URL_IN_TEXT_RE = /https?:\/\/[^\s<>"'“”‘’（）\[\]{}，。；：！？、]+/i
 const TRAILING_URL_PUNCT_RE = /[.,;:!?，。；：！？、"'”’]+$/g
 
-/** 从纯 URL 或分享文字中提取第一个可用的 http(s) URL。 */
+/** Extract the first usable http(s) URL from a bare URL or from share text. */
 export function extractHttpUrl(value: string): string | null {
   const match = value.match(URL_IN_TEXT_RE)
   if (!match) return null
   let candidate = match[0].replace(TRAILING_URL_PUNCT_RE, '')
-  // 分享/Markdown 文本常在链接外再包一层括号；只裁掉不配对的尾部括号。
+  // Share/Markdown text often wraps the link in extra parentheses; trim only unpaired trailing parentheses.
   while (candidate.endsWith(')') && candidate.split(')').length > candidate.split('(').length) {
     candidate = candidate.slice(0, -1)
   }

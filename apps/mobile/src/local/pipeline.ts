@@ -10,10 +10,10 @@ import * as repo from './repo'
 import { oneLine } from './util'
 
 /**
- * 本机处理队列：抓取 → 解析 → 摘要 → 落库。
+ * On-device processing queue: fetch → parse → summarize → store.
  *
- * 没有服务端 worker，所以单飞、串行处理；一次最多处理 20 条，
- * 剩下的等下次保存、回到前台或手动刷新时继续。
+ * There is no server worker, so it runs single-flight and serially; at most 20 items per pass,
+ * and the rest continue on the next save, on returning to the foreground, or on a manual refresh.
  */
 let running = false
 
@@ -31,7 +31,7 @@ export async function processPendingQueue(): Promise<void> {
       try {
         await processOne(next.id, next.url)
       } catch {
-        // 单条出错不能卡住整个队列；状态留在非终态会在下次启动时被重置。
+        // One bad item must not stall the whole queue; a status left non-terminal is reset on the next launch.
         await repo.markFailed(next.id, 'INTERNAL_ERROR').catch(() => undefined)
         emitChange()
       }
@@ -39,14 +39,14 @@ export async function processPendingQueue(): Promise<void> {
   } finally {
     running = false
     emitChange()
-    // 语义索引在解析之后慢慢补，失败不打扰用户，下次再试。
+    // The semantic index is filled in gradually after parsing; failures don't bother the user and are retried next time.
     void buildVectors(6).catch(() => undefined)
   }
 }
 
 /**
- * 把正文图下载到本地。失败不影响正文：本地没存下来的位置留空，
- * 详情页会退回远程地址。
+ * Download the body images to local storage. Failure doesn't affect the text: positions not saved locally are left empty
+ * and the detail screen falls back to the remote URL.
  */
 async function storeImages(id: string, images: string[], referer: string): Promise<void> {
   if (images.length === 0) return
@@ -54,7 +54,7 @@ async function storeImages(id: string, images: string[], referer: string): Promi
     const files = await cacheImages(id, images, referer)
     if (files.some((file) => file.length > 0)) await repo.setImageFiles(id, files)
   } catch {
-    // 图片是增强项，存不下来也不能让解析失败
+    // Images are an enhancement; failing to store them must not fail the parse
   }
 }
 
@@ -74,7 +74,7 @@ async function processOne(id: string, url: string): Promise<void> {
       images: article.images.length,
     })
   } catch (error) {
-    // 403/401/412/451 是站点主动拒绝，不是网络抖动：两者的补救方式完全不同。
+    // 403/401/412/451 are the site refusing on purpose, not network flakiness: the two need completely different remedies.
     const message = error instanceof Error ? error.message : ''
     const refused = /HTTP (401|403|412|451)/.test(message)
     await repo.markFailed(id, refused ? 'FETCH_BLOCKED' : 'FETCH_FAILED')
@@ -85,25 +85,25 @@ async function processOne(id: string, url: string): Promise<void> {
 
   await repo.setStatus(id, 'parsing', 'parse')
 
-  // 网页没给标题时，沿用分享文字/剪贴板里带过来的标题，别把用户已经看到的信息丢掉。
+  // When the page gives no title, keep the one carried in from the share text/clipboard rather than dropping what the user already saw.
   if (!article.title) article.title = await repo.getSeededTitle(id)
 
-  // 页面里只要有图，就把图里的字读出来——长文里的截屏、思维导图同样是内容，
-  // 搜索时不该因为「正文已经够长」而漏掉它们。
+  // If the page has images, read the text inside them — screenshots and mind maps in a long article are content too,
+  // and search shouldn't miss them just because "the body is already long enough".
   if (isOcrAvailable() && article.images.length > 0) {
     await repo.setStatus(id, 'analyzing', 'summarize')
     emitChange()
     const texts = await ocrImages(article.images, url)
     if (texts.length > 0) {
-      // 图上认出来的字只进检索文本（plainText），不并进正文 markdown：
-      // 它们是搜索线索，不是文章内容，摆进正文只会让读者读到一段「图片文字」。
+      // Text recognized from images goes only into the search text (plainText), never into the body markdown:
+      // it is a search clue, not article content, and putting it in the body only makes the reader hit a block of "image text".
       const merged = mergeOcrText(article, texts.join('\n\n'))
       article.markdown = merged.markdown
       article.plainText = merged.plainText
     }
   }
 
-  // 和原来的后端语义一致：正文太短只算部分成功，元信息照常保留。
+  // Same semantics as the old backend: too little body counts as partial success, and metadata is kept as usual.
   if (article.plainText.length < 120) {
     await opLog('parse.partial', { id, chars: article.plainText.length, ms: Date.now() - startedAt })
     await repo.savePartial(id, article)
@@ -126,7 +126,7 @@ async function processOne(id: string, url: string): Promise<void> {
     keywords = llm.keywords
   }
   if (!summary) {
-    // 抽取式兜底：只用原文里的描述或开头，不生成原文没有的内容。
+    // Extractive fallback: use only the description or the opening of the original; never generate content that isn't there.
     summary = article.description ?? oneLine(article.plainText, 220)
   }
 

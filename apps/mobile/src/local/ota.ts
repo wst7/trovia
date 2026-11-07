@@ -1,8 +1,8 @@
 /**
- * 热更新（expo-updates）的薄封装。
+ * A thin wrapper around hot updates (expo-updates).
  *
- * 只做三件事：看现在跑的是内嵌包还是热更新、查有没有新的、下载并重启。
- * 没有配置 EAS 项目时（本地构建的包）整块安静地关掉，不打扰用户。
+ * It does three things only: tell whether the embedded bundle or an update is running, check whether there is a new one, download and restart.
+ * When no EAS project is configured (a locally built bundle) the whole thing turns itself off quietly without bothering the user.
  */
 let updatesModule: typeof import('expo-updates') | null = null
 
@@ -17,13 +17,13 @@ async function updates(): Promise<typeof import('expo-updates') | null> {
 }
 
 export interface OtaState {
-  /** 这个包装了热更新能力没有。 */
+  /** Whether this build has update capability at all. */
   enabled: boolean
-  /** 当前是否跑在一次热更新上（false = 内嵌包）。 */
+  /** Whether it is currently running on an update (false = embedded bundle). */
   runningUpdate: boolean
-  /** 当前这次更新的 id 前 6 位，方便对日志。 */
+  /** The first 6 characters of the current update id, for matching against logs. */
   updateId: string | null
-  /** 这次更新是何时发布的（ISO）。 */
+  /** When this update was published (ISO). */
   createdAt: string | null
 }
 
@@ -41,7 +41,7 @@ export async function readOtaState(): Promise<OtaState> {
   }
 }
 
-/** 把 expo-updates 的原始报错换成一句人话：只有「还没发过」需要解释，其余都是重试。 */
+/** Turn expo-updates' raw error into plain language: only "never published yet" needs explaining, everything else means retry. */
 export function describeOtaError(error: unknown): 'noChannel' | 'misconfigured' | 'network' | 'other' {
   const text = error instanceof Error ? error.message : String(error)
   if (/no channel named|channel.*not found/i.test(text)) return 'noChannel'
@@ -55,7 +55,7 @@ export type OtaOutcome =
   | { kind: 'latest' }
   | { kind: 'downloaded'; id: string | null }
 
-/** 查 + 下；下好了要调用方决定何时重启（reload）。 */
+/** Check + download; once downloaded, the caller decides when to restart (reload). */
 export async function checkOta(): Promise<OtaOutcome> {
   const expo = await updates()
   if (!expo?.isEnabled) return { kind: 'unavailable' }
@@ -65,7 +65,7 @@ export async function checkOta(): Promise<OtaOutcome> {
   return { kind: 'downloaded', id: fetched.manifest?.id?.slice(0, 6) ?? null }
 }
 
-/** 重启到新包。 */
+/** Restart into the new bundle. */
 export async function applyOta(): Promise<void> {
   const expo = await updates()
   if (!expo?.isEnabled) throw new Error('这个包没有开启热更新')

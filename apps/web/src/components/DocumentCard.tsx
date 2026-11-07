@@ -3,7 +3,7 @@ import type { DocumentSummary, SearchResult } from '@trovia/shared'
 import { domainOf, formatRelativeDate, SOURCE_TYPE_LABELS } from '@trovia/shared'
 import { LiveStatusBadge } from './LiveStatusBadge'
 
-/** 搜索结果：标题、来源、摘要、匹配原因、引用片段。 */
+/** Search result: title, source, summary, why it matched, quoted snippet. */
 export function SearchResultCard({ item }: { item: SearchResult }) {
   return (
     <article className="list-item">
@@ -33,7 +33,7 @@ export function SearchResultCard({ item }: { item: SearchResult }) {
   )
 }
 
-/** 列表/最近收藏：标题、摘要、来源与时间；只有未整理完才显示状态。 */
+/** List / recent saves: title, summary, source and time; the status is shown only while it is still being processed. */
 export function DocumentSummaryCard({
   doc,
   onTerminal,

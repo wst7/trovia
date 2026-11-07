@@ -1,10 +1,10 @@
 /**
- * 抓取失败时不该把已有正文的条目降级成「失败」。
+ * A fetch failure must not downgrade an entry that already has a body to "failed".
  *
- * 用 node:sqlite 建一张最小表，直接跑 repo.markFailed 里那句 SQL：
- * 这里验的是 SQL 的行为（CASE 条件），不是 RN 的封装。
+ * Build a minimal table with node:sqlite and run the SQL from repo.markFailed directly:
+ * what is verified here is the behavior of the SQL (the CASE condition), not the RN wrapper.
  *
- * 跑法：npx tsx apps/mobile/src/local/__tests__/markfailed.test.mts
+ * Usage: npx tsx apps/mobile/src/local/__tests__/markfailed.test.mts
  */
 import assert from 'node:assert/strict'
 import { DatabaseSync } from 'node:sqlite'

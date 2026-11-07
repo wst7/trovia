@@ -28,7 +28,7 @@ BLOCKED_HOST_SUFFIXES = (
     ".localdomain",
 )
 BLOCKED_HOSTS = {"localhost", "localhost.localdomain", "metadata.google.internal"}
-# 云元数据与特殊用途地址
+# Cloud metadata and special-purpose addresses
 BLOCKED_NETWORKS = [
     ipaddress.ip_network("169.254.0.0/16"),  # link-local + AWS/GCP/Azure metadata
     ipaddress.ip_network("100.64.0.0/10"),  # CGNAT
@@ -86,7 +86,7 @@ def validate_ssrf(url: str, allowed_ports: set[int] | None = None) -> None:
     if port not in ports:
         raise FetchError("FETCH_BLOCKED", f"不允许访问端口 {port}。")
 
-    # 字面量 IP 直接校验；域名先解析再校验全部解析结果（防 DNS Rebinding 的第一道闸）
+    # Literal IPs are validated directly; a domain is resolved first and then every resolved result is validated (the first gate against DNS rebinding)
     try:
         literal = ipaddress.ip_address(host)
     except ValueError:

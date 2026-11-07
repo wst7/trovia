@@ -1,7 +1,7 @@
 /**
- * 用真实页面跑一遍正文抽取，看开头是不是还有站点残留。
+ * Run body extraction against a real page, to see whether site residue still turns up at the beginning.
  *
- * 跑法：npx tsx scripts/inspect-extract.mts <url>
+ * Usage: npx tsx scripts/inspect-extract.mts <url>
  */
 import { extractFromHtml } from '../apps/mobile/src/local/article.ts'
 

@@ -1,18 +1,18 @@
 /**
- * WebDAV adapter —— 覆盖坚果云、Nextcloud、群晖、InfiniCLOUD 等。
+ * WebDAV adapter — covers Nutstore (Jianguoyun), Nextcloud, Synology, InfiniCLOUD and the like.
  *
- * 这是「自带云盘」路线里最划算的一家：不需要 OAuth 应用审核，不需要
- * 原生模块，用户填服务器地址 + 应用密码就能用。国内用户真正手上有的
- * 云盘，多半属于这一类。
+ * This is the best-value option on the "bring your own cloud drive" route: it needs no OAuth app review, no
+ * native module, and users just enter the server address + an app password. The cloud drives domestic users
+ * actually have tend to fall into this category.
  *
- * 注意：坚果云要求使用「应用密码」而不是登录密码，且 WebDAV 域名是
+ * Note: Nutstore requires an "app password" rather than the login password, and its WebDAV domain is
  * https://dav.jianguoyun.com/dav/。
  */
 import type { SyncEntry, SyncTarget } from './index.ts'
 
 /**
- * btoa 在浏览器和 Node 20+ 有，Hermes 不一定有，所以自带一份实现。
- * 用户名密码都是 ASCII 为主，但中文密码也要能编码，先转 UTF-8 再查表。
+ * btoa exists in browsers and Node 20+, but not necessarily in Hermes, so we ship our own implementation.
+ * Usernames and passwords are mostly ASCII, but Chinese passwords must encode too: convert to UTF-8 first, then look up the table.
  */
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 
@@ -45,11 +45,11 @@ function base64(input: string): string {
 }
 
 export interface WebDavOptions {
-  /** 例如 https://dav.jianguoyun.com/dav/trovia（根目录，末尾斜杠可有可无）。 */
+  /** E.g. https://dav.jianguoyun.com/dav/trovia (the root directory; a trailing slash is optional). */
   baseUrl: string
   username: string
   password: string
-  /** 单次请求超时，默认 20s。 */
+  /** Per-request timeout, 20s by default. */
   timeoutMs?: number
 }
 
@@ -87,13 +87,13 @@ export class WebDavTarget implements SyncTarget {
   }
 
   /**
-   * 目录不存在就建，一次建整条链。
+   * Create the directory if it does not exist, building the whole chain at once.
    *
-   * 两个真实世界的坑：
-   *   1. 用户填的根目录（例如 /dav/test）本身可能不存在。只建 docs/ 会得到 409，
-   *      因为 WebDAV 不允许跳过父目录建子目录——所以先建 base 自己。
-   *   2. MKCOL 的返回各服务器不一样：已存在时坚果云回 201、Nextcloud 回 405、
-   *      有的回 301。这些都不算错误；409 才是「父目录没有」，必须报出来。
+   * Two real-world pitfalls:
+   *   1. The root directory the user typed (e.g. /dav/test) may not exist itself. Creating only docs/ returns 409,
+   *      because WebDAV does not allow creating a child while skipping its parent — so create base itself first.
+   *   2. MKCOL responses differ per server: for an existing collection Nutstore returns 201, Nextcloud 405
+   *      and some return 301. None of these are errors; 409 is the one that means "the parent is missing" and must be reported.
    */
   async ensureDir(path: string): Promise<void> {
     const steps = ['', ...path.split('/').filter(Boolean).map((_, index, all) => all.slice(0, index + 1).join('/'))]
@@ -112,16 +112,16 @@ export class WebDavTarget implements SyncTarget {
   async list(prefix: string): Promise<SyncEntry[]> {
     const dir = prefix.replace(/\/+$/, '')
     const response = await this.request('PROPFIND', dir, undefined)
-    // 目录刚建好、还没文件：207 里没有 <d:response>，当作空。
-    // 404 = 没有这个目录；409 = 父目录都没有（坚果云就是 409）。
-    // 两种情况都当成「暂时还没有内容」，不要让它把整次同步顶掉。
+    // The directory was just created and has no files yet: there is no <d:response> in the 207, so treat it as empty.
+    // 404 = the directory does not exist; 409 = even the parent is missing (Nutstore returns 409).
+    // Both are treated as "there is no content yet"; do not let them abort the whole sync.
     if (response.status === 404 || response.status === 409) return []
     if (response.status !== 207) {
       throw new Error(`PROPFIND ${dir} 失败：${response.status} ${response.statusText}`)
     }
     const xml = await response.text()
     const entries: SyncEntry[] = []
-    // 只取 href 与内容长度，够引擎用了；不引入 XML 解析器。
+    // Only href and content length are taken, which is enough for the engine; no XML parser is pulled in.
     const basePath = dir.replace(/^\/+|\/+$/g, '')
     const marker = `/${basePath}/`
     for (const block of xml.split(/<\/d:response>|<\/D:response>/i).slice(0, -1)) {
@@ -130,13 +130,13 @@ export class WebDavTarget implements SyncTarget {
       const path = decodeURIComponent(href).split('?')[0]
       const trimmed = path.replace(/\/+$/, '')
       if (!trimmed) continue
-      // 集合自己也在 207 里（坚果云的 href 末尾还可能没有斜杠），必须跳过，
-      // 否则它会变成一条 path 为整串地址的假条目，同步时还会去 GET 它。
+      // The collection itself is in the 207 as well (Nutstore's href may even lack the trailing slash), so it must be skipped,
+      // otherwise it becomes a fake entry whose path is the whole address, and sync would even GET it.
       if (trimmed === basePath || trimmed.endsWith(`/${basePath}`)) continue
-      // 子目录不参与同步（我们只用一层 docs/）。
+      // Subdirectories do not take part in sync (only a single docs/ level is used).
       if (path.endsWith('/')) continue
-      // 路径相对**根目录**返回（docs/a.json），因为读取时引擎直接拿它去 GET；
-      // 只剥到 docs/ 之后会变成 a.json，GET 就打到根上去了。
+      // Paths are returned relative to the **root directory** (docs/a.json), because the engine GETs them directly when reading;
+      // stripping only up to docs/ would leave a.json, and that GET would hit the root instead.
       const index = path.indexOf(marker)
       const relative = index >= 0 ? path.slice(index + 1) : path.replace(/^\/+/, '')
       if (!relative) continue

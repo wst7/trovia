@@ -1,13 +1,13 @@
 /**
- * 自动同步：回到前台时静默跑一轮。
+ * Auto sync: run a round quietly when the app returns to the foreground.
  *
- * 不做后台定时：手机上的后台任务既不可靠，也会让人怀疑「它在我不知道的时候传了什么」。
- * 只在这个时机同步，用户能预期到：打开应用，内容就是新的。
+ * No background scheduling: background tasks on a phone are unreliable and make people suspect "it uploaded something without me knowing".
+ * Sync only at this moment so the user can expect it: open the app and the content is current.
  */
 import { loadConfig, loadPassword, lastSyncAt } from './sync-config'
 import { syncNow } from './sync-runner'
 
-/** 两次自动同步之间的最小间隔：刚同步过就别再连一次网盘。 */
+/** Minimum interval between two auto syncs: do not hit the cloud drive again right after a sync. */
 const MIN_INTERVAL_MS = 5 * 60 * 1000
 
 let running = false
@@ -19,14 +19,14 @@ export async function isSyncConfigured(): Promise<boolean> {
 }
 
 /**
- * 满足条件才同步；失败一律静默——自动同步报错弹窗比不同步更烦人。
- * 手动同步仍然会把错误讲清楚。
+ * Sync only when the conditions hold; every failure is silent — an auto-sync error dialog is more annoying than not syncing at all.
+ * Manual sync still explains errors clearly.
  */
 /**
- * 刚存了一条，顺手同步一次。
+ * A record was just saved, so sync once along the way.
  *
- * 不等 5 分钟那个节流：用户刚存完，最想看的就是「另一台也能看到」。
- * 但连着存几条时只跑最后一轮——8 秒内的多次保存合并成一次同步。
+ * Do not wait for the 5-minute throttle: right after saving, what the user most wants is "the other device can see it too".
+ * But when several are saved in a row only the last round runs — multiple saves within 8 seconds merge into one sync.
  */
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -45,7 +45,7 @@ export async function syncAfterSave(): Promise<void> {
   try {
     await syncNow()
   } catch {
-    // 存都存好了，同步失败不该在保存这条路上弹错；下次前台会再试。
+    // It is saved already, so a sync failure must not raise an error on the save path; the next foreground will try again.
   } finally {
     running = false
   }
@@ -65,7 +65,7 @@ export async function maybeAutoSync(): Promise<void> {
   try {
     await syncNow()
   } catch {
-    // 断网、网盘限流、密码过期：都不打扰用户，下次前台再说。
+    // Network down, cloud drive rate limiting, expired password: none of them bother the user, the next foreground will handle it.
   } finally {
     running = false
   }

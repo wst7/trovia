@@ -17,7 +17,7 @@ import { recordProblem } from '../local/crash-log'
 import { devLog, isDevMode } from '../local/dev-log'
 import { classifySaveError, SAVE_FAILURE_KEY } from '../local/save-error'
 
-/** 分享进入后的保存结果页：保存到本机一次，然后跳到详情。 */
+/** The save-result page after arriving via share: save to this device once, then jump to the detail screen. */
 export function ShareScreen() {
   const t = useT()
   const router = useRouter()
@@ -31,7 +31,7 @@ export function ShareScreen() {
 
   const started = useRef<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  // 失败后原地重试：分享进来的人已经没有原 App 的上下文了，逼他回首页等于丢一次收藏。
+  // Retry in place after a failure: someone arriving via share no longer has the original app's context, and sending them back to the home screen loses a save.
   const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
@@ -49,7 +49,7 @@ export function ShareScreen() {
         } else {
           toast(t('home.toast.saved'), { type: 'success' })
           void processPendingQueue()
-          // 存完稍后同步一次：另一台设备刷新就能看到。
+          // Sync a little later once saved, so the other device sees it on refresh.
           scheduleSyncAfterSave()
         }
         router.replace(`/documents/${res.id}`)
@@ -58,7 +58,7 @@ export function ShareScreen() {
           setError(t('composer.invalidUrl'))
           return
         }
-        // 原始堆栈留给 logcat，界面只说能行动的那一句。
+        // The raw stack goes to logcat; the UI only says the one thing the user can act on.
         console.warn('[share] save failed', e)
         recordProblem('share-save', e)
         await devLog('share.save.failed', { url }, e)

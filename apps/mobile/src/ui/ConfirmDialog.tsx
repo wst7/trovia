@@ -17,8 +17,8 @@ interface ConfirmDialogProps {
 }
 
 /**
- * 应用内确认框：原生 Alert 的按钮颜色跟系统走，会跳出这套配色，
- * 所以删除这类动作统一用这里。静态卡片 + 一层薄遮罩，不做弹跳。
+ * In-app confirm dialog: the native Alert's button colour follows the system and would break out of this palette,
+ * so actions like delete all use this one. A static card plus a thin scrim, with no bouncing.
  */
 export function ConfirmDialog({
   visible,

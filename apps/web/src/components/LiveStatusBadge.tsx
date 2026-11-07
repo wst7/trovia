@@ -7,8 +7,8 @@ import { StatusBadge } from './StatusBadge'
 const POLL_INTERVAL_MS = 1500
 
 /**
- * 状态徽章 + 自动轮询：非终态时每 1.5s 查询 /documents/{id}/status，
- * 到达 completed/partial/failed 终态后停止并回调 onTerminal。
+ * Status badge + automatic polling: while non-terminal, query /documents/{id}/status every 1.5s,
+ * and stop with an onTerminal callback once a completed/partial/failed terminal state is reached.
  */
 export function LiveStatusBadge({
   docId,
@@ -39,7 +39,7 @@ export function LiveStatusBadge({
           if (isTerminalStatus(s.status)) onTerminalRef.current?.(s.status)
         })
         .catch(() => {
-          // 轮询失败不打断页面，等下一轮
+          // A failed poll does not interrupt the page; wait for the next round
         })
     }, POLL_INTERVAL_MS)
     return () => {

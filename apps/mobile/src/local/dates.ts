@@ -1,11 +1,11 @@
 /**
- * 收藏列表的日期分组。
+ * Date grouping for the saved list.
  *
- * 不按月分组：月初只有一两条的时候，「2026 年 10 月」这种标题比内容还多。
- * 只把「今天 / 昨天」说清楚，再往前一律给具体日期——用户记的是「大概什么时候存的」，
- * 具体的日月就是最好的刻度。
+ * No month grouping: early in a month, when there are only one or two entries, a heading like "October 2026" outweighs the content.
+ * Only "today / yesterday" get words; everything older gets a concrete date — users remember roughly when they saved something,
+ * so a concrete day and month is the best scale.
  *
- * 说法来自 i18n：英文下是 Today / Yesterday / 10/3。
+ * The wording comes from i18n: in English it is Today / Yesterday / 10/3.
  */
 import { t } from '../i18n'
 
@@ -29,8 +29,8 @@ export function dayLabel(iso: string, now: Date = new Date()): string {
 }
 
 /**
- * 「多久以前」：同步状态这类地方要的是跨度，不是日期。
- * 一小时内说分钟，当天说小时，再往前交给 dayLabel。
+ * "How long ago": places like sync status want a span, not a date.
+ * Under an hour, minutes; same day, hours; anything older is handed to dayLabel.
  */
 export function relativeTime(iso: string, now: Date = new Date()): string {
   const at = new Date(iso)

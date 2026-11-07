@@ -1,7 +1,7 @@
 /**
- * 失败文案的回归测试：同一个「失败」，原因不同要说不同的话。
+ * Regression tests for failure copy: the same "failed" must say different things for different reasons.
  *
- * 跑法：npx tsx apps/mobile/src/local/__tests__/status.test.mts
+ * How to run: npx tsx apps/mobile/src/local/__tests__/status.test.mts
  */
 import assert from 'node:assert/strict'
 import { statusText } from '../../../../../packages/shared/src/format.ts'

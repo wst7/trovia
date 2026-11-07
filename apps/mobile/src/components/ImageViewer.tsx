@@ -7,10 +7,10 @@ import { saveImageToLibrary } from '../local/save-image'
 import { useT } from '../i18n'
 
 /**
- * 全屏看图：双指缩放、放大后拖动、双击放大/还原、左右切换。
+ * Fullscreen image viewing: pinch to zoom, drag after zooming in, double tap to zoom in/restore, swipe left/right to switch.
  *
- * 不引入手势库：这是全篇唯一需要多点触控的地方，用 PanResponder +
- * Animated 就够，省掉 reanimated 的原生依赖和构建时间。
+ * No gesture library: this is the only place in the whole app that needs multi-touch, so PanResponder +
+ * Animated are enough, saving the native dependency and build time that reanimated would add.
  */
 const MAX_SCALE = 4
 const DOUBLE_TAP_SCALE = 2.5
@@ -36,7 +36,7 @@ export function ImageViewer({ visible, images, index, onClose, onIndexChange }: 
   const translateX = useRef(new Animated.Value(0)).current
   const translateY = useRef(new Animated.Value(0)).current
 
-  // 手势过程中用普通变量记录，松手时再决定落到哪里。
+  // Track it in a plain variable during the gesture, then decide where it lands on release.
   const gesture = useRef({
     scale: 1,
     x: 0,
@@ -67,7 +67,7 @@ export function ImageViewer({ visible, images, index, onClose, onIndexChange }: 
   const current = images[index] ?? images[0]
 
   const [saving, setSaving] = useState(false)
-  /** 存图结果只在这个浮层里说一句，不弹系统对话框。 */
+  /** The save result is mentioned only in this overlay, without a system dialog. */
   const [note, setNote] = useState<string | null>(null)
 
   const handleSave = useCallback(async () => {
@@ -122,7 +122,7 @@ export function ImageViewer({ visible, images, index, onClose, onIndexChange }: 
         const sinceLast = now - gesture.current.lastTap
         gesture.current.lastTap = now
 
-        // 双击：在 (1x, 2.5x) 之间切换，并以此点为中心。
+        // Double tap: toggle between (1x, 2.5x), centered on this point.
         if (touches.length === 1 && sinceLast < DOUBLE_TAP_MS) {
           const zoomedOut = gesture.current.scale <= 1.05
           const nextScale = zoomedOut ? DOUBLE_TAP_SCALE : 1
@@ -165,7 +165,7 @@ export function ImageViewer({ visible, images, index, onClose, onIndexChange }: 
         }
       },
       onPanResponderRelease: (_event, state) => {
-        // 没放大时左右滑动切图。
+        // Swipe left/right to change image while not zoomed in.
         if (gesture.current.scale <= 1.05 && Math.abs(state.dx) > 60 && Math.abs(state.dy) < 80) {
           const step = state.dx < 0 ? 1 : -1
           const next = index + step

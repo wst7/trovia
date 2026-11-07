@@ -1,15 +1,15 @@
 /**
- * 备份编解码。
+ * Backup encode/decode.
  *
- * 导出的是 .zip：里面一份 backup.json（原样 JSON，解压就能看，别的工具也能读）
- * 和一份 收藏.md（给人读的）。zip 内部就是 deflate，和 gzip 同一套算法：
- * 315 篇真实收藏实测，6.14 MB 的 JSON 压到 1.6 MB 左右。
+ * What is exported is a .zip: a backup.json inside (raw JSON, viewable once unzipped, readable by other tools)
+ * plus the Markdown export (MARKDOWN_ENTRY, meant for humans). Inside the zip it is plain deflate, the same algorithm as gzip:
+ * measured on 315 real saved articles, a 6.14 MB JSON compresses to around 1.6 MB.
  *
- * 为什么不用 brotli / zstd：它们能再省 0.6 MB，但 Hermes 里没有可用的编码器，
- * 得走 WASM 或原生模块，会破坏「一条 gradle 命令出包」这条线。省 0.6 MB 不值这个风险。
+ * Why not brotli / zstd: they would save another 0.6 MB, but Hermes has no usable encoder,
+ * so it would mean WASM or a native module, which breaks the "one gradle command builds the app" line. 0.6 MB is not worth that risk.
  *
- * 为什么自己写 base64：expo-file-system 写二进制只能传 base64 字符串，
- * Hermes 的 btoa 只吃 latin1，中文一进去就坏，所以用字节表自己转。
+ * Why write base64 by hand: expo-file-system can only write binary as a base64 string,
+ * and Hermes' btoa only accepts latin1, so Chinese corrupts it; hence a byte table and our own conversion.
  */
 import { gunzipSync, strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
 
@@ -56,15 +56,15 @@ export const BACKUP_ENTRY = 'backup.json'
 export const MARKDOWN_ENTRY = '收藏.md'
 
 export interface EncodedBackup {
-  /** zip 的 base64，直接写盘用。 */
+  /** base64 of the zip, for writing straight to disk. */
   base64: string
-  /** 未压缩的 JSON 字节数。 */
+  /** Byte count of the uncompressed JSON. */
   rawBytes: number
-  /** 压缩后的 zip 字节数。 */
+  /** Byte count of the compressed zip. */
   zipBytes: number
 }
 
-/** backup.json + 收藏.md → zip → base64。level 9 值得：导出不是热路径。 */
+/** backup.json + MARKDOWN_ENTRY → zip → base64. level 9 is worth it: export is not a hot path. */
 export function encodeBackup(json: string, markdown: string): EncodedBackup {
   const raw = strToU8(json)
   const zip = zipSync(
@@ -72,7 +72,7 @@ export function encodeBackup(json: string, markdown: string): EncodedBackup {
       [BACKUP_ENTRY]: [raw, { level: 9 }],
       [MARKDOWN_ENTRY]: [strToU8(markdown), { level: 9 }],
     },
-    // 固定时间戳：同一份数据导两次，zip 的字节也一致（便于比对与去重）
+    // Fixed timestamp: exporting the same data twice produces identical zip bytes (easy to compare and dedupe)
     { mtime: new Date(2026, 0, 1) },
   )
   return { base64: bytesToBase64(zip), rawBytes: raw.length, zipBytes: zip.length }
@@ -82,15 +82,15 @@ export type BackupKind = 'zip' | 'gzip' | 'plain'
 
 export interface DecodedBackup {
   text: string
-  /** 原文件是哪种容器（用魔数判断，不看扩展名）。 */
+  /** Which container the source file is (judged by magic number, not by extension). */
   kind: BackupKind
 }
 
 /**
- * 导入方向：新版 .zip、过渡期的 .json.gz、以及旧版纯 .json 都要能读。
+ * Import directions: the new .zip, the transitional .json.gz and the legacy plain .json all have to be readable.
  *
- * 只看文件头——分享面板和网盘经常把后缀改掉。
- * zip 里先找 backup.json，找不到就取第一个 .json 条目。
+ * Look only at the file header — share sheets and cloud drives often change the suffix.
+ * Inside the zip, look for backup.json first; if it is missing, take the first .json entry.
  */
 export function decodeBackupBase64(base64: string): DecodedBackup {
   const bytes = base64ToBytes(base64)

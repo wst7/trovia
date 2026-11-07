@@ -1,8 +1,8 @@
 /**
- * 开发者模式：把「存不进」这件事本身记下来，供用户一键盘发出去。
+ * Developer mode: record the very fact that something "couldn't be saved" so the user can forward it with one tap.
  *
- * 普通用户不该看到这些；开关藏在首页标题上（长按），因为出问题的时候
- * 设置页可能正是崩掉的那一页，唯一能走的路必须是首页。
+ * Ordinary users shouldn't see this; the switch hides on the home screen title (long press), because when something breaks
+ * the settings page may be exactly the page that crashed, so the one route that must always work is the home screen.
  */
 import { readSetting, writeSetting } from './settings'
 
@@ -45,11 +45,11 @@ export async function setDevMode(next: boolean): Promise<void> {
   try {
     await writeSetting(FLAG, next ? '1' : '0')
   } catch {
-    // 存不进去也不影响本次会话的记录。
+    // Failing to persist doesn't affect logging for this session.
   }
 }
 
-/** 开发者模式下写一行；关着的时候什么都不做，不占 I/O。 */
+/** Write one line in developer mode; when it is off, do nothing and spend no I/O. */
 export async function devLog(scope: string, detail: unknown, error?: unknown): Promise<void> {
   if (!enabled) return
   const module = fs()
@@ -68,15 +68,15 @@ export async function devLog(scope: string, detail: unknown, error?: unknown): P
     const previous = info.exists ? await module.readAsStringAsync(path) : ''
     await module.writeAsStringAsync(path, `${previous}${line.replace(/\s+/g, ' ')}\n`.slice(-MAX_CHARS))
   } catch {
-    // 记录失败不能再抛。
+    // A logging failure must not throw.
   }
 }
 
 /**
- * 操作日志：谁在什么时候做了什么、花了多久、结果如何。
+ * Operation log: who did what, when, how long it took, and how it turned out.
  *
- * 和 devLog 写同一个文件，前缀固定成 `op:`，读的时候可以只挑操作，
- * 也可以把保存失败的堆栈一起看——出问题时这两半总是一起看。
+ * Writes to the same file as devLog under a fixed `op:` prefix, so a read can pick only operations
+ * or look at save-failure stacks together with them — when something breaks, these two halves are always read together.
  */
 export async function opLog(
   action: string,
@@ -108,11 +108,11 @@ export async function clearDevLog(): Promise<void> {
   try {
     await module.writeAsStringAsync(path, '')
   } catch {
-    // 忽略。
+    // Ignore.
   }
 }
 
-/** 环境快照：磁盘剩余、数据库体积、行数——SQLITE_FULL 这类问题看这里。 */
+/** Environment snapshot: free disk, database size, row counts — look here for things like SQLITE_FULL. */
 export async function diagnosticsSnapshot(): Promise<string> {
   const module = fs()
   const lines: string[] = []
@@ -136,7 +136,7 @@ export async function diagnosticsSnapshot(): Promise<string> {
   } catch (error) {
     lines.push(`db: ${error instanceof Error ? error.message : String(error)}`)
   }
-  // 日志本身的状态：开发者看着这块代码判断「为什么日志是空的」。
+  // The state of the log itself: developers read this code to decide "why the log is empty".
   try {
     const module = fs()
     const path = module ? logPath(module) : null

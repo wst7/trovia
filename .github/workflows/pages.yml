@@ -1,7 +1,7 @@
 name: Landing Page
 
-# 说明页部署到 GitHub Pages（项目站点：https://<owner>.github.io/<repo>/）。
-# 只有 apps/landing 会发布；应用本身（apps/web）暂停部署，不在这里出现。
+# The landing page is deployed to GitHub Pages (project site: https://<owner>.github.io/<repo>/).
+# Only apps/landing is published; the app itself (apps/web) is paused for deployment and does not appear here.
 on:
   push:
     branches: [main]
@@ -17,7 +17,7 @@ permissions:
   pages: write
   id-token: write
 
-# 同一时间只跑一个部署，新的提交取消旧的。
+# Only one deployment runs at a time; a new commit cancels the old one.
 concurrency:
   group: pages
   cancel-in-progress: true
@@ -35,8 +35,8 @@ jobs:
 
       - run: npm ci
 
-      # 说明页里的应用入口指向安装包，而不是已暂停的网页应用。
-      # 站点地址必须写成项目站点的绝对地址，og:image 需要绝对 URL。
+      # The app entry point on the landing page points at the installer package, not at the paused web app.
+      # The site address has to be written as the absolute address of the project site; og:image needs an absolute URL.
       - name: Build landing
         run: npm run build -w @trovia/landing
         env:

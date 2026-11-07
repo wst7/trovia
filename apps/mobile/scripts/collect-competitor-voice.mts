@@ -1,11 +1,11 @@
 /**
- * 竞品差评采集：App Store 评论（iTunes RSS）+ GitHub issue。
+ * Competitor complaint collection: App Store reviews (iTunes RSS) + GitHub issues.
  *
- * 存在的意义：定位不是靠自我感觉，而是看别人被骂什么。
- * 走本机代理（127.0.0.1:7897），因为 iTunes/GitHub 直连不稳定。
+ * Why this exists: positioning should not rely on gut feeling but on what people actually complain about.
+ * Goes through a local proxy (127.0.0.1:7897) because direct connections to iTunes/GitHub are unreliable.
  *
- * 跑法：npx tsx scripts/collect-competitor-voice.mts
- * 输出：/tmp/competitor-voice.json
+ * How to run: npx tsx scripts/collect-competitor-voice.mts
+ * Output: /tmp/competitor-voice.json
  */
 import { writeFile } from 'node:fs/promises'
 
@@ -31,7 +31,7 @@ async function getJson<T>(url: string): Promise<T> {
   return (await response.json()) as T
 }
 
-/** 先在 App Store 搜到 app id。 */
+/** First look up the app id on the App Store. */
 async function findAppId(term: string, country: string): Promise<{ id: string; name: string } | null> {
   const url = `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=software&country=${country}&limit=5`
   const data = await getJson<{ results: { trackId: number; trackName: string; trackViewUrl: string }[] }>(url)
@@ -46,7 +46,7 @@ interface RssReview {
   updated: { label: string }
 }
 
-/** RSS 评论最多给 10 页，每页 50 条；这里取最近 2 页。 */
+/** The review RSS feed offers at most 10 pages of 50 entries each; take the 2 most recent pages here. */
 async function fetchReviews(appId: string, country: string, appName: string): Promise<Review[]> {
   const out: Review[] = []
   for (const page of [1, 2]) {
@@ -67,7 +67,7 @@ async function fetchReviews(appId: string, country: string, appName: string): Pr
         })
       }
     } catch {
-      // 某一页取不到就跳过，不影响整体
+      // If one page cannot be fetched, skip it; the rest is unaffected
     }
   }
   return out
@@ -83,7 +83,7 @@ interface Issue {
   created_at: string
 }
 
-/** GitHub 上被讨论最多的 open issue，往往就是用户真正的痛。 */
+/** The most-discussed open issues on GitHub are usually where users feel the real pain. */
 async function fetchIssues(repo: string, limit = 15): Promise<{ repo: string; issues: Issue[] }> {
   const url = `https://api.github.com/repos/${repo}/issues?state=open&sort=comments&direction=desc&per_page=${limit}`
   const rows = await getJson<(Issue & { pull_request?: unknown })[]>(url)

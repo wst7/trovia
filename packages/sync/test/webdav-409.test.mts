@@ -1,12 +1,12 @@
 /**
- * WebDAV 适配器的回归测试：不打网络，用假的 fetch 复刻真实服务器的怪癖。
+ * Regression tests for the WebDAV adapter: no network, a fake fetch reproduces the real server's quirks.
  *
- * 三条都来自坚果云上的实际返回：
- *   1. 父目录不存在时，MKCOL 和 PROPFIND 都回 409（不是 404）；
- *   2. 集合自己也会出现在 207 里，href 末尾还可能没有斜杠；
- *   3. MKCOL 已存在的目录仍回 201。
+ * All three come from actual responses on Nutstore:
+ *   1. when the parent directory is missing, both MKCOL and PROPFIND return 409 (not 404);
+ *   2. the collection itself also appears in the 207, and its href may have no trailing slash;
+ *   3. MKCOL on an existing directory still returns 201.
  *
- * 跑法：npx tsx packages/sync/test/webdav-409.test.mts
+ * How to run: npx tsx packages/sync/test/webdav-409.test.mts
  */
 import assert from 'node:assert/strict'
 
@@ -28,7 +28,7 @@ function fakeFetch(routes: (call: Call) => { status: number; body?: string }): {
 
 const BASE = 'https://dav.example.com/dav/trovia'
 
-// 1) 409 当成「还没有内容」，不要让整次同步失败
+// 1) Treat 409 as "nothing there yet"; it must not fail the whole sync
 {
   const { calls } = fakeFetch(() => ({ status: 409 }))
   const target = new WebDavTarget({ baseUrl: BASE, username: 'u', password: 'p' })
@@ -37,7 +37,7 @@ const BASE = 'https://dav.example.com/dav/trovia'
   assert.equal(calls[0].method, 'PROPFIND')
 }
 
-// 2) 集合自己那条 href 必须跳过（坚果云的 href 不带尾斜杠）
+// 2) The collection's own href must be skipped (Nutstore's href has no trailing slash)
 {
   fakeFetch(() => ({
     status: 207,
@@ -53,7 +53,7 @@ const BASE = 'https://dav.example.com/dav/trovia'
   assert.equal(entries[0].size, 12)
 }
 
-// 3) ensureDir 必须先建根目录，再建子目录；409 要报成「父目录不存在」
+// 3) ensureDir must create the root first, then the subdirectory; 409 must surface as "parent directory missing"
 {
   const { calls } = fakeFetch((call) => {
     if (call.url.endsWith('/docs')) return { status: 409 }
@@ -65,7 +65,7 @@ const BASE = 'https://dav.example.com/dav/trovia'
   assert.ok(calls.some((c) => c.method === 'MKCOL' && c.url === `${BASE}/docs`))
 }
 
-// 4) 已存在的目录（201/405 都算存在）不该报错
+// 4) An existing directory (201 or 405 both count as existing) must not raise
 {
   fakeFetch((call) => ({ status: call.url.endsWith('/docs') ? 405 : 201 }))
   const target = new WebDavTarget({ baseUrl: BASE, username: 'u', password: 'p' })

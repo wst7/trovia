@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { subscribeChange } from './bus'
 
-/** 本地数据变化时自增的版本号，用作列表/详情重新加载的依赖。 */
+/** A version counter that increments when local data changes, used as the dependency for reloading lists and details. */
 export function useLocalRevision(): number {
   const [revision, setRevision] = useState(0)
   useEffect(() => subscribeChange(() => setRevision((value) => value + 1)), [])

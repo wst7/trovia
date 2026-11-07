@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 
 from app.fetch import FetchResult
 
-WECHAT_TZ = timezone(timedelta(hours=8))  # 微信文章时间为北京时间
+WECHAT_TZ = timezone(timedelta(hours=8))  # WeChat article timestamps are in Beijing time
 
 
 @dataclass
@@ -44,7 +44,7 @@ class Parser(Protocol):
     def parse(self, fetched: FetchResult) -> ParseResult: ...
 
 
-# ---------------------------------------------------------------- HTML 辅助
+# ---------------------------------------------------------------- HTML helpers
 
 _WS_RE = re.compile(r"[ \t\r\f\v 　]+")
 

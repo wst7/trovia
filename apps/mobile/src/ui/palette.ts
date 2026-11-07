@@ -1,10 +1,10 @@
 import { useColorScheme } from 'react-native'
 
 /**
- * 命令式取色的唯一入口：Ionicons 的 color、placeholderTextColor、
- * RefreshControl 这些 prop 不接受 className，只能给字符串。
+ * The single entry point for imperative colour lookups: Ionicons' color, placeholderTextColor,
+ * RefreshControl and similar props do not accept className, only a string.
  *
- * 值与 `global.css` 的 CSS 变量一一对应，改一处必须同时改另一处。
+ * The values map one-to-one onto the CSS variables in `global.css`; changing one means changing the other.
  */
 export const palette = {
   light: {

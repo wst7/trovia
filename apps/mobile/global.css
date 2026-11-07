@@ -3,11 +3,11 @@
 @tailwind utilities;
 
 /*
- * Trovia · 设计令牌
+ * Trovia · design tokens
  *
- * 「克制」= 两档中性色 + 一个强调色。纸白承担画布，墨黑承担文字，
- * 朱红只出现在当前可执行的那个动作上。层次靠 1px 发丝线与留白，
- * 不用阴影、不用渐变、不用装饰性图形。
+ * "Restraint" = two neutral tones + one accent color. Paper white carries the canvas, ink black carries the text,
+ * vermilion appears only on the one action that is executable right now. Hierarchy comes from 1px hairlines and whitespace,
+ * with no shadows, no gradients and no decorative graphics.
  */
 
 :root {

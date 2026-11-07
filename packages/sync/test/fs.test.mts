@@ -1,10 +1,10 @@
 /**
- * 真实文件系统的同步测试：把「云盘」换成一个目录（LocalDirTarget），
- * 验证引擎不是只在内存里自洽——文件真的写到盘上，另一台设备真的读回来。
+ * Sync test against a real filesystem: replace "the cloud drive" with a directory (LocalDirTarget),
+ * to verify the engine is not merely self-consistent in memory — files really land on disk and another device really reads them back.
  *
- * 这个目录就是未来 iCloud Drive 容器路径的替身；换成 WebDAV 只是换 adapter。
+ * This directory stands in for the future iCloud Drive container path; switching to WebDAV is just swapping the adapter.
  *
- * 跑法：npx tsx packages/sync/test/fs.test.mts
+ * Usage: npx tsx packages/sync/test/fs.test.mts
  */
 import assert from 'node:assert/strict'
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
@@ -69,7 +69,7 @@ async function run() {
     let report = await syncOnce({ target: cloud, store: phone, deviceId: 'phone', now })
     assert.equal(report.pushed, 1)
 
-    // 文件真的落盘了，名字就是 doc id
+    // The file really landed on disk, and its name is the doc id
     const docsDir = join(root, 'docs')
     const files = await readdir(docsDir)
     assert.deepEqual(files, ['doc-a.json'], '应该在 docs/ 下生成一个文件')
@@ -77,13 +77,13 @@ async function run() {
     assert.equal(onDisk.payload.title, '为什么睡前刷手机更焦虑')
     console.log(`✓ 写进真实目录：docs/${files[0]}（${JSON.stringify(onDisk).length} 字节）`)
 
-    // 另一台设备从同一个目录拉
+    // The other device pulls from the same directory
     report = await syncOnce({ target: cloud, store: laptop, deviceId: 'laptop', now })
     assert.equal(report.pulled, 1)
     assert.equal(laptop.docs.get('doc-a')?.payload.url, 'https://example.com/a')
     console.log('✓ 第二台设备从同一目录读回，正文完整')
 
-    // 电脑上改，手机同步后跟上
+    // Changed on the computer, and the phone catches up after syncing
     laptop.put({
       id: 'doc-a',
       updated_at: '2026-01-01T00:00:20Z',
@@ -95,7 +95,7 @@ async function run() {
     assert.equal(phone.docs.get('doc-a')?.payload.title, '为什么睡前刷手机更焦虑（改过标题）')
     console.log('✓ 改动经目录中转，另一台设备拿到新版本')
 
-    // 空跑一次：不写任何东西
+    // One empty run: nothing is written
     const before = (await readdir(docsDir)).length
     report = await syncOnce({ target: cloud, store: phone, deviceId: 'phone', now })
     assert.equal(report.pushed, 0)

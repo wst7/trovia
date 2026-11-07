@@ -15,10 +15,10 @@ import { useT } from '../i18n'
 import { usePalette } from '../ui/palette'
 
 /**
- * 导入：选文件 → 看清会导入什么 → 确认 → 逐条入队。
+ * Import: pick a file → see what will be imported → confirm → enqueue item by item.
  *
- * 关键是「确认前把话说清楚」：识别到多少条、多少条已经有了、多少条读不出来。
- * 一次性把几百条链接塞进数据库却不说清楚，用户会以为数据被弄乱了。
+ * The key is "say it plainly before confirming": how many were recognized, how many already exist, how many can't be read.
+ * Stuffing hundreds of links into the database at once without saying so makes users think their data got scrambled.
  */
 export function ImportScreen() {
   const t = useT()
@@ -66,7 +66,7 @@ export function ImportScreen() {
     setBusy(true)
     setProgress({ done: 0, total: restoring ? picked.documents!.length : picked.fresh.length })
     try {
-      // 备份文件带着正文，直接落库；普通书签只带链接，才需要重新整理。
+      // A backup file carries the body and goes straight into the database; a plain bookmark file carries only links and has to be parsed.
       const result = restoring
         ? await runRestore(picked.documents!, setProgress, picked.name)
         : await runImport(picked.fresh, setProgress, picked.name)
@@ -85,8 +85,8 @@ export function ImportScreen() {
           : t('import.added', { count: result.created }),
         { type: 'success' },
       )
-      // 导入完直接去收藏页并打开「只看导入的」：否则用户回到列表只看到一排「整理中」，
-      // 分不清哪些是刚进来的。
+      // After importing, go straight to the saved page with "only imported" on: otherwise the user comes back to a list of "organizing" rows
+      // and can't tell which ones just arrived.
       if (result.created > 0) router.replace('/documents?imported=1')
     } catch {
       toast(t('import.interrupted'), { type: 'error' })
@@ -162,8 +162,8 @@ export function ImportScreen() {
                 color={p.accent}
               />
               {importedRange ? (
-                // 带时间的导出（Pocket、书签）会把原收藏时间带进来；先说清楚，
-                // 免得用户以为几百条老收藏全变成「今天」。
+                // Exports with timestamps (Pocket, bookmarks) carry the original saved time in; say so up front,
+                // so the user doesn't think hundreds of old saves all became "today".
                 <Line label={t('import.savedTime')} value={importedRange} color={p.muted} />
               ) : null}
               {picked.skipped.length > 0 ? (

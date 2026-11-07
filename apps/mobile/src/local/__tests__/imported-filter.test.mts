@@ -1,10 +1,10 @@
 /**
- * 「只看导入的」这条筛选依赖一句 SQL：metadata 里带 origin 的才算导入。
+ * The "only imported" filter relies on one SQL clause: only rows whose metadata carries origin count as imported.
  *
- * 用 node:sqlite 建最小表跑那句 LIKE，确认不会把普通收藏也算进去、
- * 也不会漏掉导入的（metadata 是 TEXT，格式由 createDocument 决定）。
+ * Build a minimal table with node:sqlite and run that LIKE, to confirm it does not count ordinary saves
+ * and does not miss imported ones (metadata is TEXT, and its format is decided by createDocument).
  *
- * 跑法：npx tsx apps/mobile/src/local/__tests__/imported-filter.test.mts
+ * Usage: npx tsx apps/mobile/src/local/__tests__/imported-filter.test.mts
  */
 import assert from 'node:assert/strict'
 import { DatabaseSync } from 'node:sqlite'
@@ -28,7 +28,7 @@ assert.deepEqual(
   '只应命中带 origin 的条目',
 )
 
-// 没有 metadata 的（NULL）不能因为 LIKE 返回 NULL 而被误判为命中
+// Rows without metadata (NULL) must not be counted as hits just because LIKE returns NULL
 assert.equal(rows.some((row) => row.id === 'plain-null'), false, 'NULL metadata 不算导入')
 
 console.log('importedOnly：2 项断言通过')

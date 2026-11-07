@@ -1,8 +1,8 @@
 /**
- * 解析能力探针：对真实平台的链接跑一遍 extractFromHtml，输出长度与失败原因。
+ * Extraction probe: runs extractFromHtml against links from real platforms and prints the output length and any failure reason.
  *
- * 用法：npx tsx scripts/probe-extract.mts
- * 注意：这不是单元测试，是「真链接真 HTML」的验收脚本；跑完会打印一张表。
+ * Usage: npx tsx scripts/probe-extract.mts
+ * Note: this is not a unit test but an acceptance script over real links and real HTML; when it finishes it prints a table.
  */
 import { extractFromHtml } from '../src/local/article.ts'
 

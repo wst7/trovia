@@ -1,7 +1,7 @@
 /**
- * 改库名时的搬迁。用假文件系统，不碰真机。
+ * Moving things over when the database name changes. Uses a fake filesystem and never touches a real device.
  *
- * 跑法：npx tsx apps/mobile/src/local/__tests__/db-migrate.test.mts
+ * How to run: npx tsx apps/mobile/src/local/__tests__/db-migrate.test.mts
  */
 import assert from 'node:assert/strict'
 
@@ -27,7 +27,7 @@ function fakeFs(files: string[]) {
 
 const DIR = '/data/SQLite'
 
-// 1. 老库在、新库不在：搬过去，含 WAL 旁路
+// 1. Old database present, new one absent: move it over, including the WAL side files
 {
   const fs = fakeFs([`${DIR}/xunji.db`, `${DIR}/xunji.db-wal`, `${DIR}/xunji.db-shm`])
   const done = await moveLegacyDatabase(DIR, fs.ops)
@@ -38,7 +38,7 @@ const DIR = '/data/SQLite'
   assert.equal([...fs.set].some((p) => p.includes('xunji')), false, '不该留下老名字的文件')
 }
 
-// 2. 新库已存在：不动，避免覆盖更新的数据
+// 2. The new database already exists: leave it alone, so newer data is not overwritten
 {
   const fs = fakeFs([`${DIR}/trovia.db`, `${DIR}/xunji.db`])
   const done = await moveLegacyDatabase(DIR, fs.ops)
@@ -47,21 +47,21 @@ const DIR = '/data/SQLite'
   assert.ok(fs.set.has(`${DIR}/xunji.db`), '老文件原样留着，交给人工判断')
 }
 
-// 3. 只有新库：什么都不做
+// 3. Only the new database: do nothing
 {
   const fs = fakeFs([`${DIR}/trovia.db`])
   assert.equal(await moveLegacyDatabase(DIR, fs.ops), false)
   assert.deepEqual(fs.moved, [])
 }
 
-// 4. 两个都没有（全新安装）：什么都不做
+// 4. Neither one exists (a fresh install): do nothing
 {
   const fs = fakeFs([])
   assert.equal(await moveLegacyDatabase(DIR, fs.ops), false)
   assert.deepEqual(fs.moved, [])
 }
 
-// 5. 老库没有旁路文件（正常关闭过的库）：只搬主文件
+// 5. The old database has no side files (it was closed normally): move only the main file
 {
   const fs = fakeFs([`${DIR}/xunji.db`])
   assert.equal(await moveLegacyDatabase(DIR, fs.ops), true)

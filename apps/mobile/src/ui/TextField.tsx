@@ -12,8 +12,8 @@ interface TextFieldProps extends Omit<TextInputProps, 'style'> {
 }
 
 /**
- * 设置页的输入项：小号标签在上、一条下划线在下，聚焦时下划线变朱红。
- * 没有底色、没有圆角框——设置项不是表单卡片。
+ * Settings input: a small label above, a single underline below, and the underline turns vermilion on focus.
+ * No fill, no rounded box — a settings row is not a form card.
  */
 export function TextField({ label, hint, ...input }: TextFieldProps) {
   const p = usePalette()

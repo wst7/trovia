@@ -60,7 +60,7 @@ function statsLine(stats: DocumentStats | null, t: (key: string, vars?: Record<s
   return parts.join(' · ')
 }
 
-/** 一组设置项：白底、14dp 圆角、1px 描边，行间一条内缩发丝线。 */
+/** A settings group: white background, 14dp corners, 1px border, an inset hairline between rows. */
 function Group({ children }: { children: ReactNode }) {
   const items = Array.isArray(children) ? children.filter(Boolean) : [children]
   return (
@@ -80,8 +80,8 @@ function Group({ children }: { children: ReactNode }) {
 }
 
 /**
- * 经典设置行：图标 + 标题 +（可选）副标题 + 右侧值 + 箭头。
- * 有 onPress 才是可点的行，只读信息行不给箭头——箭头是「这里能进去」的承诺。
+ * Classic settings row: icon + title + optional subtitle + value on the right + chevron.
+ * Only a row with onPress is tappable; read-only info rows get no chevron — a chevron is the promise that you can go in.
  */
 function Row({
   icon,
@@ -98,11 +98,11 @@ function Row({
   title: string
   subtitle?: string
   value?: string
-  /** 值前面的小图标：有新版本时用一个小箭头，而不是加一句文案。 */
+  /** Small icon before the value: a new version shows a small arrow instead of an extra line of copy. */
   valueIcon?: IconName
   onPress?: () => void
   danger?: boolean
-  /** 正在做一件要等的事：右侧图标位置换成转圈。 */
+  /** Work that requires waiting is running: the right-side icon slot becomes a spinner. */
   busy?: boolean
   accessibilityLabel?: string
 }) {
@@ -156,25 +156,25 @@ export function SettingsScreen() {
   const [llm, setLlm] = useState<{ enabled: boolean; model: string | null } | null>(null)
   const [exporting, setExporting] = useState(false)
   const [version, setVersion] = useState<string | null>(null)
-  // 版本行自己就是更新入口：不用单开一页，也不用分成「整包 / 热更新」两种下载。
+  // The version row is the update entry point itself: no separate page, and no split into "full package / hot update" downloads.
   const [update, setUpdate] = useState<CheckResult | null>(null)
   const [updatePhase, setUpdatePhase] = useState<'idle' | 'checking' | 'downloading' | 'installing' | 'error'>('idle')
   const [progress, setProgress] = useState<DownloadProgress | null>(null)
-  // 热更新下好了但还没重启：这一状态要一直摆着，直到用户自己点。
+  // The hot update is downloaded but not yet restarted into: this state stays on screen until the user taps.
   const [otaReady, setOtaReady] = useState(false)
-  // 手动查过一次、结果是「已是最新」：要在副标题上说一句，否则点完像没反应。
+  // A manual check came back "already latest": the subtitle has to say so, otherwise tapping looks like nothing happened.
   const [checkedJustNow, setCheckedJustNow] = useState(false)
-  // 开发者模式：默认关；开着才在这一页出现「查看日志」。
+  // Developer mode: off by default; "view log" only appears on this page while it is on.
   const [devOn, setDevOn] = useState(false)
   const [sync, setSync] = useState<{ configured: boolean; at: string | null } | null>(null)
   const [localePref, setLocalePref] = useState<LocalePreference>('system')
 
   const [themePref, setThemePref] = useState<ThemePreference>('system')
-  // 整库重抓：可中断的批处理，进度写在行副标题上。
+  // Re-fetch the whole library: an interruptible batch whose progress goes in the row subtitle.
   const [rebulk, setRebulk] = useState<{ done: number; total: number; current: string | null } | null>(null)
   const stopRebulk = useRef(false)
 
-  /** 版本行的副标题就是更新状态，一句话说完。 */
+  /** The version row's subtitle is the update status, said in one sentence. */
   const updateSubtitle = (): string => {
     if (otaReady) return t('update.state.restart')
     if (updatePhase === 'checking') return t('update.state.checking')
@@ -192,13 +192,13 @@ export function SettingsScreen() {
     }
     if (update?.error) return t('update.state.unknown')
     if (checkedJustNow) return t('update.state.latest')
-    // 没更新、也没出错的时候不多话：这一行本来是「只保存在这台手机上」。
+    // When there is no update and no error, say little: this row is really "kept only on this phone".
     return t('settings.about.local')
   }
 
   /**
-   * 手动检查一次，绕过十分钟缓存。
-   * 用户点这一行的意思就是「现在有没有新版」，不能拿缓存糊弄。
+   *   * Check manually once, bypassing the ten-minute cache.
+   *   * Tapping this row means "is there a new version right now", so a cached answer won't do.
    */
   const checkNow = async () => {
     if (updatePhase === 'checking') return null
@@ -227,8 +227,8 @@ export function SettingsScreen() {
   }
 
   /**
-   * 点版本行：先现查一次，再决定要不要下载。
-   * 直接拿缓存里的版本去下载，可能已经在下一版发布了——那就会装回旧的。
+   *   * Tapping the version row: check fresh first, then decide whether to download.
+   *   * Downloading based on the cached version could already be a release behind — that would install the old build.
    */
   const checkThenUpdate = async () => {
     const result = await checkNow()
@@ -236,10 +236,10 @@ export function SettingsScreen() {
   }
 
   /**
-   * 用户主动点的更新入口。
+   *   * The update entry point the user tapped.
    *
-   * 先问热更新（几 MB、下完重启即生效）；没有热更新再下整包（几十 MB、走系统安装器）。
-   * 全程只有用户点了才会下载——自动下载被关掉了。
+   *   * Ask for a hot update first (a few MB, live after a restart); without one, download the full package (tens of MB, via the system installer).
+   *   * Nothing downloads unless the user taps — automatic download is turned off.
    */
   const handleUpdate = async () => {
     if (otaReady) {
@@ -259,12 +259,12 @@ export function SettingsScreen() {
         return
       }
     } catch {
-      // 热更新不可用（没配通道、离线）时继续往下走整包。
+      // When hot updates aren't available (no channel configured, offline), carry on to the full package.
     }
     await startUpdate()
   }
 
-  /** 下载 + 交系统安装器。中途失败要把原因留在副标题上，别一闪而过。 */
+  /** Download + hand to the system installer. A mid-way failure must leave its reason in the subtitle, not flash by. */
   const startUpdate = async () => {
     if (!update?.latest?.asset) return
     setUpdatePhase('downloading')
@@ -326,7 +326,7 @@ export function SettingsScreen() {
       setLlm({ enabled: llm.enabled, model: llm.model ?? null })
       setSync({ configured, at: syncedAt ?? null })
     } catch {
-      // 读本地库失败时保持上一次的值，不打断用户。
+      // If reading the local library fails, keep the previous value and don't interrupt the user.
     }
   }, [])
 

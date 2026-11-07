@@ -11,10 +11,10 @@ import { Button } from '../src/ui/Button'
 import { Screen } from '../src/ui/Screen'
 
 /**
- * 诊断页：崩溃记录 + 开发日志 + 环境快照，一键分享成 txt。
+ * Diagnostics screen: crash records + dev log + environment snapshot, shared as a txt with one tap.
  *
- * 入口有两个——首页那行红字（出过问题才出现），以及长按首页标题进开发者模式。
- * 不放设置里：设置页本身可能就是崩掉的那一页。
+ * There are two entry points — the red line on the home screen (only shown once something has gone wrong), and a long press on the home title to enter developer mode.
+ * Not put in settings: the settings screen itself may be the page that crashed.
  */
 export default function DiagnosticsScreen() {
   const t = useT()
@@ -32,7 +32,7 @@ export default function DiagnosticsScreen() {
       diagnosticsSnapshot(),
     ])
     setCrash(crashLog)
-    // 最新的在最上面：出问题时用户刚做完那个动作，第一眼就该看到它。
+    // Newest at the top: when something breaks the user just performed that action, so it should be the first thing they see.
     setDev(
       devLogText === null
         ? null
@@ -73,7 +73,7 @@ export default function DiagnosticsScreen() {
         await Sharing.shareAsync(path, { mimeType: 'text/plain', dialogTitle: t('diagnostics.share') })
       }
     } catch {
-      // 分享失败就让用户照着屏幕念给我们听。
+      // If sharing fails, let the user read the screen out to us.
     }
   }
 
@@ -133,7 +133,7 @@ export default function DiagnosticsScreen() {
             label={t('diagnostics.clear')}
             onPress={() => {
               void (async () => {
-                // 两份一起清：用户点「清空日志」的意思是「这些别再留着了」。
+                // Clear both together: when the user taps "clear logs", they mean "stop keeping these around".
                 await Promise.all([clearCrashLog(), clearDevLog()])
                 await reload()
               })()

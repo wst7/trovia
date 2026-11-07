@@ -13,8 +13,8 @@ import { TextField } from '../ui/TextField'
 import { useT } from '../i18n'
 
 /**
- * 同步失败要说清楚是哪一类错。
- * 「稍后再试」对着一堆不同原因，用户只能干等；分清楚之后每个人都知道该改哪一项。
+ * A sync failure has to say which kind of error it was.
+ * "Try again later" in the face of many different causes just makes the user wait; once they are told apart, everyone knows which field to fix.
  */
 function describeSyncError(
   error: unknown,
@@ -31,10 +31,10 @@ function describeSyncError(
 }
 
 /**
- * 同步设置：填自己的网盘，不注册账号。
+ * Sync settings: point at your own cloud drive, no account to create.
  *
- * 抄的是「WebDAV 就行」这条真实需求：用户手上的坚果云、群晖、Nextcloud
- * 都支持，不需要我们做 OAuth 审核，也没有中心服务器能读到内容。
+ * Built around the real requirement "WebDAV is enough": the Nutstore, Synology and Nextcloud
+ * accounts users already have all work, with no OAuth review for us and no central server that can read the content.
  */
 export function SyncScreen() {
   const t = useT()
@@ -51,7 +51,7 @@ export function SyncScreen() {
     const base = baseUrl.trim().replace(/\/+$/, '')
     const sub = folder.trim().replace(/^\/+|\/+$/g, '')
     if (!base) return null
-    // 地址里已经带了目录名（常见的手滑），提示出来比默默拼两遍好。
+    // The URL already includes the folder name (a common slip); pointing that out beats silently joining it twice.
     return sub && !base.endsWith(`/${sub}`) ? `${base}/${sub}` : base
   })()
   const folderLooksDuplicated = Boolean(
@@ -138,8 +138,8 @@ export function SyncScreen() {
           <Text className="text-title font-semibold text-ink">{t('settings.section.sync')}</Text>
           <Text className="mt-2 text-body-sm text-muted">{t('sync.intro')}</Text>
 
-          {/* 地址和目录是拼起来的，填错时界面必须自己说出来：把最终会访问的
-              地址显示出来，比让人对着两个输入框猜要省事得多。 */}
+          {/* The URL and folder are joined together, so the UI must speak up when they're wrong: showing the final address
+              is far less work than making people guess across two inputs. */}
           {effectiveUrl ? (
             <Text className="mt-4 text-caption text-faint">
               {t('sync.effective', { url: effectiveUrl })}
@@ -209,7 +209,7 @@ export function SyncScreen() {
           </View>
 
           {result ? <Text className="mt-6 text-body-sm text-ink">{result}</Text> : null}
-          {/* 文件数和收藏数对不上是常态：删除的条目在云端还留一个文件。 */}
+          {/* The file count not matching the saved count is normal: deleted items still leave a file in the cloud. */}
           {result ? <Text className="mt-1 text-caption text-faint">{t('sync.filesNote')}</Text> : null}
           {lastAt ? (
             <Text className="mt-1 text-caption text-faint">

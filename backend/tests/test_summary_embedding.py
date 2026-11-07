@@ -38,12 +38,12 @@ EN_TEXT = (
 )
 
 
-# ---------------------------------------------------------------- 摘要：抽取式
+# ---------------------------------------------------------------- summary: extractive
 
 def test_extractive_short_summary_is_from_original():
     result = ExtractiveSummaryProvider().summarize("深入理解任务调度系统", ZH_TEXT)
     short = result.summary_short.rstrip("…")
-    assert short and short in ZH_TEXT  # 不虚构：短摘要必须是原文句子
+    assert short and short in ZH_TEXT  # no fabrication: the short summary must be a sentence from the original
     assert len(result.summary_short) <= 140
     assert result.summary_long and len(result.summary_long) <= 600
 
@@ -53,7 +53,7 @@ def test_extractive_keywords_and_topics_come_from_text():
     assert result.keywords
     lowered = ZH_TEXT.lower()
     for keyword in result.keywords:
-        assert keyword in lowered, keyword  # 关键词全部真实出现在原文
+        assert keyword in lowered, keyword  # every keyword really does appear in the original
     assert "调度" in result.keywords
     assert result.topics
     for topic in result.topics:
@@ -79,7 +79,7 @@ def test_extractive_empty_text_falls_back_to_title():
     assert result.keywords == []
 
 
-# ---------------------------------------------------------------- 摘要：OpenAI 兼容
+# ---------------------------------------------------------------- summary: OpenAI-compatible
 
 def _summary_client(handler):
     return httpx.Client(transport=httpx.MockTransport(handler))
@@ -92,7 +92,7 @@ def test_openai_summary_parses_json_payload():
     def handler(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content.decode())
         assert body["model"] == "test-model"
-        assert "待分析" in body["messages"][0]["content"]  # 提示词把正文当作数据
+        assert "待分析" in body["messages"][0]["content"]  # the prompt treats the body as data
         return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps(payload, ensure_ascii=False)}}]})
 
     settings = SimpleNamespace(ai_api_key="k", ai_base_url="https://api.test/v1", ai_model="test-model")
@@ -123,7 +123,7 @@ def test_openai_summary_uses_custom_path_auth_and_extra_headers():
         ai_model="test-model",
         ai_chat_path="custom/chat",
         ai_auth_header="X-Api-Key",
-        ai_auth_prefix="",  # 直接发送 key，不加 Bearer
+        ai_auth_prefix="",  # send the key directly, without adding Bearer
         ai_extra_headers='{"X-Org": "trovia"}',
     )
     provider = OpenAISummaryProvider(settings, client=_summary_client(handler))
@@ -147,7 +147,7 @@ def test_openai_summary_json_mode_can_be_disabled():
         )
 
     settings = SimpleNamespace(
-        ai_api_key="",  # 本地服务可以不带密钥
+        ai_api_key="",  # a local service may go without a key
         ai_base_url="http://localhost:11434/v1",
         ai_model="local-model",
         ai_json_mode=False,
@@ -189,7 +189,7 @@ def test_openai_summary_retries_server_errors_then_raises():
     with pytest.raises(SummaryProviderError) as exc:
         provider.summarize("t", "正文")
     assert exc.value.code == "AI_PROVIDER_ERROR"
-    assert len(calls) >= 2  # 有限重试过
+    assert len(calls) >= 2  # it did retry, a bounded number of times
 
 
 def test_get_summary_provider_factory():
@@ -197,7 +197,7 @@ def test_get_summary_provider_factory():
     with pytest.raises(RuntimeError):
         get_summary_provider(SimpleNamespace(ai_provider="bogus", ai_api_key=""))
     with pytest.raises(RuntimeError):
-        # 兼容服务必须有地址与模型，密钥可以没有
+        # a compatible service must have a base URL and a model; the key may be absent
         get_summary_provider(SimpleNamespace(ai_provider="openai-compatible", ai_base_url="", ai_model="m"))
 
 
@@ -211,7 +211,7 @@ def test_get_summary_provider_accepts_compatible_without_api_key():
     assert isinstance(get_summary_provider(settings), OpenAISummaryProvider)
 
 
-# ---------------------------------------------------------------- embedding：本地哈希
+# ---------------------------------------------------------------- embedding: local hashing
 
 def test_local_embedding_dim_and_normalization():
     provider = LocalHashEmbeddingProvider(1536)
@@ -237,7 +237,7 @@ def test_local_embedding_semantics_via_shared_tokens():
     def cosine(x, y):
         return sum(i * j for i, j in zip(x, y))
 
-    assert cosine(a, b) > cosine(a, c)  # 共享词元 → 语义更近
+    assert cosine(a, b) > cosine(a, c)  # shared tokens → semantically closer
     assert cosine(a, b) > 0.2
 
 
@@ -246,7 +246,7 @@ def test_local_embedding_empty_string_zero_vector():
     assert vector == [0.0] * 16
 
 
-# ---------------------------------------------------------------- embedding：OpenAI 兼容
+# ---------------------------------------------------------------- embedding: OpenAI-compatible
 
 def _embed_settings(dim=8):
     return SimpleNamespace(embedding_dim=dim, embedding_model="test-embed",
@@ -339,7 +339,7 @@ def test_openai_embedding_dim_mismatch_raises_runtime_error():
 
 
 def test_get_embedding_provider_factory():
-    settings = Settings()  # conftest 环境变量：local + 1536
+    settings = Settings()  # conftest env vars: local + 1536
     provider = get_embedding_provider(settings)
     assert isinstance(provider, LocalHashEmbeddingProvider)
     assert provider.dim == settings.embedding_dim == 1536
@@ -347,7 +347,7 @@ def test_get_embedding_provider_factory():
         get_embedding_provider(SimpleNamespace(embedding_provider="bogus", embedding_dim=1536))
 
 
-# ---------------------------------------------------------------- 配置校验
+# ---------------------------------------------------------------- settings validation
 
 def test_validate_settings_accepts_compatible_without_key():
     settings = Settings(

@@ -1,13 +1,13 @@
 /**
- * 导入解析：把「别的应用/浏览器导出的文件」变成链接列表。
+ * Import parsing: turn "files exported by other apps/browsers" into a list of links.
  *
- * 支持四种真实存在的格式，都是用户手上大概率能拿到的：
- *   - Netscape 书签 HTML：Chrome / Edge / Firefox / Safari / Pocket 导出的都是这个
- *   - Chrome / Edge 的 Bookmarks JSON（有些同步盘里直接就是这个文件）
- *   - CSV：Raindrop、Instapaper 这类导出的表格
- *   - 纯文本：一行一个链接（很多人自己整理的清单）
+ * Four formats that really exist are supported, all of them things users are likely to have at hand:
+ *   - Netscape bookmark HTML: what Chrome / Edge / Firefox / Safari / Pocket all export
+ *   - the Bookmarks JSON of Chrome / Edge (in some sync folders this is the very file you find)
+ *   - CSV: the spreadsheets exported by the likes of Raindrop and Instapaper
+ *   - plain text: one link per line (the lists many people put together themselves)
  *
- * 这里只做「文本 → 条目」，不碰数据库，方便用真实导出文件做回归测试。
+ * This only does "text → items" and never touches the database, which makes it easy to regression-test with real export files.
  */
 
 export type ImportFormat =
@@ -15,23 +15,23 @@ export type ImportFormat =
   | 'bookmarks-json'
   | 'csv'
   | 'urls'
-  /** Trovia 自己的导出文件：不只是链接，正文、摘要、关键词、收藏时间都在里面。 */
+  /** Trovia's own export file: not just links, but body, summary, keywords and saved time as well. */
   | 'trovia-json'
   | 'unknown'
 
 /**
- * 备份里的一篇，字段与 documents 表对齐，恢复时不再重新抓取。
+ * One article inside a backup, with fields aligned to the documents table, so restoring never re-fetches.
  *
- * 「导出再导入数据不能变」是硬要求，所以这里不只是内容字段：
- * id、原始链接、状态、时间戳、rev 全都带过来。老备份（v1）没有的字段留 null，
- * 落库时按新收藏处理，不会因为缺字段而报错。
+ * "Export then import must not change the data" is a hard requirement, so this is not content fields only:
+ * id, original URL, status, timestamps and rev all come along. Fields missing from old (v1) backups stay null,
+ * and are treated like a new save when stored, so a missing field never becomes an error.
  */
 export interface RestoreDocument {
-  /** 原样保留的链接：不做规范化，规范化后的结果在 dedupeKey 里用于判重。 */
+  /** The URL kept verbatim: not normalised; the normalised result lives in dedupeKey for duplicate detection. */
   url: string
-  /** 判重用的规范化链接。 */
+  /** The normalised URL used for duplicate detection. */
   dedupeKey: string
-  /** 备份里的主键；新库直接沿用，避免恢复后变成「另一条」。 */
+  /** The primary key from the backup; the new database keeps it so a restore does not turn into "another entry". */
   id: string | null
   canonicalUrl: string | null
   title: string | null
@@ -63,29 +63,29 @@ export interface RestoreDocument {
 export interface ImportItem {
   url: string
   title: string | null
-  /** 导出文件里带的添加时间（毫秒），没有就是 null。 */
+  /** The added time carried by the export file (in milliseconds); null when absent. */
   addedAt: number | null
 }
 
 export interface ImportParseResult {
   format: ImportFormat
   items: ImportItem[]
-  /** 只有 trovia-json 有：可以直接落库的完整内容。 */
+  /** Only present for trovia-json: the full content that can be written straight to the DB. */
   documents?: RestoreDocument[]
-  /** 看着像链接但被跳过的行，附带原因，导入前要给用户看。 */
+  /** Lines that looked like links but were skipped, with the reason; shown to the user before importing. */
   skipped: { line: string; reason: string }[]
 }
 
 export const MAX_IMPORT_ITEMS = 500
 
 /**
- * 备份恢复的上限另算：普通导入是「一堆链接要排队去抓」，500 条是给队列兜底；
- * 备份是直接落库、不抓网页，限 500 会让「1000 篇的备份恢复不全」，
- * 那就违背了「导出的东西一定导得回来」。
+ * Restoring a backup has its own limit: a normal import means "a pile of links queueing up to be fetched", where 500 is a fallback cap for the queue;
+ * a backup goes straight into the DB without fetching pages, so capping it at 500 would mean "a 1000-article backup is only partly restored",
+ * which would break the promise that whatever was exported can always be imported back.
  */
 export const MAX_RESTORE_ITEMS = 20000
 
-/** 只保留 http(s)，其余（javascript:、chrome://、file://）都不是能收藏的内容。 */
+/** Keep http(s) only; everything else (javascript:, chrome://, file://) is not content that can be saved. */
 export function normalizeUrl(raw: string): string | null {
   const text = decodeEntities(raw.trim()).replace(/^["'<]|["'>]$/g, '')
   if (!text) return null
@@ -98,7 +98,7 @@ export function normalizeUrl(raw: string): string | null {
   if (!/^https?:$/.test(parsed.protocol)) return null
 
   parsed.hash = ''
-  // 跟踪参数不参与去重，否则同一个页面会被当成两条
+  // Tracking parameters take no part in de-duplication, otherwise the same page counts as two
   const drop = [...parsed.searchParams.keys()].filter((key) => /^(utm_|fbclid|gclid|spm|from|share_)/i.test(key))
   for (const key of drop) parsed.searchParams.delete(key)
   parsed.hostname = parsed.hostname.toLowerCase().replace(/^www\./, '')
@@ -119,7 +119,7 @@ function decodeEntities(text: string): string {
 
 export function detectFormat(content: string): ImportFormat {
   const head = content.slice(0, 4000)
-  // 自己的导出放在最前面判断：它里面也有 http 链接，落到 urls 会把正文和标题全丢掉。
+  // Check our own export first: it also contains http links, and falling through to urls would throw away body and title.
   if (/"documents"\s*:\s*\[/.test(head)) return 'trovia-json'
   if (/<a\s+href=/i.test(head) && /<\/a>/i.test(head)) return 'bookmarks-html'
   if (/^\s*\[/.test(head) || /"roots"\s*:/.test(head) || /"bookmark_bar"\s*:/.test(head)) return 'bookmarks-json'
@@ -128,7 +128,7 @@ export function detectFormat(content: string): ImportFormat {
   return 'unknown'
 }
 
-/** Chrome / Edge 的 Bookmarks JSON：递归收集 type=url 的节点。 */
+/** The Bookmarks JSON of Chrome / Edge: recursively collect nodes with type=url. */
 function parseBookmarksJson(content: string, skipped: ImportParseResult['skipped']): ImportItem[] {
   const items: ImportItem[] = []
   let root: unknown
@@ -161,7 +161,7 @@ function parseBookmarksJson(content: string, skipped: ImportParseResult['skipped
       children.forEach((child) => walk(child, depth + 1))
       return
     }
-    // roots / bookmark_bar 这类是对象映射，不是数组，也要往下走
+    // Things like roots / bookmark_bar are object maps rather than arrays, and must be walked as well
     Object.values(record).forEach((value) => {
       if (value && typeof value === 'object') walk(value, depth + 1)
     })
@@ -171,7 +171,7 @@ function parseBookmarksJson(content: string, skipped: ImportParseResult['skipped
   return items
 }
 
-/** Netscape 书签 HTML：<DT><A HREF="..." ADD_DATE="...">标题</A> */
+/** Netscape bookmark HTML: <DT><A HREF="..." ADD_DATE="...">title</A> */
 function parseBookmarksHtml(content: string, skipped: ImportParseResult['skipped']): ImportItem[] {
   const items: ImportItem[] = []
   const pattern = /<a\s+[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi
@@ -189,7 +189,7 @@ function parseBookmarksHtml(content: string, skipped: ImportParseResult['skipped
   return items
 }
 
-/** 简易 CSV 解析：支持引号包裹与逗号转义，够读导出文件。 */
+/** Minimal CSV parsing: handles quoted fields and escaped commas, which is enough to read export files. */
 function splitCsvLine(line: string): string[] {
   const cells: string[] = []
   let cell = ''
@@ -218,11 +218,11 @@ function splitCsvLine(line: string): string[] {
   return cells
 }
 
-/** Pocket 的 time_added 是 Unix 秒，其他导出多半是 ISO 日期；认不出来就当没有。 */
+/** Pocket's time_added is in Unix seconds while other exports are mostly ISO dates; anything unrecognised counts as absent. */
 function parseAddedAt(raw: string | undefined): number | null {
   const value = (raw ?? '').trim()
   if (!value) return null
-  // Pocket 的 time_added 是 Unix 秒
+  // Pocket's time_added is in Unix seconds
   if (/^\d{9,11}$/.test(value)) {
     const seconds = Number(value)
     return Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : null
@@ -235,11 +235,11 @@ function parseCsv(content: string, skipped: ImportParseResult['skipped']): Impor
   const lines = content.split(/\r?\n/).filter((line) => line.trim().length > 0)
   if (lines.length === 0) return []
   const header = splitCsvLine(lines[0]).map((cell) => cell.trim().toLowerCase())
-  // 各家的列名不一样：Pocket 用 given_url/given_title，Raindrop 用 url，
-  // Instapaper 的 CSV 直接是 URL / Title，统一按别名找。
+  // Column names differ per vendor: Pocket uses given_url/given_title, Raindrop uses url,
+  // and Instapaper's CSV is simply URL / Title, so everything is looked up by alias.
   const pick = (...names: string[]) => header.findIndex((cell) => names.includes(cell))
   const urlIndex = pick('url', 'link', 'href', 'given_url', '地址', '链接')
-  // Pocket 同时给 given_url（短链）和 resolved_url（真实地址），优先用后者。
+  // Pocket supplies both given_url (the short link) and resolved_url (the real address); prefer the latter.
   const resolvedIndex = pick('resolved_url')
   const titleIndex = pick('title', 'name', 'given_title', '标题')
   const addedIndex = pick('time_added', 'added', 'created', 'saved', '时间', '收藏时间')
@@ -255,7 +255,7 @@ function parseCsv(content: string, skipped: ImportParseResult['skipped']): Impor
     const rawUrl = (cells[resolvedIndex >= 0 ? resolvedIndex : -1] ?? '').trim() || (cells[urlIndex] ?? '')
     const url = normalizeUrl(rawUrl)
     if (!url) {
-      // 有标题却没链接，多半是导出时漏了；空行则不算异常，不打扰用户。
+      // A title with no link usually means the export dropped it; blank lines are not an anomaly and do not bother the user.
       if (rawUrl.trim()) skipped.push({ line: rawUrl.slice(0, 80), reason: '不是可收藏的链接' })
       else if (title) skipped.push({ line: title.slice(0, 60), reason: '这一行没有链接' })
       continue
@@ -266,8 +266,8 @@ function parseCsv(content: string, skipped: ImportParseResult['skipped']): Impor
 }
 
 /**
- * 这批导入项的时间跨度，用来在预览里说清楚「2019-01 至 2025-01」。
- * 没有时间的导出（纯文本、部分书签）返回 null，不要显示成「今天」。
+ * The time span of this batch of imported items, used to state "2019-01 to 2025-01" clearly in the preview.
+ * Exports with no times (plain text, some bookmark files) return null; do not display that as "today".
  */
 export function addedRange(items: ImportItem[]): string | null {
   const times = items.map((item) => item.addedAt).filter((value): value is number => typeof value === 'number')
@@ -281,7 +281,7 @@ export function addedRange(items: ImportItem[]): string | null {
   return earliest === latest ? earliest : `${earliest} 至 ${latest}`
 }
 
-/** 纯文本：一行一个链接，允许「链接 标题」或 Markdown 链接。 */
+/** Plain text: one link per line, allowing "link title" or a Markdown link. */
 function parseUrls(content: string, skipped: ImportParseResult['skipped']): ImportItem[] {
   const items: ImportItem[] = []
   for (const rawLine of content.split(/\r?\n/)) {
@@ -312,10 +312,10 @@ function parseUrls(content: string, skipped: ImportParseResult['skipped']): Impo
 }
 
 /**
- * Trovia 导出的 JSON：{ version, exported_at, count, documents: [...] }。
+ * The JSON Trovia exports: { version, exported_at, count, documents: [...] }.
  *
- * 空链接或非法链接的条目跳过并记下原因；正文缺失的条目照样恢复，
- * 落库时会被标成待整理，交给解析队列重新抓。
+ * Entries with an empty or invalid link are skipped and the reason recorded; entries without a body are restored all the same,
+ * get marked as pending processing when stored, and are handed to the parse queue for a refetch.
  */
 export function parseTroviaJson(
   content: string,
@@ -389,7 +389,7 @@ export function parseTroviaJson(
   return { items, documents }
 }
 
-/** 解析入口：自动识别格式，去重后按上限截断。 */
+/** Parse entry point: detect the format automatically, de-duplicate, then truncate to the limit. */
 export function parseImport(content: string): ImportParseResult {
   const format = detectFormat(content)
   const skipped: ImportParseResult['skipped'] = []
@@ -433,7 +433,7 @@ export function parseImport(content: string): ImportParseResult {
   }
 
   const kept = new Set(unique.slice(0, limit).map((item) => item.url))
-  // 用判重键匹配：documents 里存的是原样链接，判重用的是规范化之后的那个。
+  // Match on the dedupe key: documents store the link verbatim, while de-duplication uses the normalised one.
   const keptDocuments = documents?.filter((doc) => kept.has(doc.dedupeKey ?? doc.url))
 
   return {

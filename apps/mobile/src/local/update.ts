@@ -1,10 +1,10 @@
 /**
- * 检查有没有新版本。
+ * Check whether a new version exists.
  *
- * 只用 GitHub 的公开 Release：没有后端、没有账号，也就没有「谁在用什么版本」的记录。
- * 限流是每小时 60 次（按 IP），一次检查要缓存 6 小时，正常使用碰不到。
+ * Uses only public GitHub Releases: no backend, no account, and therefore no record of who runs which version.
+ * The rate limit is 60 requests per hour per IP and one check is cached for 6 hours, so normal use never hits it.
  *
- * 纯逻辑（版本比较、解析 asset）单独导出来，测试里不联网。
+ * Pure logic (version comparison, asset parsing) is exported separately so tests need no network.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
@@ -31,12 +31,12 @@ export interface CheckResult {
   current: string
   latest: ReleaseInfo | null
   hasUpdate: boolean
-  /** 检查本身失败（离线、限流、404）时的原因，界面上要说清楚。 */
+  /** Why the check itself failed (offline, rate limited, 404); the UI has to spell it out. */
   error: string | null
   checkedAt: string
 }
 
-/** 1.2.3 → [1,2,3]；容忍 v 前缀、后缀（-beta）。 */
+/** 1.2.3 → [1,2,3]; tolerates a v prefix and a suffix (-beta). */
 export function parseVersion(input: string): number[] {
   const clean = input.trim().replace(/^v/i, '').split(/[-+]/)[0]
   return clean
@@ -45,7 +45,7 @@ export function parseVersion(input: string): number[] {
     .map((value) => (Number.isFinite(value) ? value : 0))
 }
 
-/** 远端版本比当前新才算更新；相等或更旧都不提示。 */
+/** Only a remote version newer than the current one counts as an update; equal or older never prompts. */
 export function isNewer(latest: string, current: string): boolean {
   const a = parseVersion(latest)
   const b = parseVersion(current)
@@ -65,7 +65,7 @@ interface GitHubRelease {
   assets?: { name?: string; browser_download_url?: string; size?: number }[]
 }
 
-/** 只认安卓的 apk；优先 arm64（我们只发布这一种），否则取第一个。 */
+/** Only Android apks count; prefer arm64 (the only kind we publish), otherwise take the first. */
 export function pickAsset(assets: GitHubRelease['assets']): ReleaseAsset | null {
   const apks = (assets ?? []).filter(
     (asset): asset is { name: string; browser_download_url: string; size?: number } =>
@@ -109,20 +109,20 @@ async function writeCache(result: CheckResult): Promise<void> {
 }
 
 /**
- * 查一次。`force` 为真时忽略缓存（用户手动点了检查更新）。
- * 网络失败不会抛错，而是把原因放进 error——检查更新失败不该打断任何事。
+ * Run one check. When `force` is true the cache is ignored (the user tapped check for updates).
+ * A network failure doesn't throw; the reason goes into error — a failed update check must not interrupt anything.
  */
 import { opLog } from './dev-log'
 
 export async function checkForUpdate(current: string, force = false): Promise<CheckResult> {
   if (!force) {
     const cached = await readCache()
-    // 缓存只保鲜十分钟：发版之后，之前查到的「最新版」会一直挂在版本号旁边，
-    // 点下载拿到的还是上一版。超时就重新问一次，网络失败仍然退回缓存。
+    // The cache stays fresh only ten minutes: right after a release, the previously found "latest" would stay pinned next to the version number,
+    // and tapping download would still get the previous build. On expiry it asks again; on network failure it still falls back to the cache.
     const fresh =
       cached?.checkedAt !== undefined && Date.now() - new Date(cached.checkedAt).getTime() < CACHE_TTL_MS
-    // 缓存里存的是「上次查到的最新版」，不是「这台机器该不该更新」：
-    // 版本会变（刚装了新包），是否更新每次都要现算。
+    // The cache holds "the latest version seen last time", not "should this device update":
+    // the version changes (a new package was just installed), so whether to update is recomputed every time.
     if (cached && fresh) {
       return {
         ...cached,
@@ -146,7 +146,7 @@ export async function checkForUpdate(current: string, force = false): Promise<Ch
           : response.status === 404
             ? '找不到发布页'
             : `GitHub 返回 ${response.status}`
-      // 查失败时退回上一次的结果：宁可显示旧版本号，也别让版本那一行突然说「查不到」。
+      // On failure fall back to the previous result: better an old version number than that row suddenly saying "unknown".
       const stale = await readCache()
       if (stale) return { ...stale, current, hasUpdate: stale.latest ? isNewer(stale.latest.version, current) : false, error: reason }
       const result: CheckResult = { current, latest: null, hasUpdate: false, error: reason, checkedAt: new Date().toISOString() }

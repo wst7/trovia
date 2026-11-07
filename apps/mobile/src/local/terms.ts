@@ -1,9 +1,9 @@
-/** 叙述性的口头语，匹配前先去掉，避免「我记得那篇……」污染关键词。 */
+/** Narrative filler phrases, stripped before matching, so "I remember that article…" does not pollute the keywords. */
 const FILLER = /(我记得|记得|好像|大概|可能是|应该是|之前|以前|看过|看到过|收藏过|收藏了|帮我找|找一下|找找|那篇|这篇|一篇|一个|那个|这个|关于|讲的|说的|也就是|内容|文章|视频|链接)/g
 
 /**
- * 高频虚词/泛词：它们在几乎每篇文章里都出现，命中它们等于没命中，
- * 只会把「字面结果」灌满，还挡住语义兜底。中文二元组匹配尤其需要这张表。
+ * High-frequency function words / generic words: they appear in almost every article, so matching them equals not matching at all,
+ * they only flood the "literal results" and also block the semantic fallback. Chinese bigram matching needs this table especially.
  */
 const STOP_TERMS = new Set([
   '怎么', '什么', '如何', '为什', '么会', '可以', '需要', '自己', '我们', '他们', '你们',
@@ -15,11 +15,11 @@ const STOP_TERMS = new Set([
 ])
 
 /**
- * 一句话里到底有没有实词。
+ * Whether a sentence actually contains a content word at all.
  *
- * 判定语义回退要不要跑：中文二元组让「…这种东西」这种句子也能拆出词，
- * 于是完全没有意义的查询也会拿到五条「意思相近」的结果——比说「没找到」更伤信任。
- * 虚词碎片（如「种东」是「这种东西」的子串）也在这里滤掉。
+ * Decides whether the semantic fallback should run: Chinese bigrams let a sentence like "…that kind of thing" be split into words too,
+ * so a completely meaningless query also gets five "similar meaning" results — which damages trust more than saying "not found".
+ * Fragments of function words (e.g. a bigram that is only a slice of a longer filler phrase) are filtered out here too.
  */
 export function hasContentTerm(query: string): boolean {
   const cleaned = query
@@ -27,13 +27,13 @@ export function hasContentTerm(query: string): boolean {
     .replace(FILLER, ' ')
     .replace(/[，。！？、,.!?;；:：\"'“”‘’（）()[\]【】《》<>…]/g, ' ')
 
-  // 英文/数字词：长度 >= 2 就算实词（redis、go、trait）。乱码交给语义分数线。
+  // English/numeric words: length >= 2 counts as a content word (redis, go, trait). Gibberish is left to the semantic score threshold.
   for (const word of cleaned.match(/[a-z0-9][a-z0-9.+#_-]*/g) ?? []) {
     if (word.length >= 2) return true
   }
 
-  // 中文段：把虚词一个个剥掉，剥完还剩两个字以上才算有实词。
-  // 「没有这种东西」剥完是空串，而「延时队列」一个字都不会被剥掉。
+  // Chinese segments: strip the function words one by one, and only two or more characters left counts as a content word.
+  // "There is no such thing" strips to an empty string, while "delay queue" loses not a single character.
   const stopWords = [...STOP_TERMS].sort((a, b) => b.length - a.length)
   for (const run of cleaned.match(/[一-鿿]+/g) ?? []) {
     let rest = run
@@ -57,11 +57,11 @@ export function queryTerms(query: string): string[] {
     if (run.length <= 2) {
       terms.add(run)
     } else {
-      // 中文没有分词：用二元组换取召回，长词额外保留整词以提高精度。
+      // Chinese has no word segmentation: bigrams buy recall, and long words are additionally kept whole to improve precision.
       for (let i = 0; i < run.length - 1; i += 1) terms.add(run.slice(i, i + 2))
       if (run.length <= 6) terms.add(run)
     }
   }
-  // 去掉泛词与单字：单字（的/了/是）在中文里几乎必然命中，只会制造噪声。
+  // Remove generic words and single characters: single characters (possessive particles, aspect particles, the copula) hit almost inevitably in Chinese and only create noise.
   return [...terms].filter((term) => !STOP_TERMS.has(term) && term.length >= 2).slice(0, 24)
 }

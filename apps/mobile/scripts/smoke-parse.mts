@@ -1,25 +1,25 @@
 /**
- * 发版前的真机前哨：拿几个真实站点跑一遍抓取与解析。
+ * Pre-release outpost on a real device: run fetching and parsing against a few real sites.
  *
- * 单测只能证明「逻辑没写错」，证明不了「微信今天还让我们读」。
- * 每次发版前跑一次，掉下来的站点会在下面直接列出来。
+ * Unit tests can only prove "the logic is not wrong", not "WeChat still lets us read it today".
+ * Run it once before every release; sites that fall over are listed right below.
  *
- *   npm run smoke            # 默认清单
- *   npm run smoke -- <url>   # 只跑某一条
+ *   npm run smoke            # default list
+ *   npm run smoke -- <url>   # run only one
  */
 import { fetchArticle } from '../src/local/article'
 
-// 这个 tsconfig 没有 node 类型：脚本里用到的两个全局自己声明一下。
+// This tsconfig has no node types: declare the two globals the script uses itself.
 declare const process: { argv: string[]; exit(code: number): void }
 
 interface Case {
   url: string
   label: string
-  /** 站点自己的 5xx / 网络抖动：只提醒，不拦发版。 */
+  /** The site's own 5xx / network flakiness: warn only, do not block the release. */
   flaky?: boolean
-  /** 这个站点至少要有多少正文字符，才算真读到了。 */
+  /** How many body characters this site must produce at minimum before it counts as really read. */
   minChars?: number
-  /** 站点本身时好时坏，失败只提醒不拦发版。 */
+  /** The site itself comes and goes, so failures only warn and do not block the release. */
   optional?: boolean
 }
 
@@ -36,10 +36,10 @@ const CASES: Case[] = [
   { label: 'V2EX', url: 'https://v2ex.com/t/1254622', minChars: 100, optional: true },
   { label: 'Martin Fowler', url: 'https://martinfowler.com/articles/patterns-of-distributed-systems/', minChars: 1500 },
 
-  // 外网常读的几类页面：百科、聚合站、开发者社区、老牌媒体、个人博客。
+  // The kinds of pages read most often on the open web: encyclopedias, aggregators, developer communities, established media, personal blogs.
   { label: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/Transformer_(deep_learning_architecture)', minChars: 3000 },
-  // HN 与 Ars 会按来源 IP 变脸：GitHub 的数据中心 IP 常被 HN 回 419，
-  // 我这边的出口又读不到 Ars。两个都只记录，不拦发版。
+  // HN and Ars change face by source IP: HN often answers 419 to GitHub's datacenter IPs,
+  // and my egress cannot read Ars. Both are only recorded, they do not block the release.
   { label: 'Hacker News（419 视网络）', url: 'https://news.ycombinator.com/item?id=38000000', minChars: 200, optional: true },
   { label: 'DEV', url: 'https://dev.to/', minChars: 1000 },
   { label: 'BBC', url: 'https://www.bbc.com/news', minChars: 1000 },
@@ -47,10 +47,10 @@ const CASES: Case[] = [
   { label: 'Simon Willison', url: 'https://simonwillison.net/', minChars: 1500 },
   { label: 'Paul Graham', url: 'https://paulgraham.com/greatwork.html', minChars: 3000 },
 
-  // 推文走 oembed / syndication，正文本来就短，门槛按「有没有字」定。
+  // Tweets go through oembed / syndication and the body is short anyway, so the bar is "is there any text at all".
   { label: 'X 推文', url: 'https://x.com/jack/status/20', minChars: 20 },
 
-  // 已知被挡的站点：列在这里是为了「哪天通了」能被发现，不拦发版。
+  // Sites known to be blocked: they are listed here so that "the day it works" gets noticed; they do not block the release.
   { label: 'Reddit（需登录）', url: 'https://www.reddit.com/r/programming/comments/1g0k8zj/', minChars: 300, optional: true },
   { label: 'Ars Technica（视网络）', url: 'https://arstechnica.com/', minChars: 800, optional: true },
   {
@@ -66,7 +66,7 @@ const cases = args.length > 0 ? args.map((url: string) => ({ url, label: url }))
 
 const rows: Array<{ label: string; ok: boolean; detail: string; optional: boolean }> = []
 
-/** 5xx 与网络错误是站点自己的事，不是我们的回归；403/404/空正文才是。 */
+/** 5xx and network errors are the site's own business, not our regression; 403/404/empty body are. */
 function isTransient(message: string): boolean {
   return /HTTP 5\d\d|fetch failed|aborted|ECONNRESET|ETIMEDOUT|socket/i.test(message)
 }
@@ -80,7 +80,7 @@ async function attempt(url: string) {
 for (const item of cases) {
   let lastError: unknown = null
   let done = false
-  // 一次重试：站点的 5xx 多半是几秒的事，直接判死会误伤发版。
+  // One retry: a site's 5xx is usually a matter of seconds, and declaring failure right away would wrongly fail the release.
   for (let round = 0; round < 2 && !done; round += 1) {
     try {
       const { article, ms } = await attempt(item.url)
@@ -108,7 +108,7 @@ for (const item of cases) {
     rows.push({
       label: item.label,
       ok: false,
-      // 5xx / 网络问题只当提醒；403、404、空正文才算我们这边退步了。
+      // 5xx / network problems only count as warnings; 403, 404 and an empty body are what count as our regression.
       optional: Boolean(item.optional) || item.flaky || isTransient(message),
       detail: `抓取失败：${message}`,
     })
@@ -122,9 +122,9 @@ for (const row of rows) {
 }
 
 /*
- * 只挂一个站点就拦发版太脆：站点按来源 IP 变脸（HN 对机房回 419、
- * 掘金对海外 IP 只给壳、CSDN 偶发 521），这些都不是我们的回归。
- * 规则改成：必选站点里同时挂两个以上才拦——那才像是抓取层真出问题了。
+ * Blocking the release on a single site is too brittle: sites change face by source IP (HN answers 419 to datacenter IPs,
+ * Juejin serves only a shell to overseas IPs, CSDN occasionally returns 521), and none of that is our regression.
+ * The rule is now: block only when two or more of the required sites fail at the same time — that starts to look like a real problem in the fetching layer.
  */
 const failed = rows.filter((r) => !r.ok && !r.optional)
 if (failed.length >= 2) {

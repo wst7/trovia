@@ -71,22 +71,22 @@ from app.logging import get_logger
 
 logger = get_logger("trovia.search")
 
-# 候选准入与打分的绝对门槛（阈值依据：中文真子串标题命中 similarity ≥0.10、
-# 无关串 =0；local 哈希 embedding 无关查询余弦噪声实测 ≤0.06）
+# Absolute thresholds for candidate admission and scoring (basis: a real Chinese substring title hit scores similarity ≥0.10,
+# an unrelated string =0; measured cosine noise for unrelated queries with the local hash embedding is ≤0.06)
 _TRGM_MIN = 0.05
 _SEMANTIC_MIN_COS = 0.1
 
-_MAX_TERMS = 12          # term 上限，防止模式爆炸
-_MAX_REASON_TERMS = 2    # match_reason 每个分句最多列几个命中词
-_EXCERPT_MAX = 200       # matched_excerpt 长度上限（含省略号）
-_EXCERPT_CONTEXT = 40    # 命中词前置上下文字符数
+_MAX_TERMS = 12          # cap on terms, so the pattern count can't explode
+_MAX_REASON_TERMS = 2    # how many matched terms each match_reason clause may list
+_EXCERPT_MAX = 200       # max length of matched_excerpt (ellipsis included)
+_EXCERPT_CONTEXT = 40    # characters of context before the matched term
 
 _CHANNELS = ("lexical", "semantic", "title", "meta")
 
 _TERM_SPLIT_RE = re.compile(r"[\s,.;:!?，。！？；：、…·\"'“”‘’（）()【】\[\]<>《》—\-_/\\]+")
 
-# 中文自然语言回忆常带叙事/提问外壳；先去掉这些短语，只留下内容词。
-# 短语按长度降序进入正则，避免「之前看过」先吃掉「之前看过一篇文章」。
+# Natural-language recall in Chinese often carries a narrative or question shell; strip these phrases first and keep only content words.
+# Phrases go into the regex longest first, so the short "saw it before" doesn't swallow the longer "saw an article about it".
 _FILLER_PHRASES = (
     "之前看过一篇文章", "之前看过一篇", "之前看过", "以前看过一篇文章", "以前看过一篇", "以前看过",
     "我曾经看过", "我看过一篇", "我看过", "看过一篇", "我收藏过一篇", "我收藏过", "收藏过一篇", "收藏过",
@@ -99,12 +99,12 @@ _FILLER_PHRASES = (
 )
 _FILLER_RE = re.compile("|".join(re.escape(p) for p in sorted(_FILLER_PHRASES, key=len, reverse=True)))
 
-# 中英文脚本相邻处切开，使「AI自动操作浏览器」「Playwright语义搜索」也能产出独立 term。
+# Split where Latin and CJK scripts meet, so a Latin word glued to Chinese (e.g. "AI" + "browser automation") still yields separate terms.
 _SCRIPT_BOUNDARY_RE = re.compile(
     r"(?<=[A-Za-z0-9])(?=[㐀-鿿])|(?<=[㐀-鿿])(?=[A-Za-z0-9])"
 )
 
-# 单个中文虚词/泛动词不参与匹配；单字内容词（如「猫」）仍保留。
+# A lone Chinese function word or generic verb takes no part in matching; single-character content words (e.g. "cat") are kept.
 _SINGLE_CJK_NOISE = set(
     "的了和是在有就都而及或这那我你他她它们把被对从到为很也不没么些之其此"
     "并且因此但是所以如果虽然然后已经一下用讲说看找写做篇个里中上下"
@@ -144,7 +144,7 @@ class SearchHit:
 
 
 # ---------------------------------------------------------------------------
-# 查询预处理
+# Query preprocessing
 # ---------------------------------------------------------------------------
 
 def _is_noise_term(term: str) -> bool:
@@ -176,7 +176,7 @@ def _plan_query(query: str) -> _QueryPlan:
     original = (query or "").strip()
     terms = _terms(original)
     if not terms:
-        # 整句都是虚词/标点时，退回原始串，保持「无证据则空结果」的语义。
+        # When the whole sentence is function words or punctuation, fall back to the raw string, preserving "no evidence means empty result".
         terms = [original] if original else []
     clean = " ".join(terms)
     patterns: list[str] = list(terms)
@@ -203,14 +203,14 @@ def _matched(patterns: list[str], haystack: str) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# 召回
+# Recall
 # ---------------------------------------------------------------------------
 
 def _embed_query(query: str, settings: Settings) -> list[float] | None:
     """查询向量化：搜索期唯一一次模型调用；失败降级为无语义通道。"""
     try:
         vectors = get_embedding_provider(settings).embed([query])
-    except Exception as exc:  # 语义通道故障不应让词面检索一起挂掉
+    except Exception as exc:  # A semantic-channel failure must not take lexical search down with it
         logger.warning("query_embed_failed", extra={"error": str(exc)})
         return None
     if not vectors or not vectors[0]:
@@ -247,7 +247,7 @@ def _semantic_candidates(
     out: dict[uuid.UUID, tuple[float, str | None]] = {}
     for doc_id, dist, content in rows:
         if doc_id in out:
-            continue  # 已按距离升序，首见即该文档最优 chunk
+            continue  # Already ordered by distance, so the first sighting is that document's best chunk
         cos = 1.0 - float(dist)
         if cos >= _SEMANTIC_MIN_COS:
             out[doc_id] = (cos, content)
@@ -330,7 +330,7 @@ def _lexical_candidates(
 
 
 # ---------------------------------------------------------------------------
-# 打分与融合
+# Scoring and fusion
 # ---------------------------------------------------------------------------
 
 def _minmax(values: dict[uuid.UUID, float]) -> dict[uuid.UUID, float]:
@@ -376,7 +376,7 @@ def _row_raw_scores(row, patterns: list[str], semantic: float) -> dict[str, floa
     summary_hits = int(row.summary_hits or 0)
     title_hits = len(_matched(patterns, title))
     meta_hits = len(_matched(patterns, _meta_text(row)))
-    # 摘要也是用户记得的内容：它与正文共享 lexical 维度，摘要单独命中也能召回。
+    # The summary is also something users remember: it shares the lexical dimension with the body, so a summary-only hit still recalls.
     lexical = max(
         _fts_norm(row.fts_rank),
         body_trgm if body_trgm >= _TRGM_MIN else 0.0,
@@ -399,14 +399,14 @@ def _row_raw_scores(row, patterns: list[str], semantic: float) -> dict[str, floa
 
 
 # ---------------------------------------------------------------------------
-# 结果解释（全部基于真实证据）
+# Result explanation (all grounded in real evidence)
 # ---------------------------------------------------------------------------
 
 def _display_terms(matched: list[str]) -> str:
     picked: list[str] = []
     for term in sorted(matched, key=len, reverse=True):
         if any(term in already for already in picked):
-            continue  # 已被更长的命中词包含，不重复列出
+            continue  # Already contained in a longer matched term; don't list it twice
         picked.append(term)
         if len(picked) >= _MAX_REASON_TERMS:
             break
@@ -443,7 +443,7 @@ def _build_reason(
         segs.append(f"正文与「{query}」相关：命中关键词{_display_terms(matched_body)}")
     elif body_trgm_ok:
         segs.append(f"正文与「{query}」内容相似")
-    # 摘要通常由正文抽取，已列出的词不重复；摘要独有命中时单独说明。
+    # The summary is usually extracted from the body, so terms already listed aren't repeated; a summary-only hit gets its own clause.
     summary_only = [t for t in matched_summary if t not in matched_body]
     if summary_only:
         segs.append(f"摘要命中关键词{_display_terms(summary_only)}")
@@ -457,7 +457,7 @@ def _build_reason(
         segs.append(f"来源信息匹配关键词{_display_terms(matched_meta)}")
     if has_semantic:
         segs.append("与你描述的内容语义相近" if segs else "正文语义上接近你描述的内容")
-    if not segs:  # 防御：有召回证据但词面校验没列出词（如仅全文秩命中）
+    if not segs:  # Defensive: there is recall evidence but the literal check listed no terms (e.g. only a full-text rank hit)
         segs.append(f"命中与「{query}」相关的内容")
     reason = "，".join(segs)
     if host:
@@ -532,7 +532,7 @@ def _build_excerpt(
 
 
 # ---------------------------------------------------------------------------
-# 入口
+# Entry point
 # ---------------------------------------------------------------------------
 
 def search(
@@ -553,23 +553,23 @@ def search(
         return []
     like_patterns = [f"%{_like_escape(p)}%" for p in plan.patterns]
 
-    # 1) 语义召回（唯一一次向量化；用去掉叙事外壳后的内容词，减少虚词噪声）
+    # 1) Semantic recall (the only embedding call; uses content words with the narrative shell stripped, to cut function-word noise)
     sem = _semantic_candidates(session, uid, plan.clean, settings)
 
-    # 2) 全文/三元组/词面召回（含语义入围文档的字段）
+    # 2) Full-text / trigram / literal recall (including the fields of documents that made the semantic cut)
     rows = _lexical_candidates(session, uid, plan, like_patterns, set(sem), settings)
 
-    # 3) 各通道原始分
+    # 3) Raw score per channel
     candidates: dict[uuid.UUID, dict] = {}
     for row in rows:
         raw = _row_raw_scores(row, list(plan.patterns), sem.get(row.id, (0.0, None))[0])
         if max(raw.values()) <= 0.0:
-            continue  # 入围条件与原始分不一致时的兜底（如全文秩为 0 的边界）
+            continue  # Fallback for when the admission condition and the raw scores disagree (e.g. a full-text rank of 0)
         candidates[row.id] = {"row": row, "raw": raw}
     if not candidates:
         return []
 
-    # 4) 候选集内 min-max 归一化 → 加权融合 → 阈值 → 排序截断
+    # 4) min-max within the candidate set → weighted fusion → threshold → sort and truncate
     weights = settings.search_weights
     norms = {
         ch: _minmax({did: cand["raw"][ch] for did, cand in candidates.items()})
@@ -584,11 +584,11 @@ def search(
         scored.append((score, did, cand))
     if not scored:
         return []
-    scored.sort(key=lambda item: item[2]["row"].saved_at, reverse=True)  # 稳定排序
+    scored.sort(key=lambda item: item[2]["row"].saved_at, reverse=True)  # stable sort
     scored.sort(key=lambda item: item[0], reverse=True)
     scored = scored[:limit]
 
-    # 5) 只为最终返回的文档取正文，拼真实证据的解释与片段
+    # 5) Fetch bodies only for the documents finally returned, to assemble the real-evidence explanation and excerpt
     bodies = {
         r.id: r.plain_text or ""
         for r in session.execute(

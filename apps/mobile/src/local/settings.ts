@@ -1,8 +1,8 @@
 /**
- * 键值设置：存在 SQLite 的 settings 表里。
+ * Key-value settings: stored in the SQLite settings table.
  *
- * 之前这套函数是 sync-config 私有的，自动重试也要记「上次什么时候试过」，
- * 就搬到共用位置——两个模块各写一份，早晚会有一份忘了处理旧值。
+ * These functions used to be private to sync-config, and auto-retry also needs to record "when it last tried",
+ * so they moved to a shared place — with two modules each keeping a copy, sooner or later one of them forgets to handle old values.
  */
 import { getDb } from './db'
 

@@ -1,8 +1,8 @@
 /**
- * 同步配置：地址与用户名进普通设置表，密码只进 SecureStore。
+ * Sync config: the address and username go into the ordinary settings table; the password goes only into SecureStore.
  *
- * 不做「账号体系」：用户填的是自己网盘的地址和密码，我们不经过任何服务器，
- * 也没有找回密码这回事。所以这里只需要能存、能读、能清空。
+ * No “account system” is built: the user fills in their own cloud drive's address and password, nothing passes through any server of ours,
+ * and there is no such thing as password recovery. So all that is needed here is to store, read and clear.
  */
 import * as SecureStore from 'expo-secure-store'
 
@@ -13,7 +13,7 @@ const PASSWORD_KEY = 'trovia.sync.webdav.password'
 export interface WebDavConfig {
   baseUrl: string
   username: string
-  /** 远端目录，默认 trovia；填错也不会动别人的文件。 */
+  /** Remote directory, trovia by default; a typo will not touch anybody else's files. */
   folder: string
 }
 
@@ -48,7 +48,7 @@ export async function loadPassword(): Promise<string> {
   }
 }
 
-/** 设备标识：第一次同步时生成，只用来在远端留下「谁同步过」的痕迹。 */
+/** Device identifier: generated on the first sync, used only to leave a trace on the remote of “who has synced”. */
 export async function deviceId(): Promise<string> {
   const existing = await readSetting('sync_device_id')
   if (existing) return existing

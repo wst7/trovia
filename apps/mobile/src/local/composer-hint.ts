@@ -1,9 +1,9 @@
 /**
- * 输入框下方那行提示，什么时候出现、说什么。
+ * The hint line under the composer: when it appears and what it says.
  *
- * 规则只有一条：**只有「模式」和「动作」不一致时说话**。
- * 开关开着（问 AI）却贴了条链接——这时用户会疑惑，所以提示一句。
- * 其余时候保持安静：搜索态贴链接存下来本来就是常态，再解释就是废话。
+ * There is only one rule: **speak only when the mode and the action disagree**.
+ * The switch is on (ask the AI) yet a link was pasted — that is confusing, so say one line.
+ * Stay quiet the rest of the time: pasting a link in search mode to save it is normal, and explaining it further is noise.
  */
 export function composerHint(
   args: { ask: boolean; saveMode: boolean; error: string | null },

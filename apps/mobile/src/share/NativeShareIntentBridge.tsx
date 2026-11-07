@@ -6,7 +6,7 @@ import { extractHttpUrl, isValidHttpUrl } from '@trovia/shared'
 import { titleHintFrom } from '../local/util'
 import { useToast } from '../providers/ToastProvider'
 
-/** 只在 development build / 正式包中加载，见 ShareIntentBridge。 */
+/** Loaded only in a development build / production package, see ShareIntentBridge. */
 export default function NativeShareIntentBridge() {
   const router = useRouter()
   const { toast } = useToast()
@@ -29,7 +29,7 @@ export default function NativeShareIntentBridge() {
     if (handledKey.current === key) return
     handledKey.current = key
 
-    // 必须在任何异步保存之前重置原生 payload，避免冷启动/重渲染重复处理。
+    // The native payload must be reset before any asynchronous save, so a cold start / re-render does not process it twice.
     resetShareIntent()
 
     if (!url) {
@@ -37,10 +37,10 @@ export default function NativeShareIntentBridge() {
       return
     }
 
-    // 分享文字里通常带着标题；抓不到正文时用它兜底，而不是只留一串网址。
+    // The shared text usually carries the title; use it as the fallback when no body can be fetched, rather than leaving only a bare URL.
     const hint = titleHintFrom(shareIntent.text ?? '', url) ?? shareIntent.meta?.title ?? null
 
-    // 不需要登录：直接带着链接进入保存页，数据落在本机。
+    // No login needed: go straight into the save screen with the link, and the data lands on the device.
     router.replace({ pathname: '/share', params: { url, ...(hint ? { hint } : {}) } })
   }, [hasShareIntent, shareIntent, router, toast])
 

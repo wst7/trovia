@@ -8,9 +8,9 @@ import { getStatus } from '../local/repo'
 const POLL_INTERVAL_MS = 1200
 
 /**
- * 本机解析没有服务端推送，只能读本地库看进度：
- * 仅在 App 前台且状态未终止时轮询；终态回调只触发一次。
- * 调用方负责把新状态写回自己的状态，hook 本身不持有文档。
+ * On-device parsing has no server push, so progress can only come from reading the local database:
+ * poll only while the app is in the foreground and the status hasn't terminated; the terminal callback fires once.
+ * The caller writes the new status back into its own state; the hook itself holds no document.
  */
 export function useLiveStatus(
   documentId: string | undefined,
@@ -57,7 +57,7 @@ export function useLiveStatus(
             }
           }
         } catch {
-          // 读库失败（例如迁移尚未完成）：继续静默轮询。
+          // Database read failed (e.g. the migration hasn't finished): keep polling silently.
         } finally {
           inFlight = false
         }

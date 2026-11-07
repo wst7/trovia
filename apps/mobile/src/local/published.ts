@@ -1,9 +1,9 @@
 /**
- * 原文发表日期。
+ * The original publication date.
  *
- * 只在页面自己声明了的情况下采信：meta、JSON-LD 的 datePublished、<time datetime>、
- * microdata 的 itemprop="datePublished"。拿不到就返回 null —— 用抓取时间冒充
- * 会让「发表于某天」给出假答案，比没有更糟。
+ * Only trust it when the page declares it: meta, JSON-LD datePublished, <time datetime>,
+ * or microdata's itemprop="datePublished". Otherwise return null — passing the fetch time off
+ * as the publish date gives a false answer to "published on X", which is worse than nothing.
  */
 import { load } from 'cheerio/slim'
 
@@ -40,7 +40,7 @@ function normalizeDay(raw: string | null | undefined): string | null {
   const direct = /^(\d{4})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})/.exec(text)
   if (direct) return validDay(Number(direct[1]), Number(direct[2]), Number(direct[3]))
 
-  // Unix 时间戳：10 位是秒，13 位是毫秒。
+  // Unix timestamps: 10 digits are seconds, 13 digits are milliseconds.
   if (/^\d{10}$|^\d{13}$/.test(text)) {
     const at = new Date(text.length === 10 ? Number(text) * 1000 : Number(text))
     return Number.isNaN(at.getTime()) ? null : validDay(at.getFullYear(), at.getMonth() + 1, at.getDate())

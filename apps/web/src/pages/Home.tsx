@@ -85,7 +85,7 @@ export default function Home() {
   function handleCardTerminal(status: ParseStatus) {
     const content = terminalToastContent(status)
     toast(content.message, { type: content.type })
-    // 处理完成后刷新列表，让标题与摘要从原始 URL 更新为解析结果
+    // Refresh the list once processing finishes, so the title and summary go from the raw URL to the parsed result
     void loadRecent()
   }
 

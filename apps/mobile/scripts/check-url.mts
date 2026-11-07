@@ -1,6 +1,6 @@
 import { fetchArticle } from '../src/local/article'
 
-/** 临时诊断：给定 feed 或页面地址，看看抽取结果到底抽到了什么。 */
+/** Temporary diagnostic: given a feed or page address, see what the extraction actually pulled out. */
 const targets = process.argv.slice(2)
 
 for (const url of targets) {

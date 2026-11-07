@@ -1,12 +1,12 @@
 /**
- * 文案字典的守门测试。
+ * Guard test for the copy dictionaries.
  *
- * 跑法：npx tsx src/local/__tests__/i18n.test.mts
+ * How to run: npx tsx src/local/__tests__/i18n.test.mts
  *
- * 三件事：
- *  1. 两份字典的键必须一一对应——少一条就是英文界面里冒出中文；
- *  2. 同一条文案在两种语言里的占位符必须一样，否则 count 会被吃掉；
- *  3. 界面文件里不能再写死中文，除了注释。
+ * Three things:
+ *  1. the keys of the two dictionaries must match one to one — one missing key means Chinese leaking into the English UI;
+ *  2. the same string must use the same placeholders in both languages, otherwise count gets swallowed;
+ *  3. UI files must no longer hard-code Chinese, comments aside.
  */
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
@@ -34,7 +34,7 @@ for (const key of zhKeys) {
   assert.ok(en[key].trim().length > 0, `「${key}」的英文是空的`)
 }
 
-// 英文里不该混进中文字符（语言名「中文」是唯一例外）
+// No Chinese characters should leak into English (the name of the Chinese language is the only exception)
 for (const key of enKeys) {
   if (key === 'settings.language.zh') continue
   assert.equal(
@@ -44,7 +44,7 @@ for (const key of enKeys) {
   )
 }
 
-/** 收集界面文件里写死的中文：只查屏幕、组件和 ui，逻辑层另有安排。 */
+/** Collect hard-coded Chinese in UI files: only screens, components and ui are checked; the logic layer is handled elsewhere. */
 function sources(dir: string): string[] {
   const out: string[] = []
   for (const name of readdirSync(dir)) {
@@ -74,7 +74,7 @@ for (const file of uiFiles) {
 }
 assert.deepEqual(offenders, [], `界面里还有写死的中文：\n${offenders.join('\n')}`)
 
-// 英文界面上给出的示例词必须真能解析出时间条件，否则中英文体验是两套。
+// The example words offered in the English UI must really parse into a time condition, otherwise English and Chinese become two different experiences.
 applyLocalePreference('en')
 const now = new Date(2026, 10, 3, 12, 0, 0)
 for (const [word, label] of [

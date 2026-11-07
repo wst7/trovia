@@ -1,11 +1,11 @@
 /**
- * 把整库正文重新抓一遍。
+ * Re-fetch the body of the entire library.
  *
- * 抽取规则会改进，但老条目的正文是收藏当天抓的，只能一条条点「重新整理」——
- * 313 条手工点不现实。这里做成一件可中断的活：一条一条排队，每完成一条回一次
- * 进度，用户随时能停。
+ * The extraction rules improve, but old entries hold the body fetched on the day they were saved, so they could only be fixed by tapping "refresh" one by one —
+ * doing that by hand for 313 entries is not realistic. So this is an interruptible job: queued one at a time, reporting progress after each one,
+ * so the user can stop whenever they want.
  *
- * 刻意不分批并发：连打十几个站点既容易被限流，又会让用户不知道进度到底走到哪。
+ * Deliberately not run in concurrent batches: hitting a dozen sites in a row both invites rate limiting and leaves the user unable to tell how far the progress actually got.
  */
 import { processPendingQueue } from './pipeline'
 import { markForRetry } from './repo'
@@ -14,11 +14,11 @@ import { getDb } from './db'
 export interface ReprocessProgress {
   done: number
   total: number
-  /** 刚刚处理完的那条标题，让人知道它在干活而不是卡住。 */
+  /** Title of the entry just finished, so it is clear it is working rather than stuck. */
   current: string | null
 }
 
-/** 需要重抓的条目：所有正常存在的文档（失败的那些有别的入口）。 */
+/** Entries that need re-fetching: all documents that exist normally (failed ones have their own entry point). */
 async function listTargets(): Promise<{ id: string; title: string | null }[]> {
   const db = await getDb()
   return db.getAllAsync<{ id: string; title: string | null }>(
@@ -33,8 +33,8 @@ export async function countReprocessTargets(): Promise<number> {
 }
 
 /**
- * @param onProgress 每处理完一条回调一次
- * @param shouldStop 返回 true 时在下一条之前停下（用户点了停止）
+ * @param onProgress called back after each entry is processed
+ * @param shouldStop stop before the next entry when it returns true (the user tapped stop)
  */
 export async function reprocessAll(
   onProgress: (progress: ReprocessProgress) => void,
@@ -51,7 +51,7 @@ export async function reprocessAll(
       await markForRetry(target.id)
       await processPendingQueue()
     } catch {
-      // 单条失败（网络、站点拒绝）不影响整批：它自己的状态会记下来。
+      // A single failure (network, site refusal) does not affect the batch: it is recorded on that entry's own status.
     }
     done += 1
   }

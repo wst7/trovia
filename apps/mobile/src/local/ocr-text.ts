@@ -1,9 +1,9 @@
 /**
- * 图片里认出来的字往哪儿放。
+ * Where the characters recognized in images go.
  *
- * 只进检索用的纯文本，不进正文 markdown：那些字是搜索的线索，不是文章内容。
- * 把 OCR 结果并进正文，读者会在文末看到一大段「## 图片文字」，跟这篇文章的
- * 正文混在一起，读起来像乱码。
+ * They go only into the plain text used for search, not into the body markdown: those characters are search clues, not article content.
+ * Merging the OCR results into the body would leave the reader seeing a long "## Image text" block at the end, mixed in with this article's
+ * own body text, which reads like gibberish.
  */
 export function mergeOcrText(
   article: { markdown: string; plainText: string },

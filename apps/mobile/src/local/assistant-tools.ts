@@ -1,8 +1,8 @@
 /**
- * 大模型能用的工具：全部在本地数据库上执行，不联网、不外传。
+ * Tools the LLM can use: all of them run on the local database, with no network and no sending data out.
  *
- * 每个工具都只回答「你收藏里的什么」，不提供写操作——
- * 让模型改数据是另一件事，出问题就不是「答错了」而是「删掉了」。
+ * Each tool only answers "what is in your saved items" and offers no write operations —
+ * letting the model modify data is a different matter, and when that goes wrong it is no longer "answered wrong" but "deleted".
  */
 import type { ChatTool } from './llm'
 import { parseToolArguments } from './tool-args'
@@ -11,9 +11,9 @@ import { getDb } from './db'
 export { parseToolArguments }
 
 export interface ToolRunResult {
-  /** 交给模型的文本（JSON 或纯文本），会进上下文。 */
+  /** Text handed to the model (JSON or plain text), which goes into the context. */
   content: string
-  /** 这次调用碰到的文章 id，用来在界面上做引用。 */
+  /** Article ids touched by this call, used to render citations in the UI. */
   ids: string[]
 }
 
@@ -159,7 +159,7 @@ interface ToolDefinition {
   run: (args: Record<string, unknown>) => Promise<ToolRunResult>
 }
 
-/** 工具清单：名字短、参数少，小模型也能一次就调对。 */
+/** Tool list: short names, few parameters, so even a small model gets it right in one shot. */
 export const ASSISTANT_TOOLS: ToolDefinition[] = [
   {
     name: 'search_library',

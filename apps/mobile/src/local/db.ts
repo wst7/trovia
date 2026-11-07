@@ -5,11 +5,11 @@ import { DOCUMENT_COLUMNS } from './db-columns'
 import { DB_NAME, moveLegacyDatabase } from './db-migrate'
 
 /**
- * 本地数据库：收藏的唯一真相在手机上，不依赖任何服务器。
+ * Local database: the single source of truth for saved items lives on the phone, with no dependency on any server.
  *
- * 表结构刻意保留 updated_at / deleted_at：
- * 删除用墓碑而不是物理删除，条目 id 在设备内稳定，
- * 以后要做多端同步时可以直接按 updated_at 合并、按 deleted_at 传播删除。
+ * The schema deliberately keeps updated_at / deleted_at:
+ * deletion uses a tombstone rather than a physical delete, item ids are stable within the device,
+ * and once multi-device sync is added, merging can go straight by updated_at and delete propagation by deleted_at.
  */
 let opening: Promise<SQLite.SQLiteDatabase> | null = null
 
@@ -26,7 +26,7 @@ async function migrateLegacyDatabase(): Promise<void> {
       move: (from, to) => FileSystem.moveAsync({ from, to }),
     })
   } catch {
-    // 搬不动就当没有老库：至少不会因为一次失败打不开 App。
+    // If it cannot be moved, treat it as if there were no old database: at least one failure will not keep the app from opening.
   }
 }
 
@@ -99,11 +99,11 @@ CREATE TABLE IF NOT EXISTS settings (
 `)
 
   /*
-   * 轻量迁移：把「建表语句里有、老库里没有」的列补齐。
+   * Lightweight migration: add the columns that “are in the CREATE TABLE statement but missing from an older database”.
    *
-   * 这条曾经漏过——`imported_at` 只写在 CREATE TABLE 里，升级上来的库没有它，
-   * 于是每一次保存都报 "table documents has no column named imported_at"。
-   * 现在列成清单，漏一个就是一眼能看见的疏忽。
+   * This one slipped through before — `imported_at` was only written in CREATE TABLE, an upgraded database did not have it,
+   * so every save reported "table documents has no column named imported_at".
+   * They are now kept as a list, so a missing one is an oversight you can see at a glance.
    */
   const columns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(documents)')
   const has = (name: string) => columns.some((column) => column.name === name)
@@ -112,13 +112,13 @@ CREATE TABLE IF NOT EXISTS settings (
     if (!has(name)) await db.runAsync(`ALTER TABLE documents ADD COLUMN ${name} ${definition}`)
   }
 
-  // 同步基准带上远端文件的 etag：没变过的文件就不必再 GET 一遍。
+  // The sync baseline carries the remote file's etag: a file that has not changed does not have to be GET again.
   const baseColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(sync_base)')
   if (!baseColumns.some((column) => column.name === 'remote_etag')) {
     await db.runAsync('ALTER TABLE sync_base ADD COLUMN remote_etag TEXT')
   }
-  // 同步用的 rev：老库补列，并用触发器在每次 UPDATE 时自增，
-  // 这样所有写路径（解析、状态、删除）都不用各自记得改 rev。
+  // The rev used for sync: older databases get the column added, and a trigger increments it on every UPDATE,
+  // so no write path (parsing, status, deletion) has to remember to bump rev itself.
   await db.runAsync(`
     CREATE TRIGGER IF NOT EXISTS documents_rev_bump
     AFTER UPDATE ON documents
@@ -129,8 +129,8 @@ CREATE TABLE IF NOT EXISTS settings (
     END;
   `)
 
-  // 上次进程在抓取/解析中途被杀掉时，这些行会一直停在非终态。
-  // 本进程还没有开始处理任何条目，启动时把它们放回队列最安全。
+  // When the previous process was killed mid-fetch/parse, these rows stay stuck in a non-terminal state.
+  // This process has not started on any item yet, so putting them back in the queue at startup is the safest move.
   await db.runAsync(
     `UPDATE documents SET parse_status = 'pending', parse_stage = 'fetch', updated_at = ?
      WHERE deleted_at IS NULL AND parse_status IN ('fetching', 'parsing', 'analyzing')`,
@@ -140,11 +140,11 @@ CREATE TABLE IF NOT EXISTS settings (
 }
 
 /**
- * 测试与「清空数据」用：删掉所有收藏（保留表结构）。
+ * For tests and “clear data”: delete all saved items (keeping the schema).
  *
- * sync_base 必须一起删。它记的是「这条已经同步过、基准 rev 是几」——
- * 只删 documents 而留着它，下次同步就会认为云端那些条目「本机已经有了」，
- * 一条都不拉，界面还显示「两端已经一致」，而本地其实是空的。
+ * sync_base has to be deleted along with it. It records “this item has already been synced, and the baseline rev is which” —
+ * delete only documents and leave it, and the next sync will believe those cloud items “already exist on this device”,
+ * pull not a single one, and the UI will still say “both sides are already in sync” while the local store is actually empty.
  */
 export async function clearAllDocuments(): Promise<void> {
   const db = await getDb()

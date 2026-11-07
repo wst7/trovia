@@ -31,8 +31,8 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null)
 
 /**
- * 提示条：一条墨色反底，浮在导航栏之上，最多留 3 条。
- * 不区分图标、不区分底色——文字说什么就是什么，状态已经写在那句话里。
+ * Toasts: an ink-coloured inverted bar floating above the navigation bar, at most 3 kept at a time.
+ * No icons per type, no background per type — the text says what it says, and the status is already in that sentence.
  */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([])

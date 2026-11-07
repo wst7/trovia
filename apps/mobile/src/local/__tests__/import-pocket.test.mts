@@ -1,11 +1,11 @@
 /**
- * Pocket 的 CSV 导出。
+ * Pocket's CSV export.
  *
- * Pocket 关停后大量用户导出的就是这张表：列名是 given_url / given_title /
- * time_added（Unix 秒），和 Raindrop、Instapaper 的 url/title 都不一样。
- * 时间要认出来，否则 2019 年存的东西会在时间线上全变成「今天」。
+ * This is the table a great many users exported after Pocket shut down: the column names are given_url / given_title /
+ * time_added (Unix seconds), which is nothing like Raindrop's and Instapaper's url/title.
+ * The time has to be recognised, otherwise everything saved in 2019 turns into “today” on the timeline.
  *
- * 跑法：npx tsx apps/mobile/src/local/__tests__/import-pocket.test.mts
+ * How to run: npx tsx apps/mobile/src/local/__tests__/import-pocket.test.mts
  */
 import assert from 'node:assert/strict'
 import { addedRange, parseImport } from '../import/parse.ts'
@@ -29,16 +29,16 @@ assert.equal(
 )
 assert.equal(parsed.skipped.length, 1, '跳过的行要有原因，不能静默丢')
 
-// 表里只有 url/title 也要能读（Raindrop、Instapaper 的形态）
+// A table with only url/title has to be readable too (the Raindrop and Instapaper shape)
 const simple = ['url,title', 'https://example.com/b,只有标题'].join('\n')
 const simpleParsed = parseImport(simple)
 assert.equal(simpleParsed.items.length, 1)
 assert.equal(simpleParsed.items[0].addedAt, null, '没有时间列时不该编一个时间出来')
 
-// 预览里的时间跨度：两行分别是 2020-01 与 2020-09（按本机时区显示），而不是「今天」
+// The time span in the preview: the two rows are 2020-01 and 2020-09 respectively (shown in the device's timezone), not “today”
 assert.equal(addedRange(parsed.items), '2020-01 至 2020-09')
 
-// 没有时间列的导出不能编出一个日期来
+// An export with no time column must not make a date up
 assert.equal(addedRange(simpleParsed.items), null, '纯 url/title 的文件没有时间跨度')
 assert.equal(addedRange([]), null, '空列表也不能崩')
 

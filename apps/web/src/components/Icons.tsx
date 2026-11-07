@@ -1,4 +1,4 @@
-/** 与纸面风格一致的细线图标：1.6 描边、圆头圆角、currentColor。 */
+/** Thin-line icons in keeping with the paper look: 1.6 stroke, round caps and joins, currentColor. */
 
 export function SearchIcon({ size = 18 }: { size?: number }) {
   return (

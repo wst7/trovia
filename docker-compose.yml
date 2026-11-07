@@ -1,6 +1,6 @@
-# Xunji：PostgreSQL(pgvector) + API + Worker + 前端
-# 启动：docker compose up --build
-# 国内网络可先：docker compose build --build-arg PIP_INDEX_URL=http://mirrors.aliyun.com/pypi/simple
+# Xunji: PostgreSQL(pgvector) + API + Worker + frontend
+# Start: docker compose up --build
+# On a mainland-China network, run this first: docker compose build --build-arg PIP_INDEX_URL=http://mirrors.aliyun.com/pypi/simple
 services:
   db:
     image: pgvector/pgvector:pg16

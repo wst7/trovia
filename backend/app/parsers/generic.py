@@ -52,14 +52,14 @@ def _bs4_extract(soup) -> str | None:
     blocks: list[str] = []
     for el in root.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "blockquote", "pre", "td"]):
         if el.name in {"p", "td"} and el.find_parent(["li", "td", "blockquote", "pre"]):
-            continue  # 块级父元素已经覆盖，避免重复
+            continue  # the block-level parent already covers it, so avoid duplication
         text = clean_text(el.get_text(" ", strip=True))
         if text:
             blocks.append(text)
     if not blocks:
         text = clean_text(root.get_text("\n", strip=True))
         return text
-    # 去重相邻重复块（嵌套容器常见）
+    # De-duplicate adjacent repeated blocks (common with nested containers)
     deduped: list[str] = []
     for block in blocks:
         if not deduped or deduped[-1] != block:
@@ -110,7 +110,7 @@ class GenericParser:
     def parse(self, fetched: FetchResult) -> ParseResult:
         try:
             return self._parse(fetched)
-        except Exception as exc:  # 解析器缺陷不应让任务崩溃；转为 failed 结果
+        except Exception as exc:  # a parser defect must not crash the job; turn it into a failed result
             logger.exception("generic_parse_error", extra={"url": fetched.url})
             return ParseResult(
                 source_type="web",
@@ -162,13 +162,13 @@ class GenericParser:
                     include_tables=True,
                 )
             )
-        except Exception:  # trafilatura 对畸形 HTML 可能抛错 → 走兜底
+        except Exception:  # trafilatura can raise on malformed HTML → take the fallback
             content_markdown = None
         plain_text = _markdown_to_plain(content_markdown) if content_markdown else None
         if not plain_text:
             plain_text = _bs4_extract(soup)
             if plain_text:
-                content_markdown = plain_text  # 兜底退化为纯文本段落
+                content_markdown = plain_text  # the fallback degrades to plain-text paragraphs
 
         images = _collect_images(soup, base_url)
         links = _collect_links(soup, base_url)

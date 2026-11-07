@@ -1,4 +1,4 @@
-/** 抓一篇文章，把正文按段打印出来，用来读微信文章的全貌。 */
+/** Fetch one article and print the body paragraph by paragraph, for reading a WeChat article in full. */
 import { extractFromHtml } from '../apps/mobile/src/local/article.ts'
 
 const url = process.argv[2]

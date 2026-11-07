@@ -1,8 +1,8 @@
 /**
- * 正文里图片位置的回归测试：图片必须留在原来的位置，而不是被集中到底部。
- * 另外验证纯文本里不会混进图片 URL（否则搜索和摘要里会出现一串链接）。
+ * Regression test for image placement in the body: images must stay where they were, not be collected at the bottom.
+ * It also verifies that plain text does not pick up image URLs (otherwise a string of links shows up in search and summaries).
  *
- * 跑法：npx tsx apps/mobile/src/local/__tests__/article-images.test.mts
+ * How to run: npx tsx apps/mobile/src/local/__tests__/article-images.test.mts
  */
 import assert from 'node:assert/strict'
 import { extractFromHtml } from '../article.ts'
@@ -26,33 +26,33 @@ const html = `<!doctype html><html><head>
 
 const article = extractFromHtml(html, 'https://example.com/posts/1')
 
-// 图片按原位置出现在 markdown 里：段落在前、图在中间、下一段在后
+// Images appear in place in the markdown: the paragraph before, the image in the middle, the next paragraph after
 const md = article.markdown
 assert.ok(md.indexOf('第一段文字') < md.indexOf('diagram.png'), '图应在第一段之后')
 assert.ok(md.indexOf('diagram.png') < md.indexOf('第二段文字'), '图应在第二段之前')
 assert.ok(md.indexOf('第三段里夹着') < md.indexOf('inline.png'), '行内图应在所在段落之后')
 assert.ok(md.indexOf('inline.png') < md.indexOf('后面还有字'), '行内图后面的文字应还在后面')
 
-// 相对地址补全成绝对地址
+// Relative URLs are completed into absolute URLs
 assert.match(article.markdown, /!\[示意图\]\(https:\/\/example\.com\/images\/diagram\.png\)/)
 
-// 行内图片也要单独成段，不能丢
+// Inline images must become their own paragraph too, never dropped
 assert.match(article.markdown, /!\[行内图\]\(https:\/\/cdn\.example\.com\/inline\.png\)/)
 
-// 图标、1x1、data: 全部过滤掉
+// Icons, 1x1 images and data: URLs are all filtered out
 assert.doesNotMatch(article.markdown, /logo-avatar/, '图标不该进正文')
 assert.doesNotMatch(article.markdown, /data:image/, '内联 data 图不该进正文')
 assert.doesNotMatch(article.markdown, /small\.png/, '小尺寸图不该进正文')
 
-// 纯文本里没有图片 markdown，也没有图片地址
+// Plain text has no image markdown and no image URLs
 assert.doesNotMatch(article.plainText, /!\[/, '纯文本不该含图片标记')
 assert.doesNotMatch(article.plainText, /diagram\.png/, '纯文本不该含图片地址')
 assert.match(article.plainText, /第一段文字/)
 
-// 发表日期照常解析
+// The publication date is parsed as usual
 assert.equal(article.publishedAt, '2026-10-31')
 
-// images 数组仍然给 OCR 与老版本兜底用
+// The images array still backs OCR and older versions
 assert.deepEqual(article.images, [
   'https://example.com/images/diagram.png',
   'https://cdn.example.com/inline.png',

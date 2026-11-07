@@ -1,23 +1,23 @@
 /**
- * 同步引擎在本机的落地：把 SQLite 里的收藏喂给 LocalStore。
+ * The local landing of the sync engine: feeding the saved items in SQLite to LocalStore.
  *
- * 三个容易踩的点，都在这里一次性处理掉：
+ * Three easy-to-trip points, all handled here once and for all:
  *
- * 1. **rev 由触发器维护**。db.ts 里 documents_rev_bump 会在每次 UPDATE 且 rev 未变时
- *    自动 +1，所以所有写路径（解析、状态流转、删除）都不用自己改 rev。
- *    代价是「落地远端记录」时必须显式写 rev = 远端 rev，否则本地又变成「改过」，
- *    下一轮就会把刚拉下来的内容原样推回去，来回同步永不收敛。
+ * 1. **rev is maintained by a trigger**. documents_rev_bump in db.ts bumps it automatically by 1 on every UPDATE where rev did not change,
+ *    so no write path (parsing, status transitions, deletion) has to update rev itself.
+ *    The price is that when "landing a remote record" you must write rev = the remote rev explicitly, otherwise the local row counts as "modified" again,
+ *    and the next round pushes the content just pulled down straight back up, so sync never converges.
  *
- * 2. **墓碑也要进 dirty**。已删除的条目如果不推上去，另一台设备会把它当「远端没有」而复活。
+ * 2. **Tombstones must go into dirty too**. If a deleted entry is not pushed up, another device treats it as "absent remotely" and resurrects it.
  *
- * 3. **不同步 image_files**。那是本机文件路径（documentDirectory 下的绝对路径），
- *    传到别的设备上是废字符串；图片本身按正文里的远程地址在新设备重新下载。
+ * 3. **image_files are not synced**. Those are local file paths (absolute paths under documentDirectory),
+ *    which are meaningless strings on another device; the images themselves are re-downloaded on the new device from the remote addresses in the body.
  */
 import type { LocalStore, SyncRecord } from '@trovia/sync'
 
 import { getDb } from './db'
 
-/** 参与同步的字段：用户内容 + 元信息，不含本机路径与索引。 */
+/** Fields that take part in sync: user content + metadata, without local paths and indexes. */
 const PAYLOAD_FIELDS = [
   'url',
   'canonical_url',
@@ -61,7 +61,7 @@ function parseJson(value: unknown): unknown {
 
 function truncateBody(markdown: unknown): unknown {
   if (typeof markdown !== 'string' || markdown.length <= MAX_BODY_BYTES) return markdown
-  // 按字符截断即可，2MB 的正文已经是极端情况，不需要精确字节对齐。
+  // Truncating by character is enough; a 2 MB body is already the extreme case, no exact byte alignment needed.
   return `${markdown.slice(0, MAX_BODY_BYTES)}\n\n（正文过长，同步时已截断）`
 }
 
@@ -109,18 +109,18 @@ async function listDirty(): Promise<SyncRecord[]> {
 }
 
 /**
- * 基准 rev 只认「本机确实还有这条」的。
+ * The base rev only counts entries "this device really still has".
  *
- * 老版本「清空全部收藏」只删 documents、没删 sync_base，于是清空之后
- * 云端的数据被当成「本机已经有了」而永远不再拉取——表现就是同步显示
- * 「两端已经一致」，本地却是空的。这里顺手把孤儿行清掉，让老用户自愈。
+ * The old version's "clear all saved items" deleted only from documents and not from sync_base, so after clearing,
+ * the cloud data was treated as "this device already has it" and never fetched again — the symptom being sync reporting
+ * "both sides are already consistent" while the local database was empty. This cleans up the orphan rows along the way, so old users heal themselves.
  */
 /**
- * doc_id → 远端文件的 etag；没记过的条目不在表里。
+ * doc_id → etag of the remote file; entries never recorded are not in the table.
  *
- * 同样只认「本机确实还有这条」。否则清空过库、或某条被物理删掉之后，
- * 这份 etag 会让引擎以为「这条已经同步过了」而跳过读取——
- * 表现就是云端 7 份、本地 6 份，同步却报「没有可同步的」。
+ * Again only entries "this device really still has". Otherwise, after the database was cleared, or a given entry was physically deleted,
+ * this etag makes the engine think "this entry has already been synced" and skip reading it —
+ * the symptom being seven files in the cloud and six locally, yet sync reports "nothing to sync".
  */
 async function baseEtags(): Promise<Map<string, string>> {
   const db = await getDb()
@@ -148,15 +148,15 @@ async function applyRemote(records: SyncRecord[]): Promise<void> {
     try {
       await applyOne(db, record)
     } catch {
-      // 单条落库失败（唯一索引、字段约束）不影响其他记录：
-      // 冲突副本和原条目共用同一个链接是很正常的情况。
+      // One failed write (unique index, field constraint) does not affect the other records:
+      // a conflict copy and the original entry sharing the same link is a perfectly normal situation.
       //
-      // 但必须把本地 rev 对齐到远端：引擎假定「applyRemote 之后本地 rev == 远端 rev」，
-      // 不对齐的话这条会永远满足 rev > 基准，每一轮都被重新拉一次，永远收不敛。
+      // But the local rev must be aligned to the remote: the engine assumes "after applyRemote the local rev == the remote rev",
+      // and without alignment this entry always satisfies rev > base, is pulled again every round, and never converges.
       try {
         await db.runAsync('UPDATE documents SET rev = ? WHERE id = ?', record.rev, record.id)
       } catch {
-        // 连对齐都失败就放弃这一条，至少别影响其他记录。
+        // If even the alignment fails, give up on this entry — at least do not affect the other records.
       }
     }
   }
@@ -169,7 +169,7 @@ async function applyOne(db: Awaited<ReturnType<typeof getDb>>, record: SyncRecor
     record.id,
   )
 
-  // 墓碑：本机有就跟着删，没有就什么都不做（不留空壳）。
+  // Tombstone: delete it here too if this device has it, otherwise do nothing (leave no empty shell).
   if (record.deleted_at) {
     if (!existing || existing.deleted_at) return
     await db.runAsync(
@@ -183,10 +183,10 @@ async function applyOne(db: Awaited<ReturnType<typeof getDb>>, record: SyncRecor
   }
 
   if (existing) {
-    // 远端更旧或一样新就不动，避免把本机正在整理的正文覆盖掉。
+    // If the remote is older or equally new, leave it alone, so a body being reorganized on this device is not overwritten.
     if (existing.updated_at >= record.updated_at) return
-    // 刻意不改 url / canonical_url：条目身份由 id 决定，改链接只会撞上
-    // 「同一链接只保留一条」的唯一索引，把整轮同步打断。
+    // Deliberately do not change url / canonical_url: an entry's identity is its id, and changing the link only collides with
+    // the "one entry per link" unique index and interrupts the whole sync round.
     await db.runAsync(
       `UPDATE documents SET
          title = ?, site_name = ?,
@@ -218,9 +218,9 @@ async function applyOne(db: Awaited<ReturnType<typeof getDb>>, record: SyncRecor
     return
   }
 
-  // 同一链接在别的设备上已经有条目（手机端用随机 id，插件用链接散列，两边算出来的
-  // id 必然不同）：落到那一条上，否则 INSERT 会撞「同一链接只保留一条」的唯一索引，
-  // 整个同步轮次都会失败。
+  // The same link already has an entry on another device (the phone uses random ids, the extension hashes the link, so the two sides
+  // necessarily compute different ids): land on that entry, otherwise the INSERT collides with the "one entry per link" unique index
+  // and the entire sync round fails.
   if (!existing) {
     const canonical = stringOf(payload, 'canonical_url') ?? stringOf(payload, 'url')
     if (canonical) {
@@ -249,7 +249,7 @@ async function applyOne(db: Awaited<ReturnType<typeof getDb>>, record: SyncRecor
     }
   }
 
-  // 本机没有：整条插入。
+  // Not present locally: insert the whole row.
   await db.runAsync(
     `INSERT INTO documents (
        id, url, canonical_url, title, site_name, source_type, author, published_at, description,
@@ -275,7 +275,7 @@ async function applyOne(db: Awaited<ReturnType<typeof getDb>>, record: SyncRecor
     stringOf(payload, 'plain_text'),
     arrayAsJson(payload, 'images'),
     stringOf(payload, 'plain_text') ?? '',
-    // 插件存进来的只有链接和标题，正文留给本机抓；标成 pending 才会进队列。
+    // The extension stores only the link and title and leaves the body for this device to fetch; only marking it pending puts it in the queue.
     stringOf(payload, 'content_markdown') ? 'completed' : 'pending',
     stringOf(payload, 'content_markdown') ? null : 'fetch',
     stringOf(payload, 'saved_at') ?? record.updated_at,
@@ -299,7 +299,7 @@ async function markSynced(
       etags?.get(record.id) ?? null,
     )
   }
-  // 只读不改的条目也要记下 etag，否则下一轮还会再读它一遍。
+  // Entries that are read-only must still record their etag, otherwise the next round reads them again.
   if (etags) {
     for (const [id, etag] of etags) {
       await db.runAsync(

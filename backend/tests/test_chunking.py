@@ -24,10 +24,10 @@ def test_short_text_single_chunk_unchanged():
 def test_paragraphs_kept_intact_and_ordered():
     chunks = chunk_text(MULTI_PARAGRAPH, max_chars=300, overlap=50)
     assert len(chunks) > 1
-    # 每个块都是原文的连续片段（段落优先，不拆句）
+    # Every chunk is a contiguous slice of the original (paragraph first, sentences not split)
     for chunk in chunks:
         assert chunk in MULTI_PARAGRAPH
-    # 顺序保留：第0段在第7段之前
+    # Order preserved: paragraph 0 comes before paragraph 7
     assert chunks[0].startswith("第0段")
     assert "第7段" in chunks[-1]
 
@@ -42,10 +42,10 @@ def test_no_chunk_exceeds_max_chars_on_long_paragraph():
     chunks = chunk_text(LONG_PARAGRAPH, max_chars=200, overlap=30)
     assert len(chunks) > 3
     assert all(len(chunk) <= 200 for chunk in chunks)
-    # 句子不被拆散：每个块都以句末标点结束（重叠拼接除外）
+    # Sentences stay intact: every chunk ends on sentence punctuation (except the stitched overlap)
     for chunk in chunks:
         assert chunk[-1] in "。！？.!?" or chunk is chunks[-1]
-    # 覆盖完整：开头与结尾都在
+    # Full coverage: both the start and the end are there
     assert chunks[0].startswith("任务调度")
     assert chunks[-1].endswith("。")
 

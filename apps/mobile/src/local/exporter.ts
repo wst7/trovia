@@ -1,15 +1,15 @@
 /**
- * 全量导出。
+ * Full export.
  *
- * 落地页写着「任何时候都能完整导出」，所以这里必须真的做到：
- * 一份机器可读的备份（gzip 过的 JSON，导入时能完整还原），一份人能读的 Markdown。
- * 两者都只包含用户自己的内容，不含索引与向量这类派生数据。
+ * The landing page says "you can always export everything", so this really has to do it:
+ * a machine-readable backup (gzipped JSON that restores completely on import), plus a human-readable Markdown.
+ * Both contain only the user's own content, without derived data such as indexes and vectors.
  *
- * 为什么不直接给 JSON：几百篇的库，JSON 里全是字段名和转义，正文与纯文本还各存一遍，
- * 6 MB 很常见。gzip 之后 1.6 MB（315 篇实测），手机分享面板和个人网盘都不再嫌它大。
+ * Why not hand out JSON directly: in a library of hundreds of articles the JSON is nothing but field names and escapes, and the body is stored a second time as plain text,
+ * so 6 MB is common. After gzip it is 1.6 MB (measured on 315 articles), and neither the phone's share sheet nor personal cloud drives mind it anymore.
  *
- * 备份里存的是「整行」而不只是内容字段：id、canonical_url、状态、两个时间戳、rev、metadata
- * 都要带上，否则导出再导入之后这些值会漂移，再导出就不是同一份文件了。
+ * The backup stores the "whole row", not just the content fields: id, canonical_url, status, both timestamps, rev, metadata
+ * all have to be carried, otherwise those values drift after an export/import round trip and the next export is not the same file.
  */
 import type { DocumentDetail } from '@trovia/shared'
 
@@ -27,7 +27,7 @@ function fs(): FileSystemModule | null {
   }
 }
 
-/** 备份格式版本。v2 起每篇多带 updated_at 与 rev。 */
+/** Backup format version. Since v2 each article also carries updated_at and rev. */
 export const EXPORT_VERSION = 2
 
 export interface ExportBundle {
@@ -37,7 +37,7 @@ export interface ExportBundle {
   documents: ExportDocument[]
 }
 
-/** 人可读版本：每篇一节，标题 + 元信息 + 正文。 */
+/** Human-readable version: one section per article, title + metadata + body. */
 export function buildExportMarkdown(docs: DocumentDetail[], exportedAt: string): string {
   const header = [`# Trovia 导出`, ``, `导出时间：${exportedAt}`, `共 ${docs.length} 条`, ``].join('\n')
   const sections = docs.map((doc) => {
@@ -65,16 +65,16 @@ function stamp(at: Date): string {
 }
 
 export interface ExportResult {
-  /** .zip 备份：backup.json + 收藏.md，导入时直接认。 */
+  /** .zip backup: backup.json + MARKDOWN_ENTRY, recognized directly on import. */
   path: string
-  /** 压缩前后的字节数，界面上用来交代省了多少。 */
+  /** Byte counts before and after compression, used by the UI to say how much was saved. */
   rawBytes: number
   zipBytes: number
 }
 
 /**
- * 写盘并返回路径。分享由调用方决定（系统分享面板）。
- * 没有可用文件系统时返回 null，调用方提示失败。
+ * Write to disk and return the path. Sharing is up to the caller (the system share sheet).
+ * Returns null when no usable filesystem is available; the caller reports the failure.
  */
 export async function writeExport(docs: ExportDocument[]): Promise<ExportResult | null> {
   const module = fs()
@@ -86,7 +86,7 @@ export async function writeExport(docs: ExportDocument[]): Promise<ExportResult 
   try {
     await module.makeDirectoryAsync(dir, { intermediates: true })
   } catch {
-    // 已存在
+    // Already exists
   }
 
   const bundle: ExportBundle = {
@@ -95,17 +95,17 @@ export async function writeExport(docs: ExportDocument[]): Promise<ExportResult 
     count: docs.length,
     documents: docs,
   }
-  // 不 pretty-print：缩进白涨一两成体积，压缩前也没人要读它。
+  // No pretty-print: indentation adds 10-20% of volume for nothing, and nobody reads it before compression.
   const encoded = encodeBackup(JSON.stringify(bundle), buildExportMarkdown(docs, exportedAt))
   const path = `${dir}trovia-${stamp(now)}.zip`
 
-  // expo-file-system 写二进制只能走 base64。
+  // expo-file-system can only write binary through base64.
   await module.writeAsStringAsync(path, encoded.base64, { encoding: 'base64' })
 
   return { path, rawBytes: encoded.rawBytes, zipBytes: encoded.zipBytes }
 }
 
-/** 字节数说成人话。 */
+/** Put a byte count into plain language. */
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`

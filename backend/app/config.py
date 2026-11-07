@@ -10,7 +10,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", case_sensitive=False)
 
-    # 基础
+    # Basics
     database_url: str = "postgresql+psycopg://trovia:trovia@localhost:5432/trovia"
     app_secret: str = ""
     log_level: str = "INFO"
@@ -28,16 +28,16 @@ class Settings(BaseSettings):
                 return "postgresql+psycopg://" + value[len(prefix) :]
         return value
 
-    # AI 摘要（openai 表示任意 OpenAI 兼容服务，含个人服务商/中转站/Ollama/vLLM）
+    # AI summaries ("openai" means any OpenAI-compatible service, including personal providers, proxies, Ollama and vLLM)
     ai_provider: str = "extractive"  # extractive | openai | openai-compatible
     ai_api_key: str = ""
     ai_base_url: str = "https://api.openai.com/v1"
     ai_model: str = "gpt-4o-mini"
     ai_chat_path: str = "/chat/completions"
     ai_auth_header: str = "Authorization"
-    ai_auth_prefix: str = "Bearer"  # 可为空，表示直接发送 api_key
-    ai_extra_headers: str = "{}"  # JSON 对象，如 {"X-Custom":"value"}
-    ai_json_mode: bool = True  # 服务商不支持 response_format 时设为 false
+    ai_auth_prefix: str = "Bearer"  # May be empty, which means the api_key is sent directly
+    ai_extra_headers: str = "{}"  # JSON object, e.g. {"X-Custom":"value"}
+    ai_json_mode: bool = True  # Set to false when the provider does not support response_format
     ai_timeout_seconds: float = 60.0
 
     # Embedding
@@ -52,17 +52,17 @@ class Settings(BaseSettings):
     embedding_extra_headers: str = "{}"
     embedding_timeout_seconds: float = 60.0
 
-    # 抓取安全
+    # Fetch safety
     fetch_timeout_seconds: float = 15.0
     fetch_max_bytes: int = 5 * 1024 * 1024
     fetch_max_redirects: int = 5
     fetch_allowed_ports: str = "80,443,8080,8443"
 
-    # 切分
+    # Chunking
     chunk_max_chars: int = 1200
     chunk_overlap: int = 150
 
-    # 搜索融合权重
+    # Search fusion weights
     search_lexical_weight: float = 0.35
     search_semantic_weight: float = 0.35
     search_title_weight: float = 0.20
@@ -70,12 +70,12 @@ class Settings(BaseSettings):
     search_min_score: float = 0.05
     search_vector_candidates: int = 50
 
-    # Worker / 任务
+    # Worker / jobs
     worker_poll_seconds: float = 1.0
     worker_lease_seconds: int = 300
     job_max_attempts: int = 3
 
-    # 会话
+    # Sessions
     token_ttl_days: int = 30
 
     @property
@@ -128,7 +128,7 @@ def validate_settings(settings: Settings) -> None:
             model_var="EMBEDDING_MODEL",
         )
 
-    # 额外请求头必须是合法 JSON 对象，启动时暴露而不是等第一次调用失败
+    # Extra request headers must be a valid JSON object; surface it at startup instead of waiting for the first call to fail
     parse_extra_headers(settings.ai_extra_headers)
     parse_extra_headers(settings.embedding_extra_headers)
     if settings.ai_timeout_seconds <= 0 or settings.embedding_timeout_seconds <= 0:

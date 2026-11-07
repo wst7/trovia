@@ -30,33 +30,33 @@ export function HomeScreen() {
   const router = useRouter()
   const { toast } = useToast()
   const revision = useLocalRevision()
-  // 深链直接搜索：trovia:///?q=… 由分享扩展、快捷指令或浏览器扩展调用。
+  // Deep link straight into search: trovia:///?q=…, called by the share extension, Shortcuts or the browser extension.
   const routeParams = useLocalSearchParams<{ q?: string }>()
   const insets = useSafeAreaInsets()
   const p = usePalette()
 
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[] | null>(null)
-  // 引擎对这次查询的理解，例如「昨天保存的」；直接显示，用户才知道我按什么找的。
+  // The engine's reading of this query, e.g. "saved yesterday"; show it directly so the user knows what it searched by.
   const [interpretation, setInterpretation] = useState<string | null>(null)
-  // 抓取失败/被站点拦下的条目没有正文，只能按标题命中——搜索结果里要说清楚。
+  // Items that failed to fetch or were blocked have no body and can only match on the title — the results must say so.
   const bodylessCount = (results ?? []).filter((item) => item.parse_status === 'failed').length
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
   const [lastQuery, setLastQuery] = useState('')
-  // 结果里要标出「为什么这条算命中」，词来自用户输入本身，不用模型的解释。
+  // Results mark "why this one counts as a hit"; the terms come from the user's own input, not the model's explanation.
   const highlightTerms = useMemo(() => queryTerms(lastQuery), [lastQuery])
   const [recent, setRecent] = useState<DocumentSummary[]>([])
   const [stats, setStats] = useState<repo.DocumentStats | null>(null)
   const [writing, setWriting] = useState(false)
-  // 「问模型」开关：默认关，交给用户显式打开（大模型是可选项）。
+  // The "ask the model" switch: off by default, left for the user to turn on explicitly (an LLM is optional).
   const [askMode, setAskMode] = useState(false)
   const [llmReady, setLlmReady] = useState(false)
 
   const inResults = lastQuery.length > 0
   const bottomPad = insets.bottom + TAB_BAR_HEIGHT + 24
 
-  // 首页聚焦时把积压的本机任务推进一轮（保存、分享、重试都走这里）。
+  // On home focus, push the backlog of on-device jobs forward one round (save, share and retry all go through here).
   useFocusEffect(
     useCallback(() => {
       void processPendingQueue()
@@ -69,7 +69,7 @@ export function HomeScreen() {
       .catch(() => setLlmReady(false))
   }, [revision])
 
-  // 最近收藏：只在首页空态出现，四条，够「想起来」即可。
+  // Recent saves: shown only in the home empty state, four of them, enough to jog the memory.
   useEffect(() => {
     if (inResults) return
     let cancelled = false
@@ -88,7 +88,7 @@ export function HomeScreen() {
     }
   }, [revision, inResults])
 
-  // 本地数据变化（例如刚保存的那篇解析完成）时，刷新当前搜索结果。
+  // When local data changes (e.g. the article just saved finished parsing), refresh the current search results.
   useEffect(() => {
     if (!lastQuery) return
     let cancelled = false
@@ -119,7 +119,7 @@ export function HomeScreen() {
   async function runSearch(text?: string) {
     const q = (text ?? query).trim()
     if (!q || searching) return
-    // 开了「问模型」：不像链接的输入交给模型，在收藏里找完再答。
+    // With "ask the model" on: input that isn't a link goes to the model, which searches the library and then answers.
     if (askMode) {
       router.push(`/ask?q=${encodeURIComponent(q)}`)
       return
@@ -162,7 +162,7 @@ export function HomeScreen() {
         setQuery('')
         toast(t('home.toast.saved'), { type: 'success' })
         void processPendingQueue()
-        // 存完稍后同步一次：8 秒内的多次保存合并成一轮。
+        // Sync once a bit after saving: several saves within 8 seconds are merged into one round.
         scheduleSyncAfterSave()
       }
       return { id: res.id, duplicate: res.duplicate }
@@ -264,7 +264,7 @@ export function HomeScreen() {
                       ? t('home.emptyHintWithInterpretation')
                       : t('home.emptyHint')}
                   </Text>
-                  {/* 用户不会猜出「今天」「上周」这种说法能当条件用，空结果时给几个能点的话。 */}
+                  {/* Users won't guess that "today" or "last week" work as conditions, so offer a few tappable phrases on an empty result. */}
                   <View className="mt-5 flex-row flex-wrap items-center">
                     {(interpretation
                       ? [
@@ -331,7 +331,7 @@ export function HomeScreen() {
             </>
           ) : (
             <>
-              {/* 首页只有一句话要有重量：它是这个 App 唯一的产品说明。 */}
+              {/* Only one sentence on home needs weight: it is this app's single piece of product copy. */}
               <View className="mt-6">
                 <Text className="text-[30px] font-semibold leading-[38px] tracking-[-0.4px] text-ink">
                   {t('home.title')}

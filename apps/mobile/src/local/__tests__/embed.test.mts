@@ -1,8 +1,8 @@
 /**
- * 语义检索纯逻辑的测试：请求形状、返回顺序、相似度排序、阈值。
- * 用一个本地 mock 的 /v1/embeddings 服务，走真实 HTTP，不碰 SQLite。
+ * Tests for the pure logic of semantic search: request shape, return order, similarity ranking, thresholds.
+ * Uses a local mock /v1/embeddings server over real HTTP and never touches SQLite.
  *
- * 跑法：npx tsx apps/mobile/src/local/__tests__/embed.test.mts
+ * How to run: npx tsx apps/mobile/src/local/__tests__/embed.test.mts
  */
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
@@ -16,19 +16,19 @@ import {
   rankBySimilarity,
 } from '../embed-core.ts'
 
-// ---- 端点拼接 ----
+// ---- endpoint joining ----
 assert.equal(embeddingEndpoint('https://api.openai.com/v1'), 'https://api.openai.com/v1/embeddings')
 assert.equal(embeddingEndpoint('https://api.openai.com/v1/'), 'https://api.openai.com/v1/embeddings')
 assert.equal(embeddingEndpoint('http://127.0.0.1:11434/v1/embeddings'), 'http://127.0.0.1:11434/v1/embeddings')
 console.log('✓ 端点拼接对 /v1 与已带 /embeddings 两种写法都正确')
 
-// ---- 相似度 ----
+// ---- similarity ----
 assert.equal(cosine(Float32Array.from([1, 0]), Float32Array.from([1, 0])), 1)
 assert.equal(cosine(Float32Array.from([1, 0]), Float32Array.from([0, 1])), 0)
 assert.equal(cosine(Float32Array.from([0, 0]), Float32Array.from([1, 1])), 0, '零向量不能除零')
 console.log('✓ 余弦相似度正确，零向量返回 0')
 
-// ---- 排序与阈值 ----
+// ---- ranking and thresholds ----
 const vectors = [
   { id: 'close', vec: Float32Array.from([1, 0.1]) },
   { id: 'far', vec: Float32Array.from([0, 1]) },
@@ -43,7 +43,7 @@ assert.equal(rankBySimilarity(vectors, query, { exclude: new Set(['close']) })[0
 assert.equal(rankBySimilarity(vectors, query, { limit: 1 }).length, 1)
 console.log('✓ 排序、阈值、排除已展示结果都正确')
 
-// ---- 送进模型的文本 ----
+// ---- the text handed to the model ----
 const input = embeddingInputOf({
   title: '为什么睡前刷手机更焦虑',
   summary: '睡前蓝光与情绪的关系。',
@@ -54,7 +54,7 @@ assert.ok(input.startsWith('为什么睡前刷手机更焦虑'))
 assert.ok(input.length <= 2000, '输入要有上限，别把整篇文章塞进去')
 console.log('✓ 向量输入包含标题/摘要/关键词，且限制长度')
 
-// ---- 真实 HTTP 往返：校验请求体与乱序返回 ----
+// ---- real HTTP round trip: verify the request body and out-of-order responses ----
 function startMock(): Promise<{ port: number; close: () => void; bodies: string[] }> {
   const bodies: string[] = []
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
@@ -67,7 +67,7 @@ function startMock(): Promise<{ port: number; close: () => void; bodies: string[
         return
       }
       const payload = JSON.parse(raw) as { input: string[] }
-      // 故意打乱顺序，验证按 index 回填
+      // Deliberately shuffle the order to verify results are filled back in by index
       const data = payload.input.map((text, index) => ({
         index,
         embedding: [text.length, index + 1, 0.5],

@@ -159,7 +159,7 @@ def test_delete_removes_document_and_jobs(client, auth_headers, db_session):
     assert db_session.scalars(select(ProcessingJob)).all() == []
     assert db_session.scalar(select(Document).where(Document.id == uuid.UUID(doc_id))) is None
 
-    # 删除后重新保存同一 URL 应当是全新记录
+    # Re-saving the same URL after deletion should be a brand-new record
     again = _create(client, auth_headers, "https://example.com/todelete")
     assert again.status_code == 201
     assert again.json()["data"]["duplicate"] is False
@@ -173,7 +173,7 @@ def test_reprocess_creates_new_job_after_completion(client, auth_headers, db_ses
     doc_id = _create(client, auth_headers, "https://example.com/reparse").json()["data"]["id"]
 
     first = client.post(f"/api/v1/documents/{doc_id}/reprocess", headers=auth_headers).json()["data"]
-    assert first["created"] is False  # 已有排队任务，复用而不重复创建
+    assert first["created"] is False  # a job is already queued; reuse it instead of creating another
 
     job = db_session.scalar(select(ProcessingJob).limit(1))
     job.status = "completed"

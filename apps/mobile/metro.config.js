@@ -7,7 +7,7 @@ const workspaceRoot = path.resolve(projectRoot, '../..')
 
 const config = getDefaultConfig(projectRoot)
 
-// monorepo：@trovia/shared 以源码形式链接在仓库根 node_modules 下。
+// monorepo: @trovia/shared is linked as source under the repo-root node_modules.
 config.watchFolders = [workspaceRoot]
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),

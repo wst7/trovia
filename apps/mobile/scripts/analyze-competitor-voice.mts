@@ -1,8 +1,8 @@
 /**
- * 把采集到的评论按「痛点」归类。
+ * Bucket the collected reviews by "pain point".
  *
- * 不做花哨的 NLP：固定几组关键词足够看清方向，而且结论可复现——
- * 谁都能拿同一份 JSON 跑出同样的计数。
+ * No fancy NLP: a few fixed keyword groups are enough to see the direction, and the result is reproducible —
+ * anyone can run the same JSON and get the same counts.
  */
 import { readFile } from 'node:fs/promises'
 

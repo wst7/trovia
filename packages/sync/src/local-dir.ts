@@ -1,12 +1,12 @@
 /**
- * 本地目录 adapter —— 三种用途：
+ * Local directory adapter — three uses:
  *
- *   1. 测试：用真实文件系统跑同步引擎，而不是只在内存里自说自话；
- *   2. 局域网/桌面：指向一个挂载的目录（如 macOS 上的 iCloud Drive 挂载点）；
- *   3. iCloud（未来）：指向 App 的 ubiquity 容器路径，传输交给系统。
+ *   1. tests: run the sync engine against a real filesystem instead of only talking to itself in memory;
+ *   2. LAN/desktop: point at a mounted directory (such as the iCloud Drive mount point on macOS);
+ *   3. iCloud (future): point at the app's ubiquity container path and let the system handle the transfer.
  *
- * 传入的是一个已存在、可读写的绝对路径。RN 侧由 expo-file-system
- * 提供一个目录路径即可复用同一套接口。
+ * What is passed in is an existing, readable and writable absolute path. On the RN side expo-file-system
+ * only has to supply a directory path to reuse the same interface.
  */
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
@@ -19,7 +19,7 @@ export class LocalDirTarget implements SyncTarget {
   }
 
   private abs(path: string): string {
-    // 简单越界防护：不允许 .. 逃出根目录。
+    // Simple escape guard: no .. is allowed to climb out of the root directory.
     if (path.includes('..')) throw new Error(`非法路径：${path}`)
     return join(this.root, path)
   }

@@ -1,9 +1,9 @@
 /**
- * 下载安装包并交给系统安装器。
+ * Download the installer package and hand it to the system installer.
  *
- * 安卓不许应用悄悄装东西：只能把 apk 交给系统安装界面，用户点「安装」。
- * 首次还要在系统设置里给 Trovia 开「安装未知应用」的权限——没开时
- * 这里直接把那个设置页打开，省得用户自己翻。
+ * Android does not let an app install things quietly: the apk can only be handed to the system install screen and the user taps “Install”.
+ * The first time, “install unknown apps” also has to be granted to Trovia in the system settings — when it is not granted,
+ * this opens that settings page directly, so the user does not have to go digging for it.
  */
 type FileSystemModule = typeof import('expo-file-system/legacy')
 
@@ -17,13 +17,13 @@ function fs(): FileSystemModule | null {
 }
 
 export interface DownloadProgress {
-  /** 0–1；服务器没给 Content-Length 时是 -1。 */
+  /** 0–1; -1 when the server did not send Content-Length. */
   ratio: number
   written: number
   total: number
 }
 
-/** 下载到缓存目录；文件名固定，重复下载直接覆盖。 */
+/** Download into the cache directory; the file name is fixed, so a repeat download simply overwrites it. */
 export async function downloadApk(
   url: string,
   fileName: string,
@@ -32,7 +32,7 @@ export async function downloadApk(
   const module = fs()
   if (!module?.cacheDirectory) throw new Error('这台设备上暂时无法写入文件')
   const target = `${module.cacheDirectory}${fileName.replace(/[^\w.-]/g, '_')}`
-  // 旧包先删掉，避免断点续传把半个旧文件当成新包
+  // Delete the old package first, so a resumed download cannot take half an old file for the new package
   await module.deleteAsync(target, { idempotent: true }).catch(() => undefined)
 
   const task = module.createDownloadResumable(url, target, {}, (event) => {
@@ -50,7 +50,7 @@ export async function downloadApk(
   return result.uri
 }
 
-/** 拉起系统安装界面。没权限时打开「安装未知应用」的设置页。 */
+/** Bring up the system install screen. Without the permission, open the “install unknown apps” settings page. */
 export async function installApk(uri: string): Promise<void> {
   const module = fs()
   const IntentLauncher = await import('expo-intent-launcher')
@@ -62,7 +62,7 @@ export async function installApk(uri: string): Promise<void> {
       type: 'application/vnd.android.package-archive',
     })
   } catch {
-    // 典型原因：没开「安装未知应用」。把设置页直接打开。
+    // Typical cause: “install unknown apps” is not enabled. Open that settings page directly.
     await IntentLauncher.startActivityAsync('android.settings.MANAGE_UNKNOWN_APP_SOURCES', {
       data: 'package:com.trovia.app',
     }).catch(() => undefined)

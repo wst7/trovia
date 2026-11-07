@@ -27,13 +27,13 @@ from app.parsers.registry import get_parser
 
 logger = get_logger("trovia.ai.pipeline")
 
-# 关联关系阈值（真实证据：语义余弦 / 主题 Jaccard / 同来源常量分）
+# Relation thresholds (real evidence: semantic cosine / topic Jaccard / same-source constant score)
 SEMANTIC_MIN_COSINE = 0.2
 SAME_SOURCE_SCORE = 0.15
 RELATION_MIN_SCORE = 0.1
 RELATION_TOP_K = 5
 
-# 抓取阶段可重试的错误码；其余（如 FETCH_BLOCKED/CONTENT_NOT_FOUND）视为终态
+# Error codes that can be retried in the fetch stage; the rest (such as FETCH_BLOCKED/CONTENT_NOT_FOUND) count as terminal
 RETRYABLE_FETCH_CODES = {"FETCH_TIMEOUT", "FETCH_ERROR"}
 
 _CJK_RE = re.compile(r"[㐀-䶿一-鿿]")
@@ -177,7 +177,7 @@ def process_document(
     if doc is None:
         return
 
-    # ---- 抓取 ----
+    # ---- fetch ----
     doc.parse_status = "fetching"
     doc.parse_stage = "fetch"
     doc.parse_error_code = None
@@ -196,12 +196,12 @@ def process_document(
         _raise_fetch_error(session, doc, exc)
     except RetryableJobError:
         raise
-    except Exception as exc:  # 抓取实现的未知异常按网络错误处理
+    except Exception as exc:  # an unknown exception from the fetch implementation is treated as a network error
         raise RetryableJobError(
             "FETCH_ERROR", f"抓取网页时发生错误：{exc.__class__.__name__}"
         ) from exc
 
-    # ---- 解析 ----
+    # ---- parse ----
     doc.parse_status = "parsing"
     doc.parse_stage = "parse"
     session.commit()
@@ -209,7 +209,7 @@ def process_document(
     parser = get_parser(doc.original_url, doc.source_type)
     try:
         result = parser.parse(fetched)
-    except Exception as exc:  # 防御：解析器契约要求不抛异常
+    except Exception as exc:  # defensive: the parser contract requires that it never raises
         session.rollback()
         doc.parse_status = "failed"
         doc.parse_error_code = "PARSE_ERROR"
@@ -236,14 +236,14 @@ def process_document(
         session.commit()
         return
 
-    # ---- 摘要与关键词 ----
+    # ---- summary and keywords ----
     doc.parse_status = "analyzing"
     doc.parse_stage = "summarize"
     session.commit()
 
     text = doc.plain_text or ""
     if text.strip():
-        # 摘要服务不可用不应阻断索引：回退到本地抽取式，保证内容仍可被找回。
+        # A summary service being unavailable must not block indexing: fall back to local extractive, so the content can still be found again.
         summary = None
         try:
             summary = get_summary_provider(settings).summarize(doc.title or "", text)
@@ -272,12 +272,12 @@ def process_document(
             doc.topics = summary.topics or []
             session.commit()
 
-    # ---- 切分 ----
+    # ---- chunking ----
     doc.parse_stage = "chunk"
     session.commit()
     chunks = chunk_text(text, settings.chunk_max_chars, settings.chunk_overlap)
 
-    # ---- 向量化与索引写入 ----
+    # ---- embedding and index writes ----
     doc.parse_status = "indexing"
     doc.parse_stage = "embed"
     session.commit()
@@ -287,7 +287,7 @@ def process_document(
         vectors = provider.embed(chunks) if chunks else []
     except EmbeddingProviderError as exc:
         raise RetryableJobError(exc.code, exc.message) from exc
-    except RuntimeError as exc:  # 维度不匹配：配置错误，重试无意义
+    except RuntimeError as exc:  # dimension mismatch: a configuration error, retrying is pointless
         raise FatalJobError("EMBEDDING_ERROR", str(exc)) from exc
 
     doc.parse_stage = "index"

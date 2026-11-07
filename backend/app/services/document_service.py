@@ -40,7 +40,7 @@ def create_document(session: Session, user_id: uuid.UUID, raw_url: str) -> tuple
     try:
         session.flush()
     except IntegrityError:
-        # 并发提交同一 URL：回滚后取已有记录
+        # Concurrent submit of the same URL: roll back and take the existing record
         session.rollback()
         existing = dedupe(session, user_id, norm.url_hash)
         if existing is None:

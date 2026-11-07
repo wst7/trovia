@@ -18,28 +18,28 @@ const NETWORK_FALLBACK = '网络连接失败，请稍后重试。'
 const GENERIC_FALLBACK = '请求失败，请稍后重试。'
 
 export interface ApiClientConfig {
-  /** API 根地址，例如 Web 的 `/api/v1` 或移动端的 `http://192.168.1.10:8000/api/v1`。 */
+  /** API root, e.g. `/api/v1` for the web or `http://192.168.1.10:8000/api/v1` for mobile. */
   baseUrl: string
   /**
-   * 每次请求读取当前 token；可以是异步的（移动端需要先等待 SecureStore 读取完成）。
-   * 返回 null 表示未登录。
+   * Read the current token on every request; this may be async (mobile has to await the SecureStore read first).
+   * Returning null means signed out.
    */
   getToken: () => string | null | Promise<string | null>
   /**
-   * 非登录/注册接口返回 401 时调用。tokenUsed 是本次请求实际使用的 token，
-   * 平台适配层应据此忽略旧会话的迟到响应。
+   * Called when a non-login/register endpoint returns 401. tokenUsed is the token this request actually used,
+   * and the platform adapter should use it to ignore late responses from an old session.
    */
   onUnauthorized?: (tokenUsed: string | null, path: string) => void
-  /** 默认 15s；设为 0 可关闭超时。 */
+  /** 15s by default; set to 0 to disable the timeout. */
   timeoutMs?: number
-  /** 便于测试或平台注入；默认使用全局 fetch。 */
+  /** For tests or platform injection; global fetch is used by default. */
   fetchImpl?: typeof fetch
 }
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'DELETE'
   body?: unknown
-  /** 网络层失败（无法连接/断网）时使用的兜底文案 */
+  /** Fallback message used when the network layer fails (cannot connect / offline) */
   networkMessage?: string
 }
 
@@ -47,7 +47,7 @@ function isAuthEndpoint(path: string): boolean {
   return path.startsWith('/auth/login') || path.startsWith('/auth/register')
 }
 
-/** 不使用 URLSearchParams，保证 Web 与 React Native 行为一致。 */
+/** Does not use URLSearchParams, so Web and React Native behave the same. */
 function buildQuery(params: DocumentListParams): string {
   const parts: string[] = []
   const add = (key: string, value: string | number | undefined | null) => {
@@ -71,7 +71,7 @@ export function createApiClient(config: ApiClientConfig) {
   async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
     const { method = 'GET', body, networkMessage } = options
 
-    // 平台适配层可在这里等待本地凭据读取完成。
+    // The platform adapter can wait for the local credentials to load here.
     const token = await config.getToken()
     const controller = new AbortController()
     const timer = timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : undefined
@@ -107,14 +107,14 @@ export function createApiClient(config: ApiClientConfig) {
       const err = (payload as ApiErrorBody | null)?.error
       const code = err?.code ?? `HTTP_${res.status}`
       const message = err?.message || FRIENDLY_MESSAGES[code] || GENERIC_FALLBACK
-      // 登录/注册自身的 401 是表单错误，不触发会话失效。
+      // A 401 from login/register itself is a form error and does not invalidate the session.
       if (res.status === 401 && !isAuthEndpoint(path)) {
         config.onUnauthorized?.(token, path)
       }
       throw new ApiError(code, message)
     }
 
-    // 成功响应统一 {"data": ...} 信封；204 无 body 时 payload 为 null。
+    // Successful responses are wrapped in a {"data": ...} envelope; for a 204 with no body the payload is null.
     return (payload as { data?: T } | null)?.data as T
   }
 

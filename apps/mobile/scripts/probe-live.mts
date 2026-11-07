@@ -1,19 +1,19 @@
 /**
- * 真实文章批量抽取测试。
+ * Batch extraction test against real articles.
  *
- * 不从写死的链接出发，而是先抓各站 RSS 取「当下真实存在」的文章链接，
- * 再逐篇跑真实抽取。登录墙/人机验证的站点直接标记 skip —— 那些不是我们能修的。
+ * It does not start from hardcoded links; it first pulls each site's RSS to get article links that "really exist right now",
+ * then runs the real extraction on each one. Sites behind a login wall or a human check are marked skip — those are not ours to fix.
  *
- * 跑法：
- *   npx tsx scripts/probe-live.mts           # 每站取 2 篇
- *   npx tsx scripts/probe-live.mts 3         # 每站取 3 篇
+ * Usage:
+ *   npx tsx scripts/probe-live.mts           # 2 articles per site
+ *   npx tsx scripts/probe-live.mts 3         # 3 articles per site
  */
 import { fetchArticle } from '../src/local/article'
 
 interface Feed {
   name: string
   url: string
-  /** 排除导航类链接，只留文章。 */
+  /** Exclude navigation links, keep only articles. */
   articleMatch: RegExp
 }
 
@@ -113,7 +113,7 @@ async function main() {
         rows.push({ site: feed.name, url, verdict, chars, images: article.images.length, note })
       } catch (error) {
         const message = error instanceof Error ? error.message : 'unknown'
-        // 403/412/404 多半是反爬或链接过期，不算我们能修的
+        // 403/412/404 is mostly anti-scraping or an expired link, not something we can fix
         const verdict: Row['verdict'] = /HTTP (403|412|404|451)/.test(message) ? 'skip' : 'error'
         rows.push({ site: feed.name, url, verdict, chars: 0, images: 0, note: message.slice(0, 40) })
       }
@@ -121,7 +121,7 @@ async function main() {
   }
 
   const pad = (text: string, width: number) => {
-    // 中文字符按两个位置算，表格才不会错位
+    // Count a Chinese character as two positions so the table does not get misaligned
     let visual = 0
     for (const char of text) visual += /[\u4e00-\u9fa5]/.test(char) ? 2 : 1
     return text + ' '.repeat(Math.max(0, width - visual))

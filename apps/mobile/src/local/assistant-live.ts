@@ -1,8 +1,8 @@
 /**
- * 把「问模型」接上真实的大模型与真实工具。
+ * Wire "ask the model" up to a real LLM and real tools.
  *
- * 单独一层的原因：assistant.ts 要能在 node 里直接跑测试，
- * 不能因为 import 了 expo-secure-store 就依赖原生模块。
+ * Why it is a separate layer: assistant.ts has to run directly under node in tests,
+ * and it must not depend on native modules just because it imports expo-secure-store.
  */
 import { chatStep, isLocalEndpoint, loadLlmKey, loadLlmState } from './llm'
 import { runTool, toolSchemas } from './assistant-tools'

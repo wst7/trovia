@@ -4,11 +4,11 @@ import { View } from 'react-native'
 import { cx } from './cx'
 
 /**
- * 半扁平卡片：自身是纯白表面，靠一层几乎看不见的投影从画布上「抬起」。
+ * Semi-flat card: a plain white surface lifted off the canvas by an almost invisible shadow.
  *
- * 为什么不是纯扁平：收藏页动辄几百行，行与行之间没有边界会糊成一片；
- * 为什么不是重阴影：投影只是分组手段，读内容时不该看见它。
- * 深色模式下投影消失（黑投影在深底上无效），靠 1px 发丝线兜底。
+ * Why not fully flat: the saved page runs to hundreds of rows, and with no boundary between rows they smear together;
+ * why not heavy shadows: a shadow is only a way to group things and shouldn't be noticed while reading.
+ * In dark mode the shadow disappears (a black shadow does nothing on a dark background), so a 1px hairline takes over.
  */
 export function Card({
   children,
@@ -19,7 +19,7 @@ export function Card({
   className?: string
   padded?: boolean
 }) {
-  // 层次靠发丝线与留白，不靠阴影：Android 的 elevation 会带出灰边，也破坏「克制」。
+  // Hierarchy from hairlines and whitespace, not shadows: Android elevation drags in a gray edge and breaks the restraint.
   return (
     <View
       className={cx('rounded-md border border-line bg-surface', padded && 'p-3', className)}

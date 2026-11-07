@@ -1,9 +1,9 @@
 /**
- * 外观：跟随系统，或锁定浅色 / 深色。
+ * Appearance: follow the system, or lock to light / dark.
  *
- * 不用自己维护一套主题状态——交给系统的 Appearance：NativeWind 的 dark: 变体、
- * global.css 里的颜色变量都挂在这个值上。锁定之后系统切到别的模式也不跟着变，
- * 这就是用户选「深色」时的意思。
+ * No need to maintain a theme state of our own — leave it to the system Appearance: NativeWind's dark: variants and
+ * the color variables in global.css all hang off this value. Once locked, the system switching to another mode does not change it,
+ * which is exactly what the user means by choosing "dark".
  */
 import { Appearance, useColorScheme } from 'react-native'
 
@@ -18,7 +18,7 @@ function isPreference(value: unknown): value is ThemePreference {
   return value === 'system' || value === 'light' || value === 'dark'
 }
 
-/** 启动时调一次，把上次的选择装回系统外观上。 */
+/** Called once at startup to put the previous choice back onto the system appearance. */
 export async function loadThemePreference(): Promise<ThemePreference> {
   let pref: ThemePreference = 'system'
   try {
@@ -27,7 +27,7 @@ export async function loadThemePreference(): Promise<ThemePreference> {
   } catch {
     pref = 'system'
   }
-  // 只应用，不写库：冷启动不该产生一次无意义的写入。
+  // Apply only, do not write to the database: a cold start should not produce a pointless write.
   applyTheme(pref)
   return pref
 }
@@ -41,7 +41,7 @@ export async function setThemePreference(pref: ThemePreference): Promise<void> {
   try {
     await writeSetting(KEY, pref)
   } catch {
-    // 存不进去也不影响这次，下次启动回到跟随系统。
+    // Failing to store it does not affect this run; the next startup falls back to following the system.
   }
 }
 
@@ -54,7 +54,7 @@ export async function getThemePreference(): Promise<ThemePreference> {
   }
 }
 
-/** 当前实际的明暗，组件用它取色（palette 也走这条）。 */
+/** The actual current light/dark, used by components to pick colors (palette goes through it too). */
 export function useScheme(): Scheme {
   return useColorScheme() === 'dark' ? 'dark' : 'light'
 }

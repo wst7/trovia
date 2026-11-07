@@ -1,11 +1,11 @@
 /**
- * 「问大模型」：把用户的问题交给模型，模型通过工具在本地库里找，再给答复。
+ * "Ask the model": hand the user's question to the model, which searches the local library through tools and answers.
  *
- * 关键约束：
- *   - 只能靠工具拿到的东西回答，工具查不到就说「没有」；
- *   - 工具全在本地执行，正文不外传（只有被读到的片段会进上下文）；
- *   - 最多 4 轮、最多 8 次工具调用，防止小模型来回打转；
- *   - 依赖可注入，测试里不用真网络。
+ * Key constraints:
+ *   - answer only from what the tools return; if the tools find nothing, say there is nothing;
+ *   - all tools run locally and the body text never leaves the device (only the excerpts read enter the context);
+ *   - at most 4 rounds and at most 8 tool calls, so a small model can't spin in circles;
+ *   - dependencies are injectable, so tests need no real network.
  */
 import type { ChatMessage, ChatStep } from './llm'
 import { parseToolArguments } from './tool-args'
@@ -14,7 +14,7 @@ import type { ToolRunResult } from './assistant-tools'
 export interface ToolStep {
   name: string
   args: Record<string, unknown>
-  /** 这一步拿到几条结果；界面上用来交代「查了什么」。 */
+  /** How many results this step got; the UI uses it to explain "what was searched". */
   hits: number
   ok: boolean
 }
@@ -33,7 +33,7 @@ export interface AssistantResult {
 }
 
 export interface AssistantDeps {
-  /** 走一轮模型。注入进来是为了让这一层不依赖 expo/网络，测试里能直接跑。 */
+  /** Run one model round. It is injected so this layer depends neither on expo nor the network and can run directly in tests. */
   step: (messages: ChatMessage[]) => Promise<ChatStep>
   run?: (name: string, args: Record<string, unknown>) => Promise<ToolRunResult>
   onStep?: (step: ToolStep) => void
@@ -50,9 +50,9 @@ const SYSTEM_PROMPT = `你在用户的本地收藏（Trovia）里找答案。
 - 需要细节时用 read_document 读正文，不要一次读很多篇。
 - 不要臆造文章标题或链接。`
 
-/** 从工具返回的 JSON 里抠出可以做成引用卡片的条目。 */
+/** Pull the entries that can become citation cards out of the JSON the tools return. */
 export function citationsFrom(content: string, previous: Citation[]): Citation[] {
-  // 除了 id，同标题同站点也只留一条：同一篇被重复收藏时不至于排成一列。
+  // Besides id, keep one per title+site too, so the same article saved twice doesn't fill a column.
   const seen = new Set(previous.map((item) => item.id))
   const seenTitles = new Set(previous.map((item) => `${item.title ?? ''}|${item.site ?? ''}`))
   const next = [...previous]
@@ -130,7 +130,7 @@ export async function askLibrary(question: string, deps: AssistantDeps): Promise
     }
   }
 
-  // 工具轮次用完还没收敛：让它拿着现有材料直接答，别把用户晾着。
+  // Tool rounds ran out without converging: have it answer from the material at hand rather than leaving the user hanging.
   messages.push({ role: 'user', content: '就根据上面查到的内容给出结论，不要再调用工具。' })
   const final = await step(messages)
   return { answer: (final.content ?? '').trim() || '没有找到相关内容。', citations, steps }

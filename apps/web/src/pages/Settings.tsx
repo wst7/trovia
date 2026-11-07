@@ -32,7 +32,7 @@ export default function Settings() {
     try {
       await api.logout()
     } catch {
-      // 退出失败也清除本地 token，保证本地会话终止
+      // Clear the local token even if logout fails, so the local session definitely ends
     } finally {
       clearToken()
       toast('已退出登录。')

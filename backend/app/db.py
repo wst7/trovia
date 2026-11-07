@@ -33,9 +33,9 @@ def get_engine() -> Engine:
         url = get_settings().database_url
         connect_args: dict[str, object] = {}
         if url.startswith("postgresql+psycopg://"):
-            # 托管平台常给 pgbouncer 事务模式的连接串（Supabase / Neon 的 pooler）。
-            # 事务池不保留会话状态，服务端预处理语句会互相冲突；关掉自动 prepare
-            # 后直连、会话池、事务池三种串都能用，代价只是每次重新解析 SQL。
+            # Hosted platforms often hand out a pgbouncer transaction-mode connection string (the Supabase / Neon pooler).
+            # A transaction pool keeps no session state, so server-side prepared statements collide with one another; with automatic prepare
+            # turned off, direct, session-pool and transaction-pool strings all work, at the cost of re-parsing the SQL every time.
             connect_args["prepare_threshold"] = None
         _engine = create_engine(
             url, pool_pre_ping=True, future=True, connect_args=connect_args
@@ -79,8 +79,8 @@ def _dsn(url: str) -> str:
     return url.replace("postgresql+psycopg://", "postgresql://").replace("postgresql+asyncpg://", "postgresql://")
 
 
-# 迁移互斥锁的事务级 advisory lock ID（任意常量，保证全库唯一即可）。
-# 托管平台上 API 与被重新调度的副本可能同时启动，没有这把锁会并发建表。
+# Transaction-level advisory lock ID for the migration mutex (any constant, it only has to be unique across the database).
+# On hosted platforms the API and a re-scheduled replica may start at the same moment; without this lock the tables get created concurrently.
 MIGRATION_LOCK_ID = 727_001
 
 

@@ -1,4 +1,4 @@
-/** 极小的变更通知：写入本地库后让界面知道该重新读一次。 */
+/** Tiny change notification: after a write to the local database, tells the UI to read again. */
 type Listener = () => void
 
 const listeners = new Set<Listener>()

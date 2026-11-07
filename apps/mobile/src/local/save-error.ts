@@ -1,8 +1,8 @@
 /**
- * 保存失败时，把底层那句英文堆栈翻成用户能行动的一句话。
+ * When a save fails, turn the low-level English stack message into one sentence the user can act on.
  *
- * 数据库写不进去的原因就那么几种，界面不该统一显示「保存失败，请稍后重试」——
- * 那句话对谁都没用：锁着等两秒就好，磁盘满了再等也没用。
+ * There are only so many reasons a database write cannot go through, and the UI should not show “save failed, please try again later” for all of them —
+ * that sentence helps nobody: when it is locked, waiting two seconds is enough; when the disk is full, waiting forever helps nothing.
  */
 export type SaveFailure = 'busy' | 'storage' | 'corrupt' | 'duplicate' | 'unknown'
 
@@ -21,7 +21,7 @@ export function classifySaveError(error: unknown): SaveFailure {
   return 'unknown'
 }
 
-/** 失败类型 → i18n key。 */
+/** Failure type → i18n key. */
 export const SAVE_FAILURE_KEY: Record<SaveFailure, string> = {
   busy: 'save.err.busy',
   storage: 'save.err.storage',

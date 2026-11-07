@@ -1,8 +1,8 @@
 /**
- * 同步的一次执行：把配置、WebDAV 传输、本机库接到一起。
+ * One execution of sync: wiring the config, the WebDAV transport and the local store together.
  *
- * 这里刻意不做后台自动同步：手机上「悄悄传数据」比「手动点一下」更让人不安，
- * 也更容易在弱网下反复失败。等界面稳定了再考虑前台定时。
+ * Background automatic sync is deliberately not done here: on a phone, “quietly shipping data” is more unsettling than “tapping once”,
+ * and it also fails over and over on a weak network. Foreground timers can be considered once the UI has settled down.
  */
 import { syncOnce } from '@trovia/sync'
 import type { SyncReport } from '@trovia/sync'
@@ -37,7 +37,7 @@ async function targetOf(config: WebDavConfig): Promise<WebDavTarget> {
   })
 }
 
-/** 测试连接：建目录 + 列一次，能走通就说明地址、账号、权限都对。 */
+/** Test the connection: create the directory + list it once; if that goes through, the address, account and permissions are all fine. */
 export async function testConnection(): Promise<void> {
   const config = await loadConfig()
   const target = await targetOf(config)
@@ -66,24 +66,24 @@ export async function syncNow(): Promise<SyncReport> {
   }
   await opLog('sync.done', { ...report, ms: Date.now() - startedAt })
 
-  // 拉下来的条目只有图片地址。补图放在同步之后、不阻塞结果：
-  // 用户先看到列表，图片在后台一张张补进本机。
+  // Items pulled down carry only image URLs. Filling in the images happens after the sync and does not block the result:
+  // the user sees the list first and the images are filled into the device one by one in the background.
   if (report.pulled > 0) void hydrateImages().catch(() => undefined)
 
   return report
 }
 
-/** 报告变成一句人话，界面和 Toast 共用。 */
+/** The report turned into one plain sentence, shared by the UI and the Toast. */
 export function describeReport(report: SyncReport): string {
   const parts: string[] = []
   if (report.pushed > 0) parts.push(t('sync.report.pushed', { count: report.pushed }))
   if (report.pulled > 0) parts.push(t('sync.report.pulled', { count: report.pulled }))
   if (report.deleted > 0) parts.push(t('sync.report.deleted', { count: report.deleted }))
   if (report.conflicts > 0) parts.push(t('sync.report.conflicts', { count: report.conflicts }))
-  // 云端有、却读不出来的文件：数字对不上时，这一句就是答案。
+  // Files that are in the cloud but cannot be read: when the numbers do not add up, this sentence is the answer.
   if (report.skipped > 0) parts.push(t('sync.report.skipped', { count: report.skipped }))
-  // 「没有要同步的」有两种：云端是空的，和云端有东西但两边一致。
-  // 之前两种情况都显示同一句话，用户分不清是同步没生效还是本来就没内容。
+  // “Nothing to sync” has two meanings: the cloud is empty, and the cloud has things but both sides already agree.
+  // Both cases used to show the same sentence, so users could not tell whether sync was not taking effect or there was simply nothing there.
   if (parts.length === 0) {
     return report.remoteFiles === 0 ? t('sync.report.emptyRemote') : t('sync.report.uptodate', { count: report.remoteFiles })
   }

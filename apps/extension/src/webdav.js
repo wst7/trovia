@@ -1,12 +1,12 @@
 /**
- * WebDAV 客户端：只做插件需要的四件事——探路、建目录、写文件、读文件。
+ * WebDAV client: only the four things the extension needs — probe, create directory, write a file, read a file.
  *
- * 认证用 Basic，凭据存在 chrome.storage.local，只在用户点保存时读取。
- * 坚果云这类服务要求「应用密码」，不是登录密码，设置页里写清了。
+ * Authentication is Basic; the credentials live in chrome.storage.local and are read only when the user clicks save.
+ * Services like Jianguoyun require an “app password”, not the login password, and the settings page spells that out.
  */
 
 function authHeader(config) {
-  // btoa 只吃 latin1，中文密码要先转 UTF-8。
+  // btoa only takes latin1, so a Chinese password has to be converted to UTF-8 first.
   const bytes = new TextEncoder().encode(`${config.user}:${config.password}`)
   let binary = ''
   bytes.forEach((b) => {
@@ -19,7 +19,7 @@ function endOf(text) {
   return String(text ?? '').replace(/\/+$/, '')
 }
 
-/** 相对路径 → 完整 URL，逐段编码，避免中文目录名被拒。 */
+/** Relative path → full URL, encoding segment by segment so Chinese directory names are not rejected. */
 export function resolveUrl(config, path = '') {
   const base = endOf(config.base)
   const segments = String(path)
@@ -41,7 +41,7 @@ async function request(config, method, path, body) {
   return fetch(resolveUrl(config, path), init)
 }
 
-/** 探路：PROPFIND 目录，返回.ok 表示凭据和地址都对。 */
+/** Probe: PROPFIND the directory; `.ok` coming back means both the credentials and the address are right. */
 export async function check(config) {
   const response = await fetch(resolveUrl(config), {
     method: 'PROPFIND',
@@ -53,7 +53,7 @@ export async function check(config) {
   return { ok: true }
 }
 
-/** 建目录，已存在（405）也算成功。 */
+/** Create the directory; already existing (405) also counts as success. */
 async function mkcol(config, path) {
   const response = await request(config, 'MKCOL', path)
   if (response.ok || response.status === 405) return
@@ -61,8 +61,8 @@ async function mkcol(config, path) {
 }
 
 /**
- * 写一条记录到 docs/<id>.json。
- * 目录不存在时自己建，用户只需要填一个 WebDAV 根地址。
+ * Write one record to docs/<id>.json.
+ * Create the directory itself when it does not exist, so the user only has to fill in one WebDAV root address.
  */
 export async function putRecord(config, record) {
   const dir = [config.folder, 'docs'].filter(Boolean).join('/')
@@ -79,7 +79,7 @@ export async function putRecord(config, record) {
   try {
     return await put()
   } catch (error) {
-    // 目录不存在时先建两级，再写一次。
+    // When the directory does not exist, create the two levels first and then write once more.
     if (!/→ 409|→ 404/.test(String(error?.message))) throw error
     await mkcol(config, config.folder)
     await mkcol(config, dir)
@@ -87,7 +87,7 @@ export async function putRecord(config, record) {
   }
 }
 
-/** 读回一条记录，用于「同一个链接再存一次」时沿用 rev。 */
+/** Read one record back, used to carry the rev over when “the same link is saved again”. */
 export async function getRecord(config, id) {
   const dir = [config.folder, 'docs'].filter(Boolean).join('/')
   const response = await request(config, 'GET', `${dir}/${id}.json`)

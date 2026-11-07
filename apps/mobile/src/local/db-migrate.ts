@@ -1,23 +1,23 @@
 /**
- * 数据库文件改名时的搬迁。
+ * Migrating the database file when it is renamed.
  *
- * 只跟路径打交道，不碰 expo、不碰 React Native，所以能在 Node 里用假文件系统测。
+ * It deals only with paths, touches neither expo nor React Native, so it can be tested in Node with a fake filesystem.
  */
 export const DB_NAME = 'trovia.db'
-/** 改名前的库文件。 */
+/** The database file before the rename. */
 export const LEGACY_DB_NAME = 'xunji.db'
 
-/** 只用到这两个方法，抽出来是为了能在 Node 里用假文件系统测。 */
+/** Only these two methods are used; they are pulled out so it can be tested in Node with a fake filesystem. */
 export interface DbFileOps {
   exists(path: string): Promise<boolean>
   move(from: string, to: string): Promise<void>
 }
 
 /**
- * 把改名前的老库搬到新名字下。
+ * Move the old pre-rename database under the new name.
  *
- * 条件很明确：新库不存在、老库存在才动。WAL 模式的两个旁路文件一起搬，
- * 否则会丢掉还没落盘的那部分写入。
+ * The conditions are explicit: act only when the new database does not exist and the old one does. Move WAL mode's two side files along with it,
+ * otherwise the part of the writes not yet flushed is lost.
  */
 export async function moveLegacyDatabase(dir: string, ops: DbFileOps): Promise<boolean> {
   const next = `${dir}/${DB_NAME}`

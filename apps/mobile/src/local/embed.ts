@@ -1,8 +1,8 @@
 /**
- * 语义补充检索的落库与调度。纯计算在 embed-core.ts，这里只管：
- * 读配置、攒待建索引的条目、存/取向量。
+ * Persistence and scheduling for supplementary semantic search. The pure computation lives in embed-core.ts; this file only handles:
+ * reading the config, accumulating the items whose index still needs building, and storing/fetching vectors.
  *
- * 只做兜底，不改主排序：字面命中的结果永远在前，语义结果单独列。
+ * Fallback only, never changing the primary ordering: literal hits always come first and semantic results are listed separately.
  */
 import { getDb } from './db'
 import {
@@ -19,7 +19,7 @@ import { loadLlmKey, loadLlmState } from './llm'
 export { SEMANTIC_MIN_SCORE, cosine, embedTexts, embeddingEndpoint, embeddingInputOf, rankBySimilarity }
 export type { EmbedConfig, RankedVector }
 
-/** 没配置模型、没开开关、没有 Key 时返回 null —— 调用方据此完全跳过语义。 */
+/** Returns null when no model is configured, the switch is off, or there is no key — the caller uses that to skip semantic search entirely. */
 export async function loadEmbedConfig(): Promise<EmbedConfig | null> {
   try {
     const state = await loadLlmState()
@@ -38,7 +38,7 @@ function toBlob(vec: Float32Array): Uint8Array {
 
 function fromBlob(blob: Uint8Array | ArrayBuffer): Float32Array {
   const bytes = blob instanceof Uint8Array ? blob : new Uint8Array(blob)
-  // 复制一份，避免底层 ArrayBuffer 被复用后数据错位。
+  // Copy it, so the data is not misaligned once the underlying ArrayBuffer gets reused.
   return new Float32Array(bytes.slice().buffer)
 }
 
@@ -56,7 +56,7 @@ export async function saveVector(documentId: string, model: string, vec: Float32
   )
 }
 
-/** 设置页用：已建索引 / 可建索引的条数。 */
+/** For the settings page: how many items have an index / could have one. */
 export async function vectorStats(model: string): Promise<{ indexed: number; total: number }> {
   const db = await getDb()
   const indexed = await db.getFirstAsync<{ count: number }>(
@@ -74,7 +74,7 @@ interface VectorRow {
   vec: Uint8Array | ArrayBuffer
 }
 
-/** 搜索时用：把所有向量读进内存（1000 篇 384 维约 1.5MB）。 */
+/** For search: read all vectors into memory (1000 articles at 384 dimensions is about 1.5MB). */
 export async function loadVectors(model: string): Promise<{ id: string; vec: Float32Array }[]> {
   const db = await getDb()
   const rows = await db.getAllAsync<VectorRow>(
@@ -104,7 +104,7 @@ function safeKeywords(raw: string): string[] {
   }
 }
 
-/** 还没建向量（或内容变了）的条目。 */
+/** Items with no vector yet (or whose content has changed). */
 export async function pendingVectorTargets(model: string, limit: number): Promise<{ id: string; text: string }[]> {
   const db = await getDb()
   const rows = await db.getAllAsync<PendingRow>(
@@ -131,8 +131,8 @@ export async function pendingVectorTargets(model: string, limit: number): Promis
 }
 
 /**
- * 补建索引：一次最多 limit 篇，每批 8 条，失败就停（下次再来），不打扰用户。
- * 返回本次新建的数量。
+ * Backfill the index: at most limit articles at a time, 8 per batch, stopping on failure (pick it up next time) so the user is not disturbed.
+ * Returns how many were created this time.
  */
 export async function buildVectors(limit = 12, fetchImpl: typeof fetch = fetch): Promise<number> {
   const config = await loadEmbedConfig()
@@ -154,7 +154,7 @@ export async function buildVectors(limit = 12, fetchImpl: typeof fetch = fetch):
         done += 1
       }
     } catch {
-      break // 网络或额度问题：停下来，下次再补
+      break // a network or quota problem: stop here and top it up next time
     }
   }
   return done

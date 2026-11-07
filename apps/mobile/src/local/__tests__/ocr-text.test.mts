@@ -1,7 +1,7 @@
 /**
- * 图上认出来的字只进检索，不进正文。
+ * Characters recognised on an image go only into search, never into the body.
  *
- * 跑法：npx tsx apps/mobile/src/local/__tests__/ocr-text.test.mts
+ * How to run: npx tsx apps/mobile/src/local/__tests__/ocr-text.test.mts
  */
 import assert from 'node:assert/strict'
 import { mergeOcrText } from '../ocr-text.ts'
@@ -14,10 +14,10 @@ assert.equal(merged.markdown.includes('图片文字'), false, '不该再出现�
 assert.equal(merged.plainText.includes('￥399'), true, '检索文本里必须带上图上的字')
 assert.equal(merged.plainText.startsWith('标题'), true, '原有检索文本要留在前面')
 
-// 没有识别结果时原样返回
+// Returns the input unchanged when there is no recognition result
 assert.deepEqual(mergeOcrText(article, '   '), article, '空结果不该改动任何东西')
 
-// 原文为空时也不要留下多余空行
+// No stray blank lines left behind even when the original text is empty
 const empty = mergeOcrText({ markdown: '', plainText: '' }, '图上的唯一文字')
 assert.equal(empty.plainText, '图上的唯一文字')
 assert.equal(empty.markdown, '')

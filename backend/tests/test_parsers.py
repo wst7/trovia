@@ -52,7 +52,7 @@ def test_generic_article_metadata_and_content():
     assert result.site_name == "示例博客"
     assert result.language == "zh-CN"
     assert "pgvector 扩展允许在数据库中存储向量" in result.plain_text
-    assert result.content_markdown.startswith("#")  # trafilatura 输出 markdown
+    assert result.content_markdown.startswith("#")  # trafilatura outputs markdown
     assert "https://example.com/images/cover.png" in result.images
     assert "https://github.com/pgvector/pgvector" in result.links
 
@@ -91,13 +91,13 @@ def test_wechat_article_full_extraction():
     assert result.parse_status == "completed"
     assert result.title == "深入理解任务调度系统"
     assert result.metadata["account"] == "示例公众号"
-    assert result.author == "示例公众号"  # js_author_name 为空时退化为公众号名
+    assert result.author == "示例公众号"  # falls back to the official account name when js_author_name is empty
     assert result.published_at is not None
     assert result.site_name.startswith("微信公众号")
-    # 正文段落完整、行内 span 不再被拆散
+    # Body paragraphs are intact, and inline spans are no longer split apart
     assert "任务调度是操作系统的核心功能之一" in result.plain_text
     assert "本文介绍公平调度与优先级调度的区别" in result.plain_text
-    # 图片取 data-src 并转绝对地址；正文链接保留
+    # Images take data-src and are turned into absolute addresses; body links are kept
     assert result.images == ["https://mmbiz.qpic.cn/mmbiz_png/example/0?wx_fmt=png"]
     assert result.links == ["https://example.com/scheduler-guide"]
 
@@ -108,7 +108,7 @@ def test_wechat_structure_changed_returns_partial_not_raise():
     result = WechatParser().parse(make_html_fetch(html, "https://mp.weixin.qq.com/s/GhIjKl"))
     assert result.parse_status == "partial"
     assert result.error_code == "CONTENT_NOT_FOUND"
-    assert result.title == "文章标题"  # 后缀被剥掉
+    assert result.title == "文章标题"  # the suffix is stripped
     assert result.plain_text is None
 
 
@@ -139,7 +139,7 @@ def test_github_repo_page():
     assert result.author == "pgvector"
     assert result.site_name == "GitHub"
     assert "open-source vector similarity search" in (result.description or "").lower()
-    # README 转 markdown：标题、列表、代码块
+    # README converted to markdown: headings, lists, code blocks
     assert "# About" in result.content_markdown
     assert "- Exact and approximate (HNSW) nearest neighbor search" in result.content_markdown
     assert "CREATE EXTENSION vector;" in result.content_markdown
@@ -172,7 +172,7 @@ def test_youtube_metadata_only_no_fabricated_content():
     assert result.site_name == "YouTube"
     assert result.metadata["duration_seconds"] == 754
     assert result.metadata["has_transcript"] is False
-    # 没有字幕能力：不得伪造正文
+    # No transcript capability: the body must not be fabricated
     assert result.plain_text is None
     assert result.content_markdown is None
 

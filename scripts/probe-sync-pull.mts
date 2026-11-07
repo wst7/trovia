@@ -1,6 +1,6 @@
 /**
- * 用真实的 WebDAV（本地调试服务）和一份空库跑一轮，回答一个问题：
- * 「换新手机/重装之后，同步能不能把远端的东西拉回来」。
+ * Run one round against a real WebDAV (a local debug service) and an empty local store, to answer one question:
+ * “after switching to a new phone or reinstalling, can sync pull the remote stuff back”.
  */
 import { syncOnce, WebDavTarget } from '../packages/sync/src/index.ts'
 import type { LocalStore, SyncRecord } from '../packages/sync/src/index.ts'

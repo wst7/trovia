@@ -22,7 +22,7 @@ from app.workers import queue
 
 logger = get_logger("trovia.worker")
 
-# 未知异常的兜底错误码（契约错误码表内）
+# Fallback error code for unknown exceptions (inside the contract's error code table)
 UNEXPECTED_ERROR_CODE = "PARSE_ERROR"
 
 _stop = False
@@ -81,7 +81,7 @@ def run_once(
         status, error_code, error_message = "retrying", exc.code, exc.message
     except FatalJobError as exc:
         status, error_code, error_message = "failed", exc.code, exc.message
-    except Exception as exc:  # 未知异常：按可重试处理，避免任务卡死在 running
+    except Exception as exc:  # unknown exception: treat it as retryable so the job does not get stuck in running
         logger.exception("job_unexpected_error", extra={"job_id": str(job_id)})
         status = "retrying"
         error_code = UNEXPECTED_ERROR_CODE
@@ -128,9 +128,9 @@ def main(argv: list[str] | None = None) -> int:
     setup_logging(settings.log_level)
     worker_id = f"{socket.gethostname()}:{os.getpid()}"
 
-    # 托管平台上 worker 与 API 各自独立启动，且 worker 可能先就绪。
-    # run_once 第一件事就是 reclaim_stale，表不存在会直接让循环崩掉，
-    # 所以这里先自己跑一遍迁移（幂等；advisory lock 保证与 API 并发时不会重复建表）。
+    # On hosting platforms the worker and the API start independently, and the worker may become ready first.
+    # run_once does reclaim_stale as its first step, and a missing table would crash the loop outright,
+    # so run the migrations here first (idempotent; the advisory lock keeps concurrent runs with the API from creating tables twice).
     applied = run_migrations()
     if applied:
         logger.info("worker_migrations_applied", extra={"migrations": applied})
@@ -153,7 +153,7 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
             if status is None:
                 time.sleep(settings.worker_poll_seconds)
-    except KeyboardInterrupt:  # pragma: no cover - 交互中断
+    except KeyboardInterrupt:  # pragma: no cover - interactive interrupt
         pass
     logger.info("worker_stopped", extra={"worker_id": worker_id})
     return 0

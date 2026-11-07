@@ -8,13 +8,13 @@ function check(name: string, actual: string, expected: string) {
   passed += 1
 }
 
-// 只有 AI 开着 + 链接 才说话
+// It only speaks when AI is on + the input is a link
 check('AI 开 + 链接', composerHint({ ask: true, saveMode: true, error: null }, labels), labels.aiLink)
-// 其余三种都闭嘴
+// The other three cases keep quiet
 check('AI 开 + 句子', composerHint({ ask: true, saveMode: false, error: null }, labels), '')
 check('AI 关 + 链接', composerHint({ ask: false, saveMode: true, error: null }, labels), '')
 check('AI 关 + 句子', composerHint({ ask: false, saveMode: false, error: null }, labels), '')
-// 错误优先，任何状态下都要说
+// Errors take precedence and have to be said in any state
 check('链接不合法', composerHint({ ask: true, saveMode: true, error: '这不是一个有效链接' }, labels), '这不是一个有效链接')
 check('保存失败', composerHint({ ask: false, saveMode: true, error: '保存没有完成' }, labels), '保存没有完成')
 

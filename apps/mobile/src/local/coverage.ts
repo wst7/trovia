@@ -1,12 +1,12 @@
 /**
- * 搜索结果的「相关性门槛」。
+ * The “relevance threshold” for search results.
  *
- * 中文没有分词，查询会拆成二元组（「延时队列」→ 延时/时队/队列/延时队列），
- * 好处是召回高，坏处是随便一句话也能蹭上一个常见二元组（「…这种东西」命中「这种」），
- * 于是屏幕上是二十条自信满满的错误结果——比「没找到」更伤信任。
+ * Chinese has no word segmentation, so a query gets split into character bigrams (a query of N characters also yields the overlapping bigrams plus the whole string),
+ * which is good for recall but bad because any stray sentence can graze a common bigram (a phrase like “… that sort of thing” hits the bigram “that sort”),
+ * and so the screen shows twenty confidently wrong results — which does more damage to trust than “nothing found”.
  *
- * 规则：至少要对上查询的一半词。整词命中的查询（延时队列 redis）因为二元组几乎都在，
- * 覆盖率天然很高；而只蹭到一两个泛词的句子会被挡掉。
+ * Rule: at least half of the query's terms have to match. For a whole-phrase hit (for example “delayed queue redis”), because
+ * the bigrams are almost all present, coverage is naturally very high; a sentence that only grazed one or two generic terms gets blocked.
  */
 export function requiredCoverage(termCount: number): number {
   if (termCount <= 0) return 0

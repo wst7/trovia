@@ -1,8 +1,8 @@
 /**
- * 工具参数解析：小模型经常给出带前言、尾逗号的 JSON，尽量救回来。
- * 单独一个文件是因为它必须能在 node 里跑（不能带 expo / react-native）。
+ * Tool-argument parsing: small models often emit JSON with a preamble or a trailing comma, so salvage it as far as possible.
+ * It sits in its own file because it has to be able to run under node (it must not pull in expo / react-native).
  */
-/** 去掉尾逗号：`{"a":1,}` 这种 JSON.parse 是不认的，模型却常写。 */
+/** Strip the trailing comma: JSON.parse does not accept `{"a":1,}`, yet models write it all the time. */
 function dropTrailingCommas(text: string): string {
   return text.replace(/,\s*([}\]])/g, '$1')
 }

@@ -4,8 +4,8 @@ from __future__ import annotations
 import os
 import uuid
 
-# 必须在导入任何 app 模块之前设置环境变量；测试强制使用独立库，绝不触碰开发库。
-# 并行跑不同测试进程时用 XUNJI_TEST_DB 指定不同库，避免相互清表。
+# Environment variables must be set before importing any app module; tests are forced onto their own database and never touch the dev one.
+# When running test processes in parallel, point XUNJI_TEST_DB at different databases so they don't truncate each other's tables.
 TEST_DB_NAME = os.environ.get("XUNJI_TEST_DB", "trovia_test")
 os.environ["DATABASE_URL"] = (
     f"postgresql+psycopg://trovia:trovia@localhost:5432/{TEST_DB_NAME}"

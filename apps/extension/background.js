@@ -1,8 +1,8 @@
 /**
- * 后台：右键菜单、快捷键、保存与重试队列。
+ * Background: context menu, keyboard shortcut, save and retry queue.
  *
- * MV3 的 service worker 随时会被回收，所以这里不留内存状态：
- * 待发队列在 chrome.storage.local，重试用 alarms 拉起，冷启动也能接着跑。
+ * MV3 service workers can be reclaimed at any time, so no state is kept in memory here:
+ * the outbox lives in chrome.storage.local and retries are driven by alarms, so a cold start picks up where it left off.
  */
 import { buildRecord } from './src/record.js'
 import { check, getRecord, putRecord } from './src/webdav.js'
@@ -35,7 +35,7 @@ async function log(line) {
   await chrome.storage.local.set({ [LOG_KEY]: lines.slice(0, 20) })
 }
 
-/** 存一条链接；失败就进队列，返回给弹窗的永远是「已排队」或「已保存」。 */
+/** Save one link; on failure it goes into the queue, and the popup always gets back either "queued" or "saved". */
 export async function saveUrl({ url, title }) {
   const config = await readConfig()
   if (!config) return { ok: false, reason: 'not-configured' }
@@ -44,7 +44,7 @@ export async function saveUrl({ url, title }) {
   if (!record) return { ok: false, reason: 'not-a-page' }
 
   try {
-    // 同一个链接再存一次：沿用云端的 rev，覆盖自己而不是造出第二条。
+    // Saving the same link again: reuse the rev from the cloud and overwrite itself instead of creating a second record.
     const existing = await getRecord(config, record.id).catch(() => null)
     if (existing?.rev) {
       record.rev = Number(existing.rev) + 1
@@ -63,7 +63,7 @@ export async function saveUrl({ url, title }) {
   }
 }
 
-/** 队列重试：能发多少发多少，发不出去的留在队列里等下一次。 */
+/** Queue retry: send as many as possible; whatever cannot be sent stays in the queue for the next round. */
 export async function flushQueue() {
   const config = await readConfig()
   if (!config) return { sent: 0, left: (await readQueue()).length }
@@ -85,7 +85,7 @@ export async function flushQueue() {
   return { sent, left: left.length }
 }
 
-/** 连接测试，设置页和弹窗都用它。 */
+/** Connection test, used by both the settings page and the popup. */
 export async function testConnection(config) {
   const started = Date.now()
   const result = await check(config)

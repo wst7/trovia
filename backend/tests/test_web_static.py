@@ -21,17 +21,17 @@ def test_spa_fallback_serves_index_for_client_routes(tmp_path, monkeypatch):
     monkeypatch.setenv("XUNJI_WEB_DIR", str(web_dir))
 
     with TestClient(create_app()) as client:
-        # 前端路由（应用内的 /documents/:id）回落到 index.html
+        # Frontend routes (the in-app /documents/:id) fall back to index.html
         response = client.get("/documents/abc")
         assert response.status_code == 200
         assert "app-shell" in response.text
 
-        # 真实存在的构建产物按文件返回
+        # Build artefacts that really exist are returned as files
         asset = client.get("/assets/app.js")
         assert asset.status_code == 200
         assert asset.text == "console.log(1)"
 
-        # 接口照常工作
+        # The API keeps working as usual
         assert client.get("/api/v1/health").json()["status"] in {"ok", "degraded"}
 
 

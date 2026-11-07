@@ -1,4 +1,4 @@
-/** 拼 class 的小工具：只丢掉 false/null/undefined，保留顺序。 */
+/** Tiny class joiner: drops only false/null/undefined and keeps the order. */
 export function cx(...values: (string | false | null | undefined)[]): string {
   return values.filter(Boolean).join(' ')
 }

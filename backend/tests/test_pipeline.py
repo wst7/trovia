@@ -75,7 +75,7 @@ def test_pipeline_end_to_end_completed_with_chunks_and_relations(db_session):
     )
     db_session.refresh(doc1)
 
-    # 状态与内容
+    # Status and content
     assert doc1.parse_status == "completed"
     assert doc1.parse_stage is None
     assert doc1.parse_error_code is None
@@ -90,12 +90,12 @@ def test_pipeline_end_to_end_completed_with_chunks_and_relations(db_session):
     assert doc1.metadata_json["parser"] == "generic"
     assert doc1.metadata_json["images"]
 
-    # 摘要与关键词
+    # Summary and keywords
     assert doc1.summary_short
     assert doc1.summary_long
     assert doc1.keywords and doc1.topics
 
-    # chunks 落库且带向量
+    # Chunks are stored with their vectors
     chunks = db_session.scalars(
         select(DocumentChunk).where(DocumentChunk.document_id == doc1.id).order_by(DocumentChunk.chunk_index)
     ).all()
@@ -108,7 +108,7 @@ def test_pipeline_end_to_end_completed_with_chunks_and_relations(db_session):
         assert chunk.content_hash == hashlib.sha256(chunk.content.encode("utf-8")).hexdigest()
         assert chunk.token_count > 0
 
-    # 第二篇（同来源、同内容主题）→ 关联落库
+    # Second document (same source, same content topic) → relations are stored
     url2 = "https://blog.example.com/post/2"
     pipeline.process_document(
         db_session, doc2.id, job2.id, settings, fetch_fn=make_fetch("generic_article.html", url2)
@@ -187,7 +187,7 @@ def test_pipeline_fetch_404_keeps_document_failed(db_session):
 
     db_session.expire_all()
     kept = db_session.get(Document, doc.id)
-    assert kept is not None  # 任何情况下不得删除 documents 记录
+    assert kept is not None  # The documents row must never be deleted, under any circumstances
     assert kept.parse_status == "failed"
     assert kept.parse_error_code == "CONTENT_NOT_FOUND"
 
@@ -206,7 +206,7 @@ def test_pipeline_fetch_timeout_is_retryable(db_session):
     db_session.expire_all()
     kept = db_session.get(Document, doc.id)
     assert kept is not None
-    assert kept.parse_status == "fetching"  # 交给下一次重试继续
+    assert kept.parse_status == "fetching"  # Handed to the next retry to continue
 
 
 def test_runner_run_once_completes_job(db_session):
@@ -229,7 +229,7 @@ def test_runner_run_once_failure_marks_document_failed(db_session):
     settings = get_settings()
     user = make_user(db_session)
     doc, job = make_doc(db_session, user, "https://gone.example.com/404")
-    job.max_attempts = 1  # 单次尝试即终态
+    job.max_attempts = 1  # A single attempt is already terminal
     db_session.commit()
 
     def fetch_404(url: str, **kwargs):
@@ -258,10 +258,10 @@ def test_runner_retryable_failure_retries_then_document_failed(db_session):
         raise FetchError("FETCH_TIMEOUT", "读取网页超时。")
 
     status = runner.run_once(settings, "test-worker", fetch_fn=fetch_timeout)
-    assert status == "failed"  # 可重试错误，但尝试次数已用尽 → 终态
+    assert status == "failed"  # Retryable error, but attempts are exhausted → terminal state
     db_session.expire_all()
     final_doc = db_session.get(Document, doc.id)
     assert final_doc.parse_status == "failed"
     assert final_doc.parse_error_code == "FETCH_TIMEOUT"
-    # 原始链接保留
+    # The original URL is preserved
     assert final_doc.original_url == "https://slow.example.com/a"

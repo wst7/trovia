@@ -1,28 +1,28 @@
 /**
- * Trovia · 多端同步引擎（与传输无关）
+ * Trovia · multi-device sync engine (transport-agnostic)
  *
- * 设计上的关键取舍：**同步逻辑不认任何一家云盘**。引擎只对一个
- * `SyncTarget` 说话——能列目录、读文件、写文件、删文件，就够同步了。
+ * The key design tradeoff: **the sync logic knows no particular cloud drive**. The engine talks to a single
+ * `SyncTarget` — being able to list a directory, read, write and delete files is all sync needs.
  *
- * 于是同一套协议可以跑在：
- *   - WebDAV（坚果云 / Nextcloud / 群晖）
- *   - OneDrive / Google Drive / Dropbox（各自的 API 包一层）
- *   - iCloud Drive（本地 ubiquity 容器，苹果自己负责传输）
- *   - 我们自己的托管桶（S3 兼容 + 账号额度）
- * 换云盘 = 换一个 adapter，不动协议，不动数据库。
+ * So the same protocol can run on:
+ *   - WebDAV (Nutstore / Nextcloud / Synology)
+ *   - OneDrive / Google Drive / Dropbox (a thin wrapper over each API)
+ *   - iCloud Drive (the local ubiquity container; Apple handles the transport)
+ *   - our own hosted bucket (S3-compatible + account quota)
+ * Changing cloud drives = changing one adapter, without touching the protocol or the database.
  *
- * 存储布局（一个文档一个文件，避免整库覆盖冲突）：
- *   trovia/docs/<doc_id>.json        文档本体 + 元信息
- *   trovia/blobs/<sha256>            图片等附件，按内容寻址，重复不重传
- *   trovia/devices/<device_id>.json  设备最后同步时间，仅用于排障
+ * Storage layout (one file per document, avoiding whole-library overwrite conflicts):
+ *   trovia/docs/<doc_id>.json        the document itself + metadata
+ *   trovia/blobs/<sha256>            attachments such as images, content-addressed, duplicates are not re-uploaded
+ *   trovia/devices/<device_id>.json  last sync time per device, for troubleshooting only
  */
 
 export { WebDavTarget } from './webdav'
-// LocalDirTarget 依赖 node:fs，只在桌面/测试里用，不从入口导出，
-// 否则移动端一引 @trovia/sync 就会把 node 内置模块带进 RN 的类型检查。
+// LocalDirTarget depends on node:fs and is used only on desktop/in tests; it is not exported from the entry point,
+// otherwise a mobile import of @trovia/sync would drag node builtins into RN's type check.
 
 export interface SyncTarget {
-  /** 列出某个前缀下的文件；path 是相对根目录的路径，如 `docs/abc.json`。 */
+  /** List the files under a prefix; path is relative to the root, e.g. `docs/abc.json`. */
   list(prefix: string): Promise<SyncEntry[]>
   read(path: string): Promise<string | null>
   write(path: string, body: string): Promise<void>
@@ -31,51 +31,51 @@ export interface SyncTarget {
 
 export interface SyncEntry {
   path: string
-  /** 有的云盘给 etag/mtime，用来跳过未变化的文件；没有就每次读。 */
+  /** Some cloud drives provide etag/mtime to skip unchanged files; without it, read every time. */
   etag?: string
   size?: number
 }
 
-/** 一条要同步的收藏。正文与图片引用都在 payload 里，未来加解密只动这里。 */
+/** One saved article to sync. The body and image references live in payload; future encryption would only touch this. */
 export interface SyncRecord {
   id: string
-  /** ISO 时间，冲突判定的主要依据。 */
+  /** ISO time, the main basis for conflict resolution. */
   updated_at: string
-  /** 非空表示这是墓碑（已删除），墓碑也要同步，否则别的设备会把它复活。 */
+  /** Non-null means this is a tombstone (deleted); tombstones must be synced too, otherwise another device resurrects it. */
   deleted_at: string | null
-  /** 每次本地改动 +1，用来区分「没变」和「两端都变了」。 */
+  /** +1 on every local change, to tell "unchanged" apart from "changed on both sides". */
   rev: number
   payload: Record<string, unknown>
 }
 
-/** 本地库的最小接口：引擎不碰 SQLite，测试里用内存实现。 */
+/** The minimum interface of the local database: the engine never touches SQLite, and tests use an in-memory implementation. */
 export interface LocalStore {
-  /** 自上次同步以来改动过（含新建、删除）的记录。 */
+  /** Records changed since the last sync (including creations and deletions). */
   listDirty(): Promise<SyncRecord[]>
-  /** doc_id → 上次同步时看到的 rev。三方比较的「基准」，没有它就分不清谁先改。 */
+  /** doc_id → the rev seen at the last sync. The "base" of the three-way comparison; without it you cannot tell who changed first. */
   baseRevs(): Promise<Map<string, number>>
   /**
-   * doc_id → 上次同步时远端文件的 etag。
-   * 有它就能跳过没变过的文件，不必每轮把整个云端读一遍；没有就退回「每次都读」。
+   * doc_id → the etag of the remote file at the last sync.
+   * With it, unchanged files can be skipped rather than reading the whole cloud every round; without it, fall back to "read every time".
    */
   baseEtags?(): Promise<Map<string, string>>
-  /** 按远端状态落库（顺带把基准 rev 更新成远端的）。 */
+  /** Land records according to the remote state (updating the base rev to the remote's along the way). */
   applyRemote(records: SyncRecord[]): Promise<void>
-  /** 推成功后调用：清 dirty，并把基准 rev 记为这条的 rev。 */
+  /** Called after a successful push: clear dirty and record the base rev as this record's rev. */
   markSynced(records: SyncRecord[], syncedAt: string, etags?: Map<string, string>): Promise<void>
 }
 
 export interface SyncReport {
   pushed: number
   pulled: number
-  /** 远端墓碑落地（本机因此删除）条数。 */
+  /** How many remote tombstones were landed (and therefore deleted locally). */
   deleted: number
-  /** 两端都改过、因此额外保留的副本。 */
+  /** Copies kept because both sides changed. */
   conflicts: number
   conflictNames: string[]
-  /** 云端 docs/ 里到底有多少份文件：0 和「已是最新」不是一回事，界面要能说清。 */
+  /** How many files actually sit in the cloud docs/: 0 and "already up to date" are not the same thing, and the UI has to say so clearly. */
   remoteFiles: number
-  /** 列到了但读不出来 / 解析不了的文件数：云端数与本地数对不上时看这个。 */
+  /** Files that were listed but could not be read / parsed: look at this when the cloud count and the local count disagree. */
   skipped: number
   syncedAt: string
 }
@@ -99,7 +99,7 @@ function isRecord(value: unknown): value is SyncRecord {
   )
 }
 
-/** 谁更新就谁赢；时间一样时用 rev，再一样用内容长度做确定性兜底。 */
+/** Whoever is newer wins; equal times fall back to rev, and equal revs to content length as a deterministic tiebreak. */
 function newer(a: SyncRecord, b: SyncRecord): boolean {
   if (a.updated_at !== b.updated_at) return a.updated_at > b.updated_at
   if (a.rev !== b.rev) return a.rev > b.rev
@@ -110,18 +110,18 @@ export interface SyncOptions {
   target: SyncTarget
   store: LocalStore
   deviceId: string
-  /** 注入时钟，测试里固定时间，生产用 () => new Date().toISOString()。 */
+  /** Injected clock; tests pin the time, production uses () => new Date().toISOString(). */
   now: () => string
-  /** 单次同步最多处理多少条，避免第一次同步把整库读进内存。 */
+  /** Maximum records handled in one sync, so the first sync does not read the whole library into memory. */
   limit?: number
 }
 
 /**
- * 跑一轮同步：先看远端，再决定推/拉/留副本。
+ * Run one sync round: look at the remote first, then decide to push/pull/keep a copy.
  *
- * 冲突判定是三方比较：`local.rev > base && remote.rev > base`，
- * 也就是「我改过，而且你在我上次看到之后也改过」。这时不猜谁对：
- * 新的那份占主页，另一份以「冲突副本」留下——两份内容都不会被悄悄丢掉。
+ * Conflict detection is a three-way comparison: `local.rev > base && remote.rev > base`,
+ * i.e. "I changed it, and you also changed it after I last saw it". At that point it does not guess who is right:
+ * the newer one takes the main entry and the other is kept as a conflict copy — neither side's content is silently dropped.
  */
 export async function syncOnce(options: SyncOptions): Promise<SyncReport> {
   const { target, store, deviceId, now, limit = 500 } = options
@@ -133,20 +133,20 @@ export async function syncOnce(options: SyncOptions): Promise<SyncReport> {
 
   const allEntries = await target.list(DOCS_PREFIX)
   const baseEtags = (await store.baseEtags?.()) ?? new Map<string, string>()
-  /** 列到了但读不出来 / 解析不了的文件数。 */
+  /** Files that were listed but could not be read / parsed. */
   let skipped = 0
   const remoteById = new Map<string, SyncRecord>()
   const seenEtags = new Map<string, string>()
 
-  // 扫的是全部条目，不是前 limit 条——否则第 N 条之后的文件永远轮不到。
-  // limit 现在限制的是「这一轮最多读几个文件」，没变过的（etag 与基准一致、
-  // 本地也没改动）直接跳过，不占额度也不发请求。
+  // The scan covers all entries, not just the first limit — otherwise files past entry N would never get a turn.
+  // limit now bounds "how many files are read in this round"; unchanged ones (etag matching the base,
+  // and nothing changed locally) are skipped outright, taking neither quota nor a request.
   let reads = 0
   for (const entry of allEntries) {
     const id = idFromPath(entry.path)
     if (!id) continue
-    // 必须同时有基准 rev 和 etag 一致才算「没变」：只有 etag 的话，
-    // 一旦基准 rev 丢了（清空过库），这条就永远不会再被读。
+    // "Unchanged" requires both the base rev and a matching etag: with the etag alone,
+    // once the base rev is lost (the database was cleared), this entry would never be read again.
     const unchanged =
       Boolean(entry.etag) &&
       baseEtags.get(id) === entry.etag &&
@@ -168,7 +168,7 @@ export async function syncOnce(options: SyncOptions): Promise<SyncReport> {
       const parsed: unknown = JSON.parse(raw)
       if (isRecord(parsed)) remoteById.set(parsed.id, parsed)
     } catch {
-      // 坏文件跳过：可能上次写到一半，下一轮会被正确版本覆盖。
+      // Skip bad files: the previous write may have been cut off, and the next round overwrites them with the correct version.
       skipped += 1
     }
   }
@@ -181,14 +181,14 @@ export async function syncOnce(options: SyncOptions): Promise<SyncReport> {
   const applied: SyncRecord[] = []
   const pushedRecords: SyncRecord[] = []
 
-  /** 推一条上去，并记入待标记列表。 */
+  /** Push one record up and add it to the list to be marked. */
   const push = async (record: SyncRecord) => {
     await target.write(docPath(record.id), JSON.stringify(record))
     pushed += 1
     pushedRecords.push(record)
   }
 
-  /** 拉一条下来，统计删除，顺带记人话名字。 */
+  /** Pull one record down, count deletions, and note a human-readable name along the way. */
   const pull = (record: SyncRecord) => {
     applied.push(record)
     pulled += 1
@@ -201,20 +201,20 @@ export async function syncOnce(options: SyncOptions): Promise<SyncReport> {
     const local = dirtyById.get(id) ?? null
     const remote = remoteById.get(id) ?? null
 
-    // 只在本地：推上去（含墓碑）。
+    // Local only: push it up (tombstones included).
     if (local && !remote) {
       await push(local)
       continue
     }
 
-    // 只在远端：分两种情况。
-    // 一是本机真的没有这条（拉取）；二是本机有、但自上次同步后没改过——
-    // 这种不会出现在 listDirty 里，只能靠基准 rev 认出来，否则每轮都会把整库重拉一遍。
+    // Remote only: two cases.
+    // One, this device really does not have it (pull); two, this device has it but it has not changed since the last sync —
+    // such records do not appear in listDirty and can only be recognized from the base rev, otherwise the whole library would be re-pulled every round.
     if (!local && remote) {
       const base = baseRevs.get(id) ?? 0
       if (base > 0) {
         if (remote.rev > base) pull(remote)
-        // 相同 rev 说明两端一致，什么都不用做。
+        // Equal rev means both sides agree; nothing to do.
         continue
       }
       pull(remote)
@@ -223,7 +223,7 @@ export async function syncOnce(options: SyncOptions): Promise<SyncReport> {
 
     if (!local || !remote) continue
 
-    // 两边一致：只需把基准 rev 对齐。
+    // Both sides agree: only the base rev needs aligning.
     if (local.rev === remote.rev && local.updated_at === remote.updated_at) {
       pushedRecords.push(local)
       continue
@@ -253,9 +253,9 @@ export async function syncOnce(options: SyncOptions): Promise<SyncReport> {
   }
 
   if (applied.length > 0) await store.applyRemote(applied)
-  // 拉下来的记录也要记基准 rev：否则下一轮「本地 rev > 0 且远端 rev > 0」会被判成
-  // 两端都改过——真机上表现为「本地删了一条从别的设备同步来的文章，它又变成冲突副本冒回来」。
-  // 即使这次什么都没推进也要标记一次：界面上的「上次同步」应该是「上次尝试」。
+  // Pulled records must also record the base rev: otherwise the next round sees "local rev > 0 and remote rev > 0" and judges
+  // that both sides changed — which on a real device shows up as "I deleted an article synced from another device and it came back as a conflict copy".
+  // Mark once even if nothing advanced this time: the "last sync" in the UI should mean "last attempt".
   await store.markSynced([...pushedRecords, ...applied], syncedAt, seenEtags)
 
   return {
@@ -270,13 +270,13 @@ export async function syncOnce(options: SyncOptions): Promise<SyncReport> {
   }
 }
 
-/** `docs/<id>.json` → `<id>`；不是这个形状的条目直接忽略。 */
+/** `docs/<id>.json` → `<id>`; entries of any other shape are ignored. */
 function idFromPath(path: string): string | null {
   const match = /^docs\/(.+)\.json$/.exec(path)
   return match ? match[1] : null
 }
 
-/** 冲突副本：新 id、标题带「冲突副本」，两端内容都不会被悄悄丢掉。 */
+/** Conflict copy: a new id and the conflict-copy suffix on the title, so neither side's content is silently dropped. */
 function conflictCopy(record: SyncRecord, deviceId: string, at: string): SyncRecord {
   const stamp = at.replace(/[-:.TZ]/g, '').slice(0, 14)
   const title = typeof record.payload.title === 'string' ? record.payload.title : ''

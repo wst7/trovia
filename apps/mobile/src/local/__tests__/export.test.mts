@@ -1,8 +1,8 @@
 /**
- * 导出格式的回归测试：导出必须包含「用户自己的东西」，
- * 而且要能被别的工具读懂（一份 JSON 一份 Markdown）。
+ * Regression tests for the export format: the export must contain "the user's own things",
+ * and it must be readable by other tools (one JSON, one Markdown).
  *
- * 跑法：npx tsx apps/mobile/src/local/__tests__/export.test.mts
+ * How to run: npx tsx apps/mobile/src/local/__tests__/export.test.mts
  */
 import assert from 'node:assert/strict'
 import { buildExportMarkdown } from '../exporter.ts'
@@ -49,11 +49,11 @@ assert.ok(md.includes('发表于：2026-10-30'), '发表时间要带上')
 assert.ok(md.includes('关键词：睡眠、焦虑'))
 assert.ok(md.includes('正文第一段。'), '正文要完整导出')
 
-// 没有正文时也不能静默留空
+// A missing body must not silently stay blank either
 const empty = buildExportMarkdown([doc({ content_markdown: null, plain_text: null })], '2026-11-01T12:00:00.000Z')
 assert.ok(empty.includes('（没有保存到正文）'), '缺正文要有明确说明')
 
-// 多篇之间用分隔线隔开，便于人读
+// Separate articles with a rule so a human can read it
 const two = buildExportMarkdown([doc({ id: 'a' }), doc({ id: 'b', title: '第二篇' })], '2026-11-01T12:00:00.000Z')
 assert.equal(two.split('\n\n---\n\n').length, 3, '两篇之间要有一条分隔线')
 

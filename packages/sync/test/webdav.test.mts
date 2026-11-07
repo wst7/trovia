@@ -1,11 +1,11 @@
 /**
- * WebDAV adapter 的验证：起一个最小 WebDAV 服务（MKCOL / PROPFIND / PUT /
- * GET / DELETE），让同步引擎真的通过 HTTP 跑一遍。
+ * Verification of the WebDAV adapter: spin up a minimal WebDAV server (MKCOL / PROPFIND / PUT /
+ * GET / DELETE) and let the sync engine really run over HTTP.
  *
- * 目的不是模拟坚果云的全部行为，而是验证最脆的部分——PROPFIND 的 XML
- * 怎么解析、路径怎么拼、空目录怎么处理。这些错了，连上真云盘也跑不通。
+ * The point is not to imitate all of Nutstore's behaviour but to verify the most fragile part — how the PROPFIND XML
+ * is parsed, how paths are joined, how empty directories are handled. Get these wrong and even a real cloud drive will not work.
  *
- * 跑法：npx tsx packages/sync/test/webdav.test.mts
+ * How to run: npx tsx packages/sync/test/webdav.test.mts
  */
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
@@ -14,7 +14,7 @@ import { syncOnce } from '../src/index.ts'
 import { WebDavTarget } from '../src/webdav.ts'
 import type { LocalStore, SyncRecord } from '../src/index.ts'
 
-/** 最小 WebDAV：把文件放在内存里，够引擎用。 */
+/** Minimal WebDAV: keeps files in memory, which is enough for the engine. */
 function makeServer() {
   const files = new Map<string, string>()
   const dirs = new Set<string>([''])
@@ -127,7 +127,7 @@ async function run() {
 
     await target.ensureDir('docs')
 
-    // 空目录：list 必须返回空数组，而不是抛错
+    // Empty directory: list must return an empty array, not throw
     assert.deepEqual(await target.list('docs/'), [], '空目录应返回空列表')
     console.log('✓ 空目录 PROPFIND 返回空列表，不报错')
 
@@ -142,13 +142,13 @@ async function run() {
     assert.equal(files.size, 1, '服务端应该收到一个文件')
     console.log(`✓ PUT 走通，服务端收到 ${files.size} 个文件`)
 
-    // 另一台设备通过 PROPFIND + GET 拉回来，标题里的中文不能坏
+    // Another device pulls it back via PROPFIND + GET, and the Chinese in the title must not be corrupted
     report = await syncOnce({ target, store: laptop, deviceId: 'laptop', now })
     assert.equal(report.pulled, 1)
     assert.equal(laptop.docs.get('doc-w1')?.payload.title, '中文标题能不能过 XML')
     console.log('✓ PROPFIND 解析出 href，GET 拿回中文标题')
 
-    // 无改动时不该重复写
+    // With no changes nothing should be written again
     const writesBefore = files.size
     report = await syncOnce({ target, store: laptop, deviceId: 'laptop', now })
     assert.equal(report.pushed, 0)

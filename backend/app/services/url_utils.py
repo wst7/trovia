@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.errors import ApiError
 from app.models import Document
 
-# 只删这类明确的追踪参数，其余一律保留（避免改变内容身份）
+# Delete only these explicit tracking parameters and keep everything else (so the content identity does not change)
 TRACKING_KEYS = {
     "gclid",
     "fbclid",
@@ -35,7 +35,7 @@ TRACKING_PREFIXES = ("utm_", "wt_", "hmsr", "hmci", "hmdt")
 
 DEFAULT_PORTS = {"http": 80, "https": 443}
 
-# 手机分享面板常把标题/描述和链接一起塞进来；保存时只取其中第一段 http(s) 链接。
+# Mobile share sheets often paste the title/description together with the link; on save, keep only the first http(s) link in it.
 _URL_IN_TEXT_RE = re.compile(
     r"https?://[^\s<>\"'“”‘’（）\[\]{}，。；：！？、]+", re.IGNORECASE
 )
@@ -58,7 +58,7 @@ def extract_first_url(raw: str) -> str | None:
     if not match:
         return None
     candidate = match.group(0).rstrip(_TRAILING_URL_PUNCT)
-    # 分享/Markdown 文本常在链接外再包一层括号；只裁掉不配对的尾部括号。
+    # Share/Markdown text often wraps the link in extra parentheses; trim only unpaired trailing parentheses.
     while candidate.endswith(")") and candidate.count(")") > candidate.count("("):
         candidate = candidate[:-1]
     return candidate
@@ -110,7 +110,7 @@ def normalize_url(raw: str) -> NormalizedUrl:
         port = f":{parts.port}"
 
     netloc = f"{host}{port}"
-    if "[" in host:  # IPv6 字面量
+    if "[" in host:  # IPv6 literal
         ipv6 = host.split("%")[0]
         netloc = f"[{ipv6}]{port}"
 

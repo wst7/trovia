@@ -1,10 +1,10 @@
-# Render Blueprint：一个免费 Web 服务跑完整应用（API + Worker + 网页）。
+# Render Blueprint: one free web service runs the whole app (API + Worker + web pages).
 #
-# 用法：Render → New → Blueprint → 选这个仓库。Render 读到本文件后会创建服务；
-# DATABASE_URL 需要你在创建时填写（Supabase 的连接串），其余变量已给好默认值。
+# How to use it: Render → New → Blueprint → pick this repository. Render reads this file and then creates the service;
+# DATABASE_URL has to be filled in when you create it (the Supabase connection string); every other variable already has a sensible default.
 #
-# 免费实例的特点：15 分钟没人访问会休眠，下次访问冷启动约 30–60 秒；
-# 休眠期间 worker 也停着，任务留在库里，醒来后继续处理。
+# What a free instance is like: it sleeps after 15 minutes with no traffic, and the next visit takes about 30–60 seconds to cold start;
+# the worker is stopped while it sleeps too, so jobs stay in the database and processing picks up again once it wakes.
 services:
   - type: web
     name: trovia
@@ -16,13 +16,13 @@ services:
     healthCheckPath: /api/v1/health
     autoDeploy: true
     envVars:
-      # Supabase → Project Settings → Database → Connection string（Session pooler，
-      # 端口 5432）。必须是 postgresql://…；后端会自己补上 psycopg3 驱动。
+      # Supabase → Project Settings → Database → Connection string(Session pooler,
+      # port 5432). It must be postgresql://…; the backend adds the psycopg3 driver itself.
       - key: DATABASE_URL
         sync: false
       - key: APP_SECRET
         generateValue: true
-      # 默认离线实现：不需要任何外部密钥，部署完就能用。
+      # The default offline implementation: no external key needed, so it works the moment it is deployed.
       - key: AI_PROVIDER
         value: extractive
       - key: EMBEDDING_PROVIDER
@@ -31,7 +31,7 @@ services:
         value: "1536"
       - key: LOG_LEVEL
         value: INFO
-      # 免费数据库更在意连接数与查询量，放宽轮询间隔；保存后最多等这么久开始解析。
+      # A free database cares more about connection count and query volume, so the polling interval is relaxed; this is the longest wait after saving before parsing starts.
       - key: WORKER_POLL_SECONDS
         value: "15"
       - key: XUNJI_WEB_DIR

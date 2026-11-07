@@ -46,10 +46,10 @@ export function DocumentDetailScreen() {
   const [reprocessing, setReprocessing] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
-  // 原文是否展开：长文默认收起。hook 必须放在所有早返回之前。
+  // Whether the body is expanded: long articles are collapsed by default. The hook must come before all early returns.
   const [showBody, setShowBody] = useState(false)
-  // 看图：整篇图片一起传，左右能翻。
-  // 底部悬浮按钮挡不挡正文，取决于它的真实高度，所以量一次再决定留白。
+  // Image viewing: all the images in the article are passed together, so they can be paged left and right.
+  // Whether the floating bottom bar covers the body depends on its real height, so measure it once and then decide the padding.
   const [barHeight, setBarHeight] = useState(0)
   const [viewer, setViewer] = useState<{ open: boolean; index: number; images: string[] }>({
     open: false,
@@ -172,11 +172,11 @@ export function DocumentDetailScreen() {
   }
 
   const rawBody = doc.content_markdown ?? doc.plain_text ?? ''
-  // 抓取失败时站点只给了 <title>，正文就是标题本身。再排一遍等于把标题放大两次，
-  // 读者会以为页面卡住了；这种情况按「没有正文」处理，交给下面的说明文案。
+  // When fetching fails the site only gave a <title>, and the body is the title itself. Laying it out again shows the title twice at double size,
+  // and the reader thinks the page is stuck; treat this case as "no body" and leave it to the explanatory copy below.
   const bodyIsJustTitle = flat(rawBody) === flat(doc.title ?? '') || !flat(rawBody)
   const bodySource = bodyIsJustTitle ? '' : rawBody
-  // 图片落盘后同一张图有两个地址：本地文件优先，远程只作兜底。
+  // Once images are persisted the same image has two addresses: prefer the local file, use the remote only as a fallback.
   const localByRemote = new Map<string, string>()
   const remoteImages = doc.images ?? []
   const localFiles = doc.image_files ?? []
@@ -185,18 +185,18 @@ export function DocumentDetailScreen() {
     if (local) localByRemote.set(remote, local)
   })
   const resolveImage = (url: string) => localByRemote.get(url) ?? url
-  // 被站点拒绝时重试没有意义（再点一次还是 403），别给用户假动作。
+  // Retrying when the site refused is meaningless (tap again and it is still 403), so do not give the user a fake action.
   const blockedBySite = doc?.parse_error_code === 'FETCH_BLOCKED' || doc?.parse_error_code === 'APP_ONLY_LINK'
   const canReprocess = status === 'partial' || (status === 'failed' && !blockedBySite)
   const rawShort = doc.summary_short?.trim() || null
   const rawLong = doc.summary_long?.trim() || null
-  // 抽取式摘要常常两段一样：一样就只显示一次，别让同一句话占两块版面。
+  // Extractive summaries often make both fields identical: show it once, do not let the same sentence take up two blocks.
   const summaryShort = rawShort ?? (rawLong && rawLong.length <= 120 ? rawLong : null)
   const summaryLong = rawLong && rawLong !== summaryShort && rawLong !== rawShort ? rawLong : null
   const summary = summaryShort ?? summaryLong
-  // 抽取式摘要对短文就等于全文：这时候摘要块只是把原文又说一遍，直接不显示。
-  // 导入进来的条目要能说明来历：用户看到 2019 年的时间，得知道那不是 App 记错了。
-  // 老的条目只存了一句写死的中文；新的存「来源类型 + 文件名」，按界面语言说。
+  // For a short article the extractive summary equals the full text: the summary block would just restate the article, so do not show it at all.
+  // Imported entries have to be able to explain where they came from: when the user sees a 2019 date, they need to know the app did not get it wrong.
+  // Old entries stored only one hardcoded Chinese sentence; new ones store "source kind + filename" and speak in the UI language.
   const originText = (() => {
     const kind = doc.metadata?.origin_kind
     const file = doc.metadata?.origin_file
@@ -208,11 +208,11 @@ export function DocumentDetailScreen() {
   })()
   const savedFromFile = doc.metadata?.savedAtFromFile === true
   const summaryRepeatsBody = Boolean(summary && bodySource && flat(bodySource).includes(flat(summary)))
-  // 长摘要常常是短摘要的完整版，两句一起显示等于同一段话印两遍。
+  // The long summary is often the full version of the short one, and showing both prints the same passage twice.
   const summaryShortText = doc.summary_short?.trim() ?? ''
   const summaryLongText = doc.summary_long?.trim() ?? ''
-  // 短摘要常是长摘要截断到 120 字再加省略号，所以不能直接 includes 比较：
-  // 比前 40 个字（去掉省略号）就够了，同一句话的开头不会撞车。
+  // The short summary is often the long one truncated to 120 characters plus an ellipsis, so a plain includes comparison will not do:
+  // comparing the first 40 characters (without the ellipsis) is enough, since two different sentences never share an opening.
   const head = (text: string) => flat(text).replace(/[.…]+$/, '').slice(0, 40)
   const longRepeatsShort = Boolean(
     summaryShortText &&
@@ -222,25 +222,25 @@ export function DocumentDetailScreen() {
   )
   const showShort = Boolean(summaryShortText) && !longRepeatsShort
   const showLong = Boolean(summaryLongText)
-  // 没有可显示的文字就别画那个红色竖线和「摘要」标题——空块比没有更难看。
+  // If there is no displayable text, do not draw that red bar and the "summary" heading — an empty block looks worse than none.
   const hasSummaryText = Boolean(summaryShortText || summaryLongText)
   /**
-   * 折叠态的三行预览：正文是 Markdown，直接截取会露出 ##、![](...) 这些标记。
-   * 这里只做「读起来像话」的最小清洗，不追求还原渲染效果。
+   * The collapsed three-line preview: the body is Markdown, and slicing it directly would expose ##, ![](...) and other markup.
+   * This only does the minimal cleanup needed to "read like prose"; it does not try to reproduce the rendered look.
    */
   const plainPreview = (md: string) =>
     md
-      .replace(/!\[[^\]]*\]\([^)]*\)/g, '')        // 图片整段丢掉
-      .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')      // 链接只留文字
-      .replace(/^#{1,6}\s*/gm, '')                    // 标题井号
-      .replace(/```[\s\S]*?```/g, '')                 // 代码块
-      .replace(/[`*_>~]/g, '')                        // 行内标记
-      .replace(/\n{2,}/g, '\n')                       // 多余空行
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, '')        // Drop the whole image
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')      // Keep only the link text
+      .replace(/^#{1,6}\s*/gm, '')                    // Heading hashes
+      .replace(/```[\s\S]*?```/g, '')                 // Code blocks
+      .replace(/[`*_>~]/g, '')                        // Inline markers
+      .replace(/\n{2,}/g, '\n')                       // Redundant blank lines
       .replace(/\s+/g, ' ')
       .trim()
 
-  // 原文默认收起：这一页先回答「是不是这一篇」，摘要够用；要读再展开。
-  // 短文本不收起，多一次点击没有收益。
+  // The body is collapsed by default: this page first answers "is this the one", and the summary is enough; expand to read.
+  // Short text is not collapsed, since one more tap buys nothing.
   const bodyText = plainPreview(bodySource ?? '')
   const bodyLength = bodyText.length
   const bodyCollapsible = bodyLength > 1200
@@ -252,7 +252,7 @@ export function DocumentDetailScreen() {
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: GUTTER,
-          // 读到最后一屏时最后一行不能被悬浮按钮压住。
+          // On the last screen the last line must not be covered by the floating button.
           paddingBottom: (barHeight || 88) + 20,
         }}
         showsVerticalScrollIndicator={false}

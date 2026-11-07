@@ -1,5 +1,5 @@
 #!/bin/bash
-# 小工具：确认前台是寻迹，再执行 tap / 截图，避免盲点落到浏览器或桌面。
+# Small helper: confirm the foreground app is Xunji before tapping or taking a screenshot, so blind taps do not land in the browser or on the desktop.
 export PATH="$PATH:$HOME/Library/Android/sdk/platform-tools:$HOME/Library/Android/sdk/emulator"
 PKG=com.trovia.app
 

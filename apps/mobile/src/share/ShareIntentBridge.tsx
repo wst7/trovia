@@ -4,8 +4,8 @@ import { lazy, Suspense } from 'react'
 const NativeShareIntentBridge = lazy(() => import('./NativeShareIntentBridge'))
 
 /**
- * Expo Go 不包含原生分享模块，直接 import 会崩溃。
- * Expo Go 中跳过分享桥，其余页面仍可用于调试。
+ * Expo Go does not include the native share module, and importing it directly crashes.
+ * Skip the share bridge inside Expo Go; the other screens remain usable for debugging.
  */
 export function ShareIntentBridge() {
   if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) {

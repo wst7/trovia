@@ -15,10 +15,10 @@ export default function Documents() {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  // 卡片处理完成时触发一次刷新，拿到解析后的标题与摘要
+  // Refresh once when a card finishes processing, to pick up the parsed title and summary
   const [reloadKey, setReloadKey] = useState(0)
 
-  // 输入即筛选，不需要再按「筛选」按钮。
+  // Typing filters directly, no need to press a "filter" button as well.
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setKeyword(keywordInput.trim())

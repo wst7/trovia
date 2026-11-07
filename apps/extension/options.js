@@ -17,7 +17,7 @@ function readForm() {
   }
 }
 
-/** 需要目标域的主机权限，否则 service worker 里的 fetch 会被拦。 */
+/** Host permission for the target domain is required, otherwise fetch inside the service worker gets blocked. */
 async function ensureHostPermission(base) {
   try {
     const origin = new URL(base).origin + '/*'

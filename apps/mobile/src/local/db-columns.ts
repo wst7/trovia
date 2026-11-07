@@ -1,12 +1,12 @@
 /**
- * 老库补列清单。
+ * The list of columns backfilled into old databases.
  *
- * 「建表语句里有、升级上来的库却没有」的列全写在这里，启动时按表检查补齐。
- * 这张清单漏过一项——imported_at——结果每次保存都报
- * `table documents has no column named imported_at`，用户只看到「保存没有完成」。
+ * Every column that exists in the CREATE TABLE statement but is missing from an upgraded database is listed here, and is added per table at startup.
+ * This list once missed one entry — imported_at — and every save then reported
+ * `table documents has no column named imported_at`, while the user only saw "the save did not finish".
  *
- * 单独成文件是为了能被 node:sqlite 的测试直接跑一遍：新建一个老结构，
- * 应用这份清单，再按真实 INSERT 写一行，证明迁移真的补上了。
+ * It lives in its own file so a node:sqlite test can run it directly: create the old schema,
+ * apply this list, then write a row with the real INSERT, proving the migration really backfills it.
  */
 export const DOCUMENT_COLUMNS: Array<[string, string]> = [
   ['canonical_url', "TEXT NOT NULL DEFAULT ''"],

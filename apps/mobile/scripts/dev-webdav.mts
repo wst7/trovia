@@ -1,11 +1,11 @@
 /**
- * 本机调试用的最小 WebDAV 服务：把目录直接映射到磁盘，方便用 `ls` 看同步结果。
+ * Minimal WebDAV server for local debugging: it maps the directory straight to disk, so `ls` shows the sync result.
  *
- * 跑法：npx tsx apps/mobile/scripts/dev-webdav.mts [端口] [目录]
- * 模拟器里填 http://10.0.2.2:<端口>/dav/，用户名 u，密码 p。
+ * Run it: npx tsx apps/mobile/scripts/dev-webdav.mts [port] [directory]
+ * In the emulator put http://10.0.2.2:<port>/dav/, user u, password p.
  *
- * 只实现同步引擎会用到的五个方法（MKCOL / PROPFIND / PUT / GET / DELETE），
- * 不追求兼容全部 WebDAV 语义——真机上最终要连的是坚果云或群晖。
+ * Implements only the five methods the sync engine uses (MKCOL / PROPFIND / PUT / GET / DELETE),
+ * and does not try to cover all of WebDAV — a real device ends up talking to Nutstore or Synology.
  */
 import { createServer } from 'node:http'
 import type { IncomingMessage, ServerResponse } from 'node:http'
@@ -41,7 +41,7 @@ const server = createServer((req: IncomingMessage, res: ServerResponse) => {
   const disk = toDisk(path)
 
   if (req.method === 'MKCOL') {
-    // 照坚果云来：父目录不存在就 409，已存在也回 201（不是 405）。
+    // Follow Nutstore: a missing parent gives 409, and an existing collection still answers 201 (not 405).
     if (existsSync(disk)) {
       res.writeHead(201).end()
       return
@@ -59,7 +59,7 @@ const server = createServer((req: IncomingMessage, res: ServerResponse) => {
 
   if (req.method === 'PROPFIND') {
     if (!existsSync(disk) || !statSync(disk).isDirectory()) {
-      // 目录不存在：父目录在 → 404；父目录也没有 → 409（坚果云就是这么回的）。
+      // Missing directory: parent exists → 404; parent missing too → 409 (that is how Nutstore answers).
       res.writeHead(existsSync(dirname(disk)) ? 404 : 409).end()
       return
     }

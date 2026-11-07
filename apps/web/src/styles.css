@@ -1,7 +1,7 @@
 /*
- * Trovia 视觉系统：温润纸感
- * 一张私人检索纸：米白纸面、墨色文字、赭红一点。
- * 界面只保留「找」和「存」两件事，其余全部退后。
+ * Trovia visual system: a warm paper feel
+ * A private index on paper: off-white sheet, ink-coloured text, one touch of ochre red.
+ * The interface keeps only two things, find and save; everything else steps back.
  */
 
 :root {
@@ -92,7 +92,7 @@ select {
   outline-offset: 2px;
 }
 
-/* ---------- 顶栏 ---------- */
+/* ---------- Top bar ---------- */
 
 .app-shell {
   min-height: 100vh;
@@ -196,7 +196,7 @@ select {
   }
 }
 
-/* ---------- 按钮与表单 ---------- */
+/* ---------- Buttons and forms ---------- */
 
 .btn {
   display: inline-flex;
@@ -263,7 +263,7 @@ input::placeholder {
   color: var(--faint);
 }
 
-/* ---------- 首页 ---------- */
+/* ---------- Home page ---------- */
 
 .hero {
   margin-bottom: 52px;
@@ -428,7 +428,7 @@ input::placeholder {
   cursor: default;
 }
 
-/* ---------- 区块标题 ---------- */
+/* ---------- Section headings ---------- */
 
 .section-head {
   display: flex;
@@ -464,7 +464,7 @@ input::placeholder {
   margin-left: 8px;
 }
 
-/* ---------- 收藏列表（纸面横线，不用卡片堆叠） ---------- */
+/* ---------- Saved-items list (ruled paper lines, no stacked cards) ---------- */
 
 .list {
   border-top: 1px solid var(--line);
@@ -581,7 +581,7 @@ input::placeholder {
   color: var(--accent);
 }
 
-/* ---------- 状态徽章 ---------- */
+/* ---------- Status badges ---------- */
 
 .badge {
   display: inline-flex;
@@ -634,7 +634,7 @@ input::placeholder {
   }
 }
 
-/* ---------- 提示与空状态 ---------- */
+/* ---------- Notices and empty states ---------- */
 
 .notice {
   margin-bottom: 16px;
@@ -663,7 +663,7 @@ input::placeholder {
   font-size: 0.9rem;
 }
 
-/* ---------- 全部收藏 ---------- */
+/* ---------- All saved items ---------- */
 
 .page-head {
   display: flex;
@@ -752,7 +752,7 @@ input::placeholder {
   cursor: default;
 }
 
-/* ---------- 收藏详情 ---------- */
+/* ---------- Saved item detail ---------- */
 
 .back-link {
   display: inline-flex;
@@ -1011,7 +1011,7 @@ input::placeholder {
   cursor: default;
 }
 
-/* ---------- 账户 ---------- */
+/* ---------- Account ---------- */
 
 .account-list {
   margin: 0 0 24px;
@@ -1045,7 +1045,7 @@ input::placeholder {
   line-height: 1.8;
 }
 
-/* ---------- 登录 / 注册 ---------- */
+/* ---------- Sign in / sign up ---------- */
 
 .auth-page {
   min-height: 100vh;
@@ -1230,7 +1230,7 @@ input::placeholder {
   color: var(--ink);
 }
 
-/* ---------- 移动端 ---------- */
+/* ---------- Mobile ---------- */
 
 @media (max-width: 680px) {
   .topbar {

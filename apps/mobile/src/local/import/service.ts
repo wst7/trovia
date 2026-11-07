@@ -1,8 +1,8 @@
 /**
- * 导入的落库部分：选文件 → 解析 → 与现有收藏比对 → 批量入队。
+ * The persistence side of import: pick a file → parse → compare against existing saves → enqueue in bulk.
  *
- * 刻意不在这里做「导入即解析」：导入只负责把链接放进队列，
- * 真正的抓取交给既有的解析队列，用户可以继续用手机，解析在后台慢慢跑。
+ * “import means parse” is deliberately not done here: import is only responsible for putting the links into the queue,
+ * the actual fetching is left to the existing parse queue, so the user can keep using the phone while parsing runs slowly in the background.
  */
 import * as DocumentPicker from 'expo-document-picker'
 
@@ -27,15 +27,15 @@ export interface PickedFile {
   name: string
   format: ImportFormat
   items: ImportItem[]
-  /** 只有 Trovia 备份有：带正文的那份，恢复时直接落库。 */
+  /** Only a Trovia backup has this: the copy that carries the body, written straight to the store on restore. */
   documents: RestoreDocument[] | undefined
   skipped: { line: string; reason: string }[]
-  /** 已经在本机收藏里的条数（按归一化后的链接判断）。 */
+  /** How many are already saved on this device (judged by the normalized link). */
   existing: number
   fresh: ImportItem[]
 }
 
-/** 打开系统文件选择器并解析；用户取消时返回 null。 */
+/** Open the system file picker and parse; returns null when the user cancels. */
 export async function pickAndParse(): Promise<PickedFile | null> {
   const picked = await DocumentPicker.getDocumentAsync({
     type: [
@@ -44,7 +44,7 @@ export async function pickAndParse(): Promise<PickedFile | null> {
       'text/csv',
       'text/plain',
       'application/octet-stream',
-      // 自己导出的备份：zip（新）与 gzip（过渡期），不同系统报的 mime 不一样
+      // Our own exported backups: zip (new) and gzip (transitional); different systems report different mimes
       'application/zip',
       'application/x-zip-compressed',
       'application/gzip',
@@ -59,7 +59,7 @@ export async function pickAndParse(): Promise<PickedFile | null> {
   const module = fs()
   if (!module) throw new Error('这台设备上暂时无法读取文件')
 
-  // 按字节读、按文件头判断容器：zip / gzip / 纯文本走同一个入口。
+  // Read as bytes and detect the container from the file header: zip / gzip / plain text all come in through the same door.
   const base64 = await module.readAsStringAsync(asset.uri, { encoding: 'base64' })
   const { text: content } = decodeBackupBase64(base64)
   const parsed = parseImport(content)
@@ -90,12 +90,12 @@ export interface ImportSummary {
   failed: number
 }
 
-/** 逐条写入队列；交给调用方节流展示进度。 */
+/** Write the items into the queue one by one; the caller throttles the progress display. */
 /**
- * 从自己的备份恢复：不抓网页，直接按备份里的内容落库。
+ * Restore from one's own backup: do not fetch the web page, write the store straight from what the backup holds.
  *
- * 这跟 runImport 是两条路：普通导入只有链接，得重新整理；备份里有正文，
- * 站点挂了也还在。
+ * This is a separate path from runImport: an ordinary import has only links and has to be re-fetched; a backup holds the body,
+ * so it is still there even when the site is down.
  */
 export async function runRestore(
   documents: RestoreDocument[],
@@ -117,8 +117,8 @@ export async function runRestore(
     onProgress?.({ done: index + 1, total: documents.length })
   }
 
-  // 恢复是直接写库，不经过解析队列，所以这里要自己喊一声；
-  // 否则收藏页还停在导入前的列表上，得手动下拉才看得到。
+  // Restore writes the store directly and does not go through the parse queue, so it has to announce itself here;
+  // otherwise the saved-items screen stays on the pre-import list and needs a manual pull-to-refresh to show anything.
   if (created > 0) emitChange()
   return { created, duplicate, failed }
 }
@@ -126,7 +126,7 @@ export async function runRestore(
 export async function runImport(
   items: ImportItem[],
   onProgress?: (progress: ImportProgress) => void,
-  /** 文件名，写进每条收藏的 metadata，详情页能说明「这条是从哪个文件来的」。 */
+  /** File name, written into every saved item's metadata, so the detail page can explain “which file this one came from”. */
   fileName?: string,
 ): Promise<ImportSummary> {
   let created = 0
@@ -151,7 +151,7 @@ export async function runImport(
     onProgress?.({ done: index + 1, total: items.length })
   }
 
-  // 第一条落库就让列表刷新，别等后台整理完。
+  // Refresh the list as soon as the first item is stored; do not wait for the background tidying to finish.
   if (created > 0) emitChange()
   return { created, duplicate, failed }
 }

@@ -14,12 +14,12 @@ const SIZES = {
   sm: 'h-10 px-4',
 } as const
 const VARIANTS = {
-  // 朱红只给「当前可执行的那个动作」——一屏最多一个。
+  // Vermilion is reserved for "the one action available right now" — at most one per screen.
   primary: 'bg-accent',
   destructive: 'bg-danger',
-  // 描边次级动作：分隔线色描边，透明底。
+  // Outlined secondary action: divider-coloured border, transparent background.
   secondary: 'border border-line-strong bg-surface',
-  // 纯文字动作：不占视觉重量。
+  // Text-only action: carries no visual weight.
   quiet: 'bg-transparent',
 } as const
 const LABEL_VARIANTS = {
@@ -87,7 +87,7 @@ interface TextButtonProps {
   disabled?: boolean
 }
 
-/** 行内文字动作：加载更多、清除筛选、全部收藏。 */
+/** Inline text action: load more, clear filters, save all. */
 export function TextButton({ label, onPress, tone = 'accent', disabled = false }: TextButtonProps) {
   return (
     <Pressable
@@ -124,7 +124,7 @@ interface IconButtonProps {
   disabled?: boolean
 }
 
-/** 48dp 触区的纯图标按钮，没有底色——没有底色就没有装饰。 */
+/** An icon-only button with a 48dp touch target and no background — no background means no decoration. */
 export function IconButton({
   name,
   onPress,

@@ -15,7 +15,7 @@ interface SearchInputProps {
   autoFocus?: boolean
 }
 
-/** 收藏页的筛选框：一条下划线，不画框——框会把它变成一个「卡片里的组件」。 */
+/** The filter field on the saved-items screen: one underline, no box — a box would turn it into “a component sitting inside a card”. */
 export function SearchInput({
   value,
   onChangeText,

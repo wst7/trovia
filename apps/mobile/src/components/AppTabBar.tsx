@@ -37,13 +37,13 @@ const TABS: {
 ]
 
 /**
- * 底部导航：一条发丝线 + 三组图标与字。
- * 没有胶囊底色、没有指示器——选中只表现为「墨色 vs 极淡墨」。
+ * Bottom navigation: one hairline + three groups of icon and label.
+ * No pill background and no indicator — selection shows only as “ink versus very pale ink”.
  */
 export function AppTabBar() {
   const router = useRouter()
   const pathname = usePathname()
-  // 由导航器统一渲染，所以当前 Tab 从路径推断，页面不用再传。
+  // Rendered centrally by the navigator, so the current tab is inferred from the path and pages do not have to pass it in.
   const active: TabKey = pathname.startsWith('/documents')
     ? 'documents'
     : pathname.startsWith('/settings')
@@ -98,5 +98,5 @@ export function AppTabBar() {
   )
 }
 
-/** 底部导航占总高度（不含安全区），列表用它留净空。 */
+/** The total height the bottom navigation occupies (excluding the safe area); lists use it to leave clear space. */
 export const TAB_BAR_HEIGHT = 56

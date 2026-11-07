@@ -5,8 +5,8 @@ import { Text } from '../ui/text'
 import { t } from '../i18n'
 
 /**
- * 受限 Markdown 渲染器：标题、段落、列表、引用、代码块、行内代码/粗体/斜体、
- * http(s) 链接。文本始终作为 Text 子节点输出，不解析原始 HTML，也不使用 WebView。
+ * Restricted Markdown renderer: headings, paragraphs, lists, quotes, code blocks, inline code/bold/italic,
+ * and http(s) links. Text is always emitted as Text children; raw HTML is never parsed and no WebView is used.
  */
 
 const INLINE_PATTERN = /(`[^`]+`|\*\*[^*]+?\*\*|\*[^*]+?\*|\[[^\]]+\]\([^)\s]+\))/g
@@ -67,7 +67,7 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
   return nodes
 }
 
-/** 正文里的图片：宽度撑满，高度按真实比例算，避免长图被裁成一条。 */
+/** Images in the body: full width, height from the real aspect ratio, so a tall image isn't cropped to a strip. */
 function ArticleImage({ uri, alt, onPress }: { uri: string; alt?: string; onPress?: () => void }) {
   const [ratio, setRatio] = useState(16 / 10)
   const [failed, setFailed] = useState(false)
@@ -90,10 +90,10 @@ function ArticleImage({ uri, alt, onPress }: { uri: string; alt?: string; onPres
 
   if (failed) return null
 
-  // alt 常常是文件名（IMG_2043.png）或「图片」两个字，那种当图注只是噪声。
+  // alt is often a filename (IMG_2043.png) or just the word for "image"; as a caption that is only noise.
   const caption = (alt ?? '').trim()
-  // CSDN 这类站点把「最新推荐文章于 2026-10-12 发布」整句塞进 alt，
-  // 显示出来就是一条和图片毫无关系的噪声，还可能和页头的时间重复。
+  // Sites like CSDN stuff a whole sentence such as "latest recommended article published on 2026-10-12" into alt,
+  // which shows up as noise unrelated to the image and may also repeat the date from the page header.
   const captionIsNoise =
     caption.length < 4 ||
     caption.length > 80 ||
@@ -134,12 +134,12 @@ export function Markdown({
   resolveImage,
 }: {
   source: string
-  /** 点开图片：把整篇的图片一起传出去，方便左右翻。 */
+  /** Opening an image: hand over all the images in the article so they can be swiped side to side. */
   onImagePress?: (url: string, images: string[]) => void
-  /** 远程地址 → 本地文件；图片落盘后详情页靠它离线显示。 */
+  /** Remote URL → local file; once images are on disk the detail screen uses this to show them offline. */
   resolveImage?: (url: string) => string
 }) {
-  // 图片一律单独成段：段里既有字又有图时，也要保持原来的先后顺序。
+  // Images always get a paragraph of their own: when a paragraph holds both text and images, the original order still holds.
   const normalized = source.replace(/(!\[[^\]]*\]\([^)\s]+\))/g, '\n\n$1\n\n')
   const images = [...new Set([...source.matchAll(/!\[[^\]]*\]\(([^)\s]+)\)/g)].map((match) => match[1]))]
   const resolved = images.map((url) => resolveImage?.(url) ?? url)
@@ -183,7 +183,7 @@ function renderBlocks(
     if (state.paragraph.length === 0) return
     const key = nextKey('p')
     blocks.push(
-      // 长文阅读：行距比界面文案松一档，段间留白也比列表大，眼睛才不会粘行。
+      // Long-form reading: line height one notch looser than UI copy, paragraph gaps larger than list gaps, so the eye doesn't stick on a line.
       <Text
         key={key}
         className="text-ink"

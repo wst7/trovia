@@ -1,24 +1,24 @@
 /**
- * 用大模型理解搜索意图。
+ * Use an LLM to understand search intent.
  *
- * 规则层（query.ts）能覆盖「昨天」「上周三」「2022年发表」这些写法，
- * 但「上次跟你说的那个」「前阵子存的讲睡眠的」它认不出来。模型擅长后者，
- * 代价是慢、且结果不总是稳定 —— 所以：
+ * The rule layer (query.ts) covers phrasings like "yesterday", "last Wednesday" or "published in 2022",
+ * but not "that one I told you about" or "the one about sleep I saved a while back". The model is good at the latter,
+ * at the cost of being slow and not always stable — so:
  *
- *   1. 只把**这一句话**发给模型，不发收藏内容（本来也没必要）；
- *   2. 模型只负责翻译成 {关键词, 时间区间, 字段}，不负责给结果；
- *   3. 返回的日期要过校验（合理年份、from < to），不合规就退回规则层；
- *   4. 同一次会话里同一句话只问一次，缓存住；
- *   5. 超时 / 未配置 / 报错一律退回规则层，不让搜索变不可用。
+ *   1. send the model **only this one sentence**, never the saved content (which isn't needed anyway);
+ *   2. the model only translates into {keywords, time range, field}; it does not produce results;
+ *   3. returned dates are validated (plausible year, from < to); anything invalid falls back to the rule layer;
+ *   4. the same sentence is asked about once per session and cached;
+ *   5. timeout / not configured / error always falls back to the rule layer, so search never becomes unusable.
  */
 import type { DateField, ParsedQuery } from './query'
 import { parseQuery, timeOf } from './query'
 
 export interface ModelDate {
   kind: 'day' | 'range' | 'year' | 'month' | 'none'
-  /** YYYY-MM-DD，含当天。 */
+  /** YYYY-MM-DD, inclusive of that day. */
   from: string | null
-  /** YYYY-MM-DD，不含当天。 */
+  /** YYYY-MM-DD, exclusive of that day. */
   to: string | null
 }
 
@@ -26,7 +26,7 @@ export interface ModelIntent {
   keywords: string
   field: DateField
   date: ModelDate
-  /** 给用户看的说法，例如「昨天保存的」。 */
+  /** The user-facing wording, e.g. "saved yesterday". */
   label: string | null
 }
 
@@ -81,7 +81,7 @@ function validDay(text: unknown, now: Date): string | null {
   return `${match[1]}-${match[2]}-${match[3]}`
 }
 
-/** 解析模型返回的 JSON；字段不合规就丢弃那一部分，不整体失败。 */
+/** Parse the JSON the model returns; drop any field that is invalid rather than failing the whole thing. */
 export function parseIntentJson(raw: string, now: Date): ModelIntent | null {
   const cleaned = raw.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim()
   const start = cleaned.indexOf('{')
@@ -110,7 +110,7 @@ export function parseIntentJson(raw: string, now: Date): ModelIntent | null {
   if (dateKind !== 'none' && from && to) {
     date = timeOf(to)! > timeOf(from)! ? { kind: dateKind, from, to } : { kind: 'none', from: null, to: null }
   } else if (dateKind !== 'none' && from && !to) {
-    // 只给了起点：按 kind 补一个合理的终点。
+    // Only a start was given: fill in a sensible end based on kind.
     const startMs = timeOf(from)!
     const endMs =
       dateKind === 'day' ? startMs + DAY_MS : dateKind === 'month' ? startMs + 31 * DAY_MS : dateKind === 'year' ? startMs + 366 * DAY_MS : null
@@ -121,10 +121,10 @@ export function parseIntentJson(raw: string, now: Date): ModelIntent | null {
   return { keywords, field, date, label }
 }
 
-/** 模型自带的说法可能写成「今天找到的」——统一成「今天保存的 / 昨天发表的」。 */
+/** The model's own wording may say "found today" — normalize it to "saved today / published yesterday". */
 function labelOf(date: ModelDate, field: DateField, modelLabel: string | null, now: Date): string | null {
   const action = field === 'published' ? '发表' : '保存'
-  // 模型自己写得像人话（「上个月存的」）就留着；写成「今天找到的」这种动词不一致的就重算。
+  // If the model's wording already reads naturally ("saved last month"), keep it; if the verb is inconsistent ("found today"), recompute it.
   if (modelLabel && /(保存|收藏|存的|存了|发表|发布)/.test(modelLabel) && !/(找到|搜到)/.test(modelLabel)) {
     return modelLabel
   }
@@ -152,14 +152,14 @@ function labelOf(date: ModelDate, field: DateField, modelLabel: string | null, n
   return `${from.getMonth() + 1}月${from.getDate()}日到${lastDay.getMonth() + 1}月${lastDay.getDate()}日${action}的`
 }
 
-/** 模型结果与规则结果合并：时间以模型为准（它更懂难句），规则补齐模型漏掉的部分。 */
+/** Merge the model result with the rule result: trust the model for time (it handles hard sentences better), and let the rules fill in what the model missed. */
 export function mergeIntent(rule: ParsedQuery, intent: ModelIntent | null, now: Date): ParsedQuery {
   if (!intent) return rule
 
-  // 规则能确定的时间（昨天/上周/上个月）优先：它精确且稳定，模型只补规则认不出的说法。
+  // A time the rules can pin down (yesterday/last week/last month) wins: it is exact and stable, and the model only fills in phrasings the rules can't read.
   const modelHasDate = intent.date.kind !== 'none' && Boolean(intent.date.from) && Boolean(intent.date.to)
   const fromModel = rule.ranges.length === 0 && modelHasDate
-  // 显示文案一律按日期算，不采信模型自己写的句子（小模型爱把关键词塞进 label）。
+  // The display wording is always computed from the dates; the model's own sentence is not trusted (small models like to stuff keywords into label).
   const modelLabel = fromModel ? labelOf(intent.date, intent.field, null, now) : null
   const ranges = fromModel
     ? [
@@ -174,7 +174,7 @@ export function mergeIntent(rule: ParsedQuery, intent: ModelIntent | null, now: 
     : rule.ranges
 
   const text = intent.keywords || rule.text
-  // 时间条件没变时就沿用语法的说法（「昨天保存的」），不要降级成「昨天」。
+  // When the time condition hasn't changed, keep the grammatical wording ("saved yesterday") instead of degrading it to "yesterday".
   const summary = fromModel ? modelLabel : rule.summary
   const onlyDate = text.replace(/[\s\p{P}]/gu, '').length === 0
   void now
@@ -184,12 +184,12 @@ export function mergeIntent(rule: ParsedQuery, intent: ModelIntent | null, now: 
 export type Completer = (messages: unknown[], maxTokens: number) => Promise<string>
 
 /**
- * 句子里明显带时间线索、但模型没给区间的说法。
- * 小模型容易漏，这种情况再问一次并点名要求给区间，代价只有一次调用。
+ * Phrasings that clearly carry a time clue but for which the model returned no range.
+ * Small models miss these easily, so in that case ask once more and explicitly demand a range; it costs only one extra call.
  */
 const FUZZY_TIME = /(前阵子|前段时间|上次|上回|那天|这些天|这几天|前几天|前两天|最近一阵|有一阵|早些时候)/
 
-/** 问模型要意图；任何异常都返回 null，由调用方退回规则层。 */
+/** Ask the model for the intent; any exception returns null and the caller falls back to the rule layer. */
 export async function detectIntent(query: string, now: Date, complete: Completer): Promise<ModelIntent | null> {
   try {
     const messages: unknown[] = [
@@ -200,7 +200,7 @@ export async function detectIntent(query: string, now: Date, complete: Completer
     if (first && first.date.kind !== 'none') return first
     if (!FUZZY_TIME.test(query)) return first
 
-    // 第二次：把「必须给出区间」说清楚，仍然要 JSON。
+    // Second attempt: state plainly that a range is required, still JSON.
     const retry = parseIntentJson(
       await complete(
         [
@@ -218,10 +218,10 @@ export async function detectIntent(query: string, now: Date, complete: Completer
   }
 }
 
-// 同一句话在一次会话里只问一次：反复搜索不该反复计费，也不该出现前后不一致。
+// The same sentence is asked only once per session: repeated searches shouldn't cost repeatedly or give inconsistent answers.
 const cache = new Map<string, ParsedQuery>()
-// 同一句话可能被同时触发两次（搜索 + 本地数据变化后的自动刷新），
-// 合并成一个请求，避免重复计费与前后不一致。
+// The same sentence can be triggered twice at once (a search plus an automatic refresh after local data changes),
+// so the requests are merged to avoid double billing and inconsistency.
 const inflight = new Map<string, Promise<ParsedQuery>>()
 const CACHE_LIMIT = 60
 
@@ -229,7 +229,7 @@ function cacheKey(query: string, now: Date): string {
   return `${dayString(now)}|${query}`
 }
 
-/** 搜索入口：规则先行，配置了模型再用模型修正。 */
+/** Search entry point: rules first, then the model corrects it if one is configured. */
 export async function resolveIntent(
   query: string,
   options: { now?: Date; complete?: Completer | null } = {},
@@ -257,7 +257,7 @@ export async function resolveIntent(
   return request
 }
 
-/** 仅测试用：清空缓存。 */
+/** Tests only: clear the cache. */
 export function clearIntentCache(): void {
   cache.clear()
   inflight.clear()

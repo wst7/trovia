@@ -6,7 +6,7 @@ module.exports = {
   presets: [require('nativewind/preset')],
   darkMode: 'media',
   theme: {
-    // 间距直接是 dp：p-4 = 16dp，不经过 rem（NativeWind 的 rem 是 14px）。
+    // Spacing is in dp directly: p-4 = 16dp, with no rem step (NativeWind's rem is 14px).
     spacing: {
       0: '0px',
       px: '1px',
@@ -49,7 +49,7 @@ module.exports = {
         warn: c('warn'),
         ok: c('ok'),
       },
-      // 五档字阶。中文大字需要负字距才紧实，正文一律 0，label 唯一带正字距。
+      // Five type sizes. Large Chinese type needs negative tracking to look tight, body text is always 0, and label is the only one with positive tracking.
       fontSize: {
         display: ['28px', { lineHeight: '36px', letterSpacing: '-0.5px' }],
         title: ['20px', { lineHeight: '28px', letterSpacing: '-0.2px' }],

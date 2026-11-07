@@ -1,4 +1,4 @@
-// 与 docs/ENGINEERING.md 第 5 节 API 契约一一对应。
+// One-to-one with the API contract in section 5 of docs/ENGINEERING.md.
 
 export type SourceType = 'web' | 'wechat' | 'github' | 'youtube' | 'bilibili' | 'twitter'
 
@@ -34,7 +34,7 @@ export interface AuthResponse {
   user: User
 }
 
-/** DocumentSummary：列表与搜索外的通用摘要字段 */
+/** DocumentSummary: the common summary fields, apart from lists and search */
 export interface DocumentSummary {
   id: string
   url: string
@@ -45,12 +45,12 @@ export interface DocumentSummary {
   parse_status: ParseStatus
   parse_error_code: string | null
   saved_at: string
-  /** 列表缩略图用：正文里的图片地址，与本地文件按下标对齐。 */
+  /** For list thumbnails: image URLs from the body, index-aligned with the local files. */
   images?: string[]
   image_files?: string[]
 }
 
-/** Detail：Summary 全字段 + 正文与元数据 */
+/** Detail: every Summary field plus body and metadata */
 export interface DocumentDetail extends DocumentSummary {
   canonical_url: string
   author: string | null
@@ -62,9 +62,9 @@ export interface DocumentDetail extends DocumentSummary {
   language: string | null
   content_markdown: string | null
   plain_text: string | null
-  /** 正文里的图片地址（本机解析时抓取；后端解析的条目可能没有这个字段）。 */
+  /** Image URLs from the body (captured during on-device parsing; items parsed by the backend may not have this field). */
   images?: string[]
-  /** 与 images 等长的本地文件路径；空字符串表示这张没落盘。 */
+  /** Local file paths, the same length as images; an empty string means that one never reached disk. */
   image_files?: string[]
   metadata: Record<string, unknown>
   last_parsed_at: string | null
@@ -133,9 +133,9 @@ export interface SearchResult {
   score: number
   match_reason: string
   matched_excerpt: string | null
-  /** 命中方式：字面匹配，或只找到意思相近的内容。 */
+  /** How it matched: literally, or only content with a similar meaning was found. */
   match_kind?: 'literal' | 'semantic'
-  /** 失败原因，用于列表里说清「为什么没读到」。 */
+  /** Failure reason, used in the list to spell out "why nothing was read". */
   parse_error_code?: string | null
   saved_at: string
   parse_status: ParseStatus
@@ -147,6 +147,6 @@ export interface SearchResponse {
   total: number
 }
 
-// 平台无关的运行时常量与工具：Web 与移动端共用，禁止引入 DOM / 原生 API。
+// Platform-agnostic runtime constants and utilities shared by web and mobile; importing DOM or native APIs is forbidden.
 export * from './format'
 export * from './errors'

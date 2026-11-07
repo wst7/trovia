@@ -1,10 +1,10 @@
 /**
- * 「这条失败值不值得再试」的判定。
+ * Deciding whether a given failure is worth retrying.
  *
- * 站点一侧的决定（登录墙、人机验证、只在 App 里给内容、正文靠脚本渲染）
- * 不会因为用户多点几次而改变，所以这些错误码不该出现重试入口。
+ * Decisions made on the site's side (login wall, CAPTCHA, content only inside the App, body rendered by script)
+ * don't change just because the user taps a few more times, so those error codes should not offer a retry entry point.
  *
- * 跑法：npx tsx apps/mobile/src/local/__tests__/retry.test.mts
+ * How to run: npx tsx apps/mobile/src/local/__tests__/retry.test.mts
  */
 import assert from 'node:assert/strict'
 import { isRetryableError } from '../retry.ts'

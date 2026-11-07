@@ -1,8 +1,8 @@
 /**
- * 语义检索的纯逻辑：请求 embeddings、算相似度、排序。
+ * The pure logic of semantic search: request embeddings, compute similarity, rank.
  *
- * 刻意不引入 react-native / sqlite / AsyncStorage，这样能在 Node 里直接跑测试
- * ——向量这块最容易出错的恰恰是「返回顺序」「归一化」「阈值」，必须能单测。
+ * Deliberately no react-native / sqlite / AsyncStorage, so it runs directly under Node in tests
+ * — the things that break most often in the vector path are exactly "return order", "normalization" and "thresholds", so they must be unit-testable.
  */
 export interface EmbedConfig {
   baseUrl: string
@@ -12,20 +12,20 @@ export interface EmbedConfig {
 
 const TIMEOUT_MS = 12_000
 /**
- * 相似度门槛。实测（qwen3-embedding）相关句落在 0.36–0.51，不相关 0.17–0.35，
- * 不同模型分布差异很大，所以不能只用一个固定值：
- *   - 绝对下限 0.30：实测相关句 0.33–0.51、无关句 0.17–0.35，两者有重叠，
- *     所以下限只负责挡掉明显无关的，真正的噪声靠下面的相对差距控制；
- *   - 相对差距：只保留与最高分相差不超过 margin 的，避免为凑数带进噪声。
+ * Similarity thresholds. Measured with qwen3-embedding, related sentences land at 0.36–0.51 and unrelated at 0.17–0.35,
+ * different models spread very differently, so a single fixed value is not enough:
+ *   - absolute floor 0.30: measured related 0.33–0.51, unrelated 0.17–0.35, and the two overlap,
+ *     so the floor only removes the obviously unrelated; real noise is handled by the relative margin below;
+ *   - relative margin: keep only those within margin of the top score, so the list isn't padded with noise.
  */
 /**
- * 语义命中的绝对下限。
+ * Absolute floor for a semantic hit.
  *
- * 这个数不是拍的，是在真机上用 309 条真实收藏量出来的（qwen3-embedding）：
- *   真实命中「延时队列」的最高分 0.47
- *   无匹配的「量子纠缠」0.42、「明天会下雨」0.41、「zzzz没…」0.41
- * 0.30 会让后面这类查询稳定拿到五条「意思相近」，比说「没找到」更伤信任；
- * 0.45 把噪声挡在外面，同时留住真正的语义命中。换 embedding 模型后要重测。
+ * This number is not a guess; it was measured on a device with 309 real saved items (qwen3-embedding):
+ *   a real hit for "delayed queue" peaks at 0.47
+ *   with no match, "quantum entanglement" scores 0.42, "will it rain tomorrow" 0.41, "zzzz…" 0.41
+ * 0.30 would let queries like the latter reliably get five "roughly similar" hits, which costs more trust than saying "not found";
+ * 0.45 keeps the noise out while keeping real semantic hits. Re-measure after switching embedding models.
  */
 export const SEMANTIC_MIN_SCORE = 0.45
 export const SEMANTIC_RELATIVE_MARGIN = 0.05
@@ -36,7 +36,7 @@ export function embeddingEndpoint(baseUrl: string): string {
   return `${base}/embeddings`
 }
 
-/** 批量取向量；服务端不保证顺序，所以按 index 回填。 */
+/** Fetch vectors in bulk; the server doesn't guarantee order, so results are filled in by index. */
 export async function embedTexts(
   texts: string[],
   config: EmbedConfig,
@@ -86,7 +86,7 @@ export function cosine(a: Float32Array, b: Float32Array): number {
   return dot / (Math.sqrt(normA) * Math.sqrt(normB))
 }
 
-/** 送进模型的文本：标题 + 摘要 + 关键词 + 正文前段，控制在 2000 字以内。 */
+/** Text handed to the model: title + summary + keywords + the start of the body, capped at 2000 characters. */
 export function embeddingInputOf(doc: {
   title: string | null
   summary: string | null
@@ -105,8 +105,8 @@ export interface RankedVector {
 }
 
 /**
- * 排序 + 过滤：低于门槛的丢掉，离最高分太远的丢掉，已经展示过的丢掉。
- * 先算全部再决定门槛，因为「最高分」本身是判断相关性的依据。
+ * Rank + filter: drop anything below the floor, anything too far from the top score, anything already shown.
+ * Score everything before deciding the cutoff, because the top score is itself what relevance is judged against.
  */
 export function rankBySimilarity(
   vectors: { id: string; vec: Float32Array }[],

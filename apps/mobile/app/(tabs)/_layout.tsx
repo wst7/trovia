@@ -3,12 +3,12 @@ import { Tabs } from 'expo-router'
 import { AppTabBar } from '../../src/components/AppTabBar'
 
 /**
- * 三个主页面走真正的 Tab 导航。
+ * The three main screens use real tab navigation.
  *
- * 之前是三个独立 Stack 页面、各自在底部画一条「假 Tab 栏」：切页时整页卸载重挂，
- * 在 Fabric 下会把还挂在旧父节点上的原生视图插进新容器，直接崩在
+ * Previously they were three separate stack screens each drawing its own fake tab bar at the bottom: switching screens unmounted and remounted the whole page,
+ * which under Fabric inserted a native view still attached to its old parent into a new container, crashing with
  * `IllegalStateException: The specified child already has a parent`。
- * 交给导航器管理后页面保持挂载，滚动位置也不会再丢。
+ * With the navigator in charge the pages stay mounted, and scroll position is no longer lost.
  */
 export default function TabsLayout() {
   return (

@@ -12,9 +12,9 @@ import { useToast } from '../providers/ToastProvider'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { useT } from '../i18n'
 
-/** 上次已经问过的链接：同一个链接不重复弹，换了一条再问。 */
+/** The link already asked about last time: the same link is not offered twice, and a different one is asked about again. */
 const LAST_OFFERED_KEY = 'trovia.clipboard.v1'
-// 改名前的键：只为读出「上次已经问过的那条链接」，避免重装/升级后再问一遍。
+// The key from before the rename: only read to get “the link already asked about”, so a reinstall/upgrade does not ask all over again.
 const LEGACY_LAST_OFFERED_KEY = 'xunji.clipboard.v1'
 const MAX_CLIPBOARD_CHARS = 5000
 const CHECK_DELAY_MS = 900
@@ -25,10 +25,10 @@ interface Candidate {
 }
 
 /**
- * 打开或回到 App 时看一眼剪贴板：如果有网页链接且还没收藏，就问要不要保存。
+ * Take a look at the clipboard when the app opens or comes back: if it holds a web link that is not saved yet, ask whether to save it.
  *
- * 只读一次、只用来判断“是不是链接”。剪贴板文字不写日志、不落库；
- * 用户点保存时，链接随保存进入本机数据库，标题种子只在内存里传给保存流程。
+ * It is read once and only used to decide “is this a link”. Clipboard text goes into no log and no database;
+ * when the user taps save, the link enters the local database as part of the save, and the title seed is passed to the save flow in memory only.
  */
 export function ClipboardPrompt({ enabled }: { enabled: boolean }) {
   const t = useT()
@@ -45,7 +45,7 @@ export function ClipboardPrompt({ enabled }: { enabled: boolean }) {
   const check = useCallback(async () => {
     if (!enabled || checkingRef.current || savingRef.current) return
     if (AppState.currentState !== 'active') return
-    // 分享进入的保存页有自己的流程，别叠一层剪贴板弹窗。
+    // The save screen reached via share has its own flow; do not stack a clipboard dialog on top of it.
     if (pathnameRef.current.startsWith('/share')) return
 
     checkingRef.current = true
@@ -68,20 +68,20 @@ export function ClipboardPrompt({ enabled }: { enabled: boolean }) {
       }
       setCandidate({ url, hint: titleHintFrom(text, url) })
     } catch {
-      // 剪贴板不可用（iOS 未允许粘贴、后台、系统限制）时静默跳过。
+      // Skip silently when the clipboard is unavailable (iOS has not allowed paste, the app is in the background, system restrictions).
     } finally {
       checkingRef.current = false
     }
   }, [enabled])
 
-  // 冷启动进入首页后问一次。
+  // Ask once after a cold start lands on the home screen.
   useEffect(() => {
     if (!enabled) return
     const timer = setTimeout(() => void check(), CHECK_DELAY_MS)
     return () => clearTimeout(timer)
   }, [enabled, check])
 
-  // 从后台回来时再看一眼：这时剪贴板通常刚被其他 App 写入。
+  // Look again when coming back from the background: the clipboard has usually just been written by another app.
   useEffect(() => {
     if (!enabled) return
     const sub = AppState.addEventListener('change', (state) => {

@@ -98,7 +98,7 @@ def test_keyword_query_hits_correct_document_with_real_reason(db_session):
     reason = hits[0].match_reason
     assert "任务调度" in reason, f"match_reason 必须列出真实命中词：{reason}"
     assert "红烧肉" not in reason, "解释不得包含未命中的内容"
-    # 命中词确实存在于正文，片段取自真实正文
+    # The matched words really exist in the body, and the excerpt comes from the real body
     assert "任务调度" in sched.plain_text
     assert hits[0].matched_excerpt and "任务调度" in hits[0].matched_excerpt
     assert cook.id not in [uuid.UUID(h.document_id) for h in hits]
@@ -143,8 +143,8 @@ def test_semantic_recall_via_injected_vectors(db_session, monkeypatch):
     hit = hits[0]
     assert "语义" in hit.match_reason, hit.match_reason
     assert "来源" in hit.match_reason, hit.match_reason
-    assert "猫咪" not in hit.match_reason  # 不编造文档里不存在的中文命中词
-    # 片段来自语义命中的 chunk 本身（真实证据）
+    assert "猫咪" not in hit.match_reason  # Do not invent Chinese match words that do not exist in the document
+    # The excerpt comes from the very chunk that hit semantically (real evidence)
     assert hit.matched_excerpt and "Cats meow" in hit.matched_excerpt
 
 
@@ -179,7 +179,7 @@ def test_unrelated_query_returns_empty(db_session):
         body="We compared CNI plugins for Kubernetes clusters, including Calico and Cilium.",
         summary="Kubernetes CNI 对比评测",
     )
-    # 走真实 local embedding：无关查询与该正文的余弦噪声实测远低于语义门槛
+    # Goes through the real local embedding: the measured cosine noise between an unrelated query and this body is far below the semantic threshold
     vec = get_embedding_provider(get_settings()).embed([doc.plain_text])[0]
     _chunk(db_session, doc, doc.plain_text, vec)
 

@@ -1,11 +1,11 @@
 /**
- * 「云端超过 500 条就永远同步不到尾部」的回归测试。
+ * Regression test for “once the cloud holds more than 500 entries, the tail can never be synced”.
  *
- * 老逻辑：entries = list().slice(0, limit)。PROPFIND 顺序是稳定的，
- * 所以第 501 条之后每一轮都被截掉，永远轮不到。
+ * Old logic: entries = list().slice(0, limit). PROPFIND order is stable,
+ * so everything after entry 501 was truncated every round and never got its turn.
  *
- * 新逻辑：扫全部条目；带 etag 且与基准一致、本地也没改过的直接跳过，
- * limit 只限制「这一轮最多读几个文件」。
+ * New logic: scan every entry; skip outright the ones that carry an etag matching the baseline and were not changed locally,
+ * so limit only caps “how many files are read this round”.
  */
 import assert from 'node:assert/strict'
 import { syncOnce } from '../src/index.ts'
@@ -81,7 +81,7 @@ for (let i = 0; i < TOTAL; i += 1) {
 }
 
 const store = new MemoryStore()
-// 前 500 条已经在基准里（etag 一致、本地没改过）；后 100 条才是这一轮该读的。
+// The first 500 are already in the baseline (etag matches, not changed locally); the last 100 are what this round should read.
 for (let i = 0; i < 500; i += 1) {
   const id = `doc${String(i).padStart(3, '0')}`
   store.revs.set(id, 1)
@@ -104,7 +104,7 @@ assert.ok(
 assert.equal(first.pulled, LIMIT, '取回条数应等于本轮读取数')
 assert.equal(first.remoteFiles, TOTAL, '报告的云端文件数必须是全量，不是被截断后的数量')
 
-// 第二轮：上一轮读完的 100 条已进基准，这一轮不该再读它们。
+// Second round: the 100 read last round are already in the baseline, so they must not be read again this round.
 target.reads = []
 store.applied = []
 const second = await syncOnce({
@@ -117,7 +117,7 @@ const second = await syncOnce({
 assert.equal(second.pulled, 0, '第二轮没有新内容，不该再拉')
 assert.equal(target.reads.length, 0, 'etag 一致的条目不该再发 GET')
 
-// 第三轮：改掉一个远端文件，只该读这一个。
+// Third round: change one remote file, and only that one should be read.
 const changed = 'docs/doc042.json'
 target.files.set(changed, JSON.stringify({ ...makeRecord('doc042', '改过的标题'), rev: 2 }))
 target.etags.set(changed, 'etag-changed')
@@ -133,16 +133,16 @@ assert.deepEqual(target.reads, [changed], `只该重读被改的那一个，实�
 assert.equal(third.pulled, 1, '改过的那条应该被拉回来')
 
 /*
- * 另一个真实故障：云端 7 份、本地 6 份，同步却报「没有可同步的」。
- * 原因是 etag 记着、基准 rev 丢了（清空过库或那条被物理删了）——
- * 只有 etag 一致就跳过读取，这份就永远拉不回来。
+ * Another real failure: 7 copies in the cloud, 6 locally, yet sync reported “nothing to sync”.
+ * The cause was the etag still being recorded while the baseline rev was lost (the store had been cleared, or that row physically deleted) —
+ * so skipping the read on a matching etag alone meant that copy could never be pulled back.
  */
 {
   const t2 = new MemoryTarget()
   t2.files.set('docs/only.json', JSON.stringify(makeRecord('only', '只存在本地记录里的那条')))
   t2.etags.set('docs/only.json', 'etag-only')
   const s2 = new MemoryStore()
-  s2.etags.set('only', 'etag-only') // 有 etag，没有 rev —— 就是丢基准的状态
+  s2.etags.set('only', 'etag-only') // it has an etag but no rev — exactly the lost-baseline state
   s2.revs.set('keep', 1)
 
   const report = await syncOnce({ target: t2, store: s2, deviceId: 'test', now: () => '2026-01-03T00:00:00.000Z' })

@@ -1,12 +1,12 @@
 /**
- * 插件与手机端共用的记录格式。
+ * Shared record format used by both the extension and the mobile app.
  *
- * 这里的规则必须和 apps/mobile/src/local/util.ts、sync-store.ts 保持一致：
- * 判重规则一旦漂移，同一个链接就会在云端变成两条，手机上出现重复条目。
- * test/sync.test.mjs 会拿手机端的规范化结果做对照，改这里要一起改测试。
+ * The rules here must stay identical to apps/mobile/src/local/util.ts and sync-store.ts:
+ * once the dedupe rules drift, the same link becomes two records in the cloud and the phone shows duplicate entries.
+ * test/sync.test.mjs compares against the mobile app's normalization output, so changing this means changing the test as well.
  */
 
-/** 跟踪参数，保存时去掉；手机端是同一份正则。 */
+/** Tracking parameters, stripped on save; the mobile app uses the same regex. */
 const TRACKING = /^(utm_|fbclid|gclid|spm|share_|ref$|source$|from$)/i
 
 export function normalizeUrl(raw) {
@@ -32,7 +32,7 @@ export function normalizeUrl(raw) {
       try {
         key = decodeURIComponent(rawKey)
       } catch {
-        // 非法编码按原文判断，不能让一条链接因此存不进去。
+        // Judge malformed encoding on the raw text — a key must not become unsaveable because of it.
       }
       return !TRACKING.test(key)
     })
@@ -48,10 +48,10 @@ export function hostOf(url) {
 }
 
 /**
- * 文档 id 由规范化后的链接算出，不是随机数。
+ * The document id is derived from the normalized link, not a random number.
  *
- * 手机端新建条目用的是随机 id，插件做不到（两台机器各存同一个链接会得到两条）。
- * 用链接做散列，重复保存同一个页面就落在同一个文件上，rev 递增，覆盖的是自己。
+ * Creating a new entry with a random id is what the mobile app does, and the extension cannot (two machines each saving the same link would get two records).
+ * Hashing the link means saving the same page again lands on the same file, rev increases, and it overwrites itself.
  */
 export function docId(url) {
   const canonical = normalizeUrl(url)
@@ -65,8 +65,8 @@ export function docId(url) {
 }
 
 /**
- * 一条待抓取的记录。payload 里只放手机端立刻就有的东西：
- * 链接、标题、来源站点。正文留给手机端抓，否则插件里要再养一套解析器。
+ * A record waiting to be fetched. payload holds only what the mobile app has right away:
+ * link, title, source site. The body is left for the mobile app to fetch, otherwise the extension would have to maintain a second parser.
  */
 export function buildRecord({ url, title, rev = 1, savedAt = new Date().toISOString() }) {
   const canonical = normalizeUrl(url)

@@ -15,8 +15,8 @@ import { GUTTER } from '../ui/Screen'
 import { usePalette } from '../ui/palette'
 
 /**
- * 大模型设置：可选功能，所以从「我的」点进来单独一屏。
- * 关闭时整体变淡——用户能看见配置，也知道它当前不生效。
+ * LLM settings: an optional feature, so it gets its own screen reached from "Me".
+ * When it is switched off the whole screen dims — users can see the configuration and know it is not currently in effect.
  */
 export function LlmSettingsScreen() {
   const t = useT()
@@ -54,7 +54,7 @@ export function LlmSettingsScreen() {
       setSemantic(llm.semantic)
       setHasKey(llm.hasKey)
     } catch {
-      // 读不到就保持上一次的值，不打断用户。
+      // If it cannot be read, keep the previous values and do not interrupt the user.
     }
   }, [])
 
@@ -100,7 +100,7 @@ export function LlmSettingsScreen() {
         toast(t('llm.needModel'), { type: 'error' })
         return
       }
-      // 本地服务不需要 key；只有远端地址才强制要求。
+      // A local service needs no key; only a remote address makes one mandatory.
       if (!hasKey && !apiKey.trim() && !isLocalEndpoint(baseUrl)) {
         toast(t('llm.needKey'), { type: 'error' })
         return

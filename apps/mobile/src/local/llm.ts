@@ -2,17 +2,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as SecureStore from 'expo-secure-store'
 
 /**
- * 大模型是「可选的增强」，不是运行前提：
- * 没配置时用抽取式摘要（原文里的句子），配了才调用用户自己的
- * OpenAI 兼容服务。密钥只进 SecureStore，不写 AsyncStorage、不进日志。
+ * The LLM is an “optional enhancement”, not a prerequisite for running:
+ * with nothing configured it uses extractive summaries (sentences taken from the original text); only when configured does it call the user's own
+ * OpenAI-compatible service. The key only goes into SecureStore, never into AsyncStorage and never into logs.
  */
 export interface LlmConfig {
   enabled: boolean
   baseUrl: string
   model: string
-  /** 用模型理解「找找昨天的」这类搜索意图，默认开启。 */
+  /** Use the model to understand search intent such as “find me yesterday's”, on by default. */
   intent: boolean
-  /** 向量模型：字面匹配找不到时用语义兜底；留空则关闭语义检索。 */
+  /** Embedding model: semantic fallback when literal matching finds nothing; leave it empty to turn semantic search off. */
   embedModel: string
   semantic: boolean
 }
@@ -32,12 +32,12 @@ export const DEFAULT_LLM: LlmConfig = {
 
 const CONFIG_KEY = 'trovia.llm.v1'
 const SECRET_KEY = 'trovia.llm.key.v1'
-// 改名前的键：只读一次，读到就搬到新键上。用户配过的模型不该因为改名丢掉。
+// The key from before the rename: read once, and migrate to the new key when found. A model the user configured must not be lost over a rename.
 const LEGACY_CONFIG_KEY = 'xunji.llm.v1'
 const LEGACY_SECRET_KEY = 'xunji.llm.key.v1'
 const TIMEOUT_MS = 30_000
 
-/** 旧的存储键 → 新键。读到旧值就顺手写回新键，下次不再读旧的。 */
+/** Old storage key → new key. When the old value is read it is written back to the new key on the way, so the old one is not read again. */
 async function readMigrated(key: string, legacyKey: string): Promise<string | null> {
   const current = await AsyncStorage.getItem(key)
   if (current) return current
@@ -103,8 +103,8 @@ export async function loadLlmKey(): Promise<string | null> {
 }
 
 /**
- * 本地服务（Ollama、LM Studio、局域网里的 vLLM）通常不校验 key。
- * 这类地址允许留空，否则「在自己电脑上跑模型」这条路会被必填项堵死。
+ * Local services (Ollama, LM Studio, vLLM on the LAN) usually do not check the key.
+ * These addresses are allowed to leave it blank, otherwise the “run the model on your own computer” route would be walled off by a required field.
  */
 export function isLocalEndpoint(baseUrl: string): boolean {
   return /localhost|127\.0\.0\.1|0\.0\.0\.0|10\.0\.2\.2|192\.168\.|\b10\.\d+\.\d+\.\d+|\.local\b/i.test(baseUrl)
@@ -115,7 +115,7 @@ function endpointOf(baseUrl: string): string {
   return base.endsWith('/chat/completions') ? base : `${base}/chat/completions`
 }
 
-/** 一次 JSON 友好的补全；意图解析复用它，超时比摘要短。 */
+/** One JSON-friendly completion; intent parsing reuses it with a shorter timeout than summarization. */
 export async function chat(
   config: LlmConfig,
   key: string,
@@ -187,14 +187,14 @@ export interface ChatTool {
 }
 
 export interface ChatStep {
-  /** 模型要说的话；调工具时通常为空。 */
+  /** What the model has to say; usually empty when it is calling a tool. */
   content: string | null
   toolCalls: ChatToolCall[]
 }
 
 /**
- * 带工具的一步。工具调用要原样传回模型，所以不能复用 chat() 的「只要文本」。
- * 超时按步算：一次问答可能走三四步。
+ * One step with tools. Tool calls have to be passed back to the model verbatim, so chat()'s “text only” path cannot be reused.
+ * The timeout is counted per step: one question-and-answer may go three or four steps.
  */
 export async function chatStep(
   config: LlmConfig,
@@ -277,7 +277,7 @@ function parseSummary(raw: string): SummaryResult | null {
   }
 }
 
-/** 用用户自己配置的模型写摘要；未启用或调用失败返回 null，由调用方退回抽取式。 */
+/** Write the summary with the model the user configured; returns null when disabled or on a failed call, and the caller falls back to extractive. */
 export async function summarizeWithLlm(input: {
   title: string
   url: string
@@ -318,7 +318,7 @@ export async function summarizeWithLlm(input: {
   }
 }
 
-/** 设置页的「测试连接」：返回模型的实际回复，失败时抛出带原因的 Error。 */
+/** The settings page's “test connection”: returns the model's actual reply and throws an Error carrying the reason on failure. */
 export async function testLlmConnection(config: LlmConfig, apiKey: string): Promise<string> {
   const key = apiKey.trim() || (await loadLlmKey())
   if (!key) throw new Error('还没有填写 API Key')

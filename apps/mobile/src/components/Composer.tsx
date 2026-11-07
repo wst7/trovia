@@ -25,16 +25,16 @@ interface ComposerProps {
   onSave: (url: string, titleHint: string | null) => Promise<SaveResult | null>
   searching?: boolean
   onFocus?: () => void
-  /** 当前模式：普通检索，还是交给 AI 在库里找。 */
+  /** Current mode: an ordinary search, or handed to the AI to search inside the library. */
   ask?: boolean
   onSelectMode?: (mode: 'search' | 'ai') => void
-  /** AI 是否可用（设置里打开且填了地址）。不可用时点它去设置。 */
+  /** Whether the AI is available (switched on in settings and an address filled in). When it is not usable, tapping it goes to settings. */
   askAvailable?: boolean
-  /** 大模型没配好时，点 AI 直接去设置。 */
+  /** When the LLM is not set up, tapping AI goes straight to settings. */
   onAskNeedsSetup?: () => void
 }
 
-/** 只输入了域名（没有协议）时补上 https://，避免用户被「没有链接」挡住。 */
+/** Add https:// when only a domain was typed (no scheme), so the user is not stopped by “no link”. */
 function withScheme(text: string): string | null {
   const trimmed = text.trim()
   if (!trimmed || trimmed.length > 500 || /\s/.test(trimmed)) return null
@@ -43,11 +43,11 @@ function withScheme(text: string): string | null {
 }
 
 /**
- * 一个输入框做两件事：看得出是链接就收下来，看不出就当成一句话去找。
+ * One input field does two jobs: if it looks like a link it is taken as one, if not it is treated as a sentence to search for.
  *
- * 这是首页「克制」的核心——不再并排摆放「提问」和「收藏」两张卡，
- * 因为用户心里只有一件事：我要找的那个东西。框下方那行小字随输入
- * 变化，告诉他这次会被当成保存还是检索。
+ * This is the heart of the home screen's “restraint” — no longer setting the “ask” and “save” cards side by side,
+ * because there is only one thing on the user's mind: the thing I want to find. The small line under the field
+ * changes with what is typed and tells them whether this will be treated as a save or a search.
  */
 export function Composer({
   value,
@@ -75,7 +75,7 @@ export function Composer({
 
   const hint = composerHint({ ask, saveMode, error }, { aiLink: t('composer.hint.aiLink') })
 
-  // 开关的小方块：关在左，开在右，位移 16。
+  // The switch knob: off on the left, on on the right, moved by 16.
   const knob = useRef(new Animated.Value(ask ? 1 : 0)).current
   useEffect(() => {
     Animated.timing(knob, { toValue: ask ? 1 : 0, duration: 140, useNativeDriver: true }).start()
@@ -137,13 +137,13 @@ export function Composer({
         className="min-h-[52px] max-h-[132px] px-4 pt-4 text-body text-ink"
       />
 
-      {/* 输入区与操作区之间一条发丝线：文字多了也不会跟开关、发送挤在一起。 */}
+      {/* One hairline between the input area and the action area: even with a lot of text it will not crowd the switch and the send button. */}
       <View className="mt-1 border-t border-line px-3 pt-2.5 pb-4">
         <View className="flex-row items-center">
           {/*
-            左置开关：轨道 36×20，方块 12，位移 16。
-            开关本身说明「有没有开」，紧挨着的词说明「开的是什么」——
-            比并排两个词省一半宽度，也不会让人以为有两个地方能点。
+            Left-placed switch: track 36×20, knob 12, travel 16.
+            The switch itself says “whether it is on”, and the word right next to it says “what is on” —
+            that saves half the width of two side-by-side words, and nobody thinks there are two places to tap.
           */}
           <Pressable
             onPress={() => {
@@ -189,7 +189,7 @@ export function Composer({
 
           {hint ? (
             <Text
-              // 必须显式给颜色：Text 不写颜色时是系统黑，深色模式下等于隐形。
+              // The colour has to be given explicitly: a Text with no colour is system black, which amounts to invisible in dark mode.
               className={cx(
                 'ml-3 flex-1 text-caption',
                 error ? 'text-danger' : 'text-muted',

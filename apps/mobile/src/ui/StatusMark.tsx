@@ -8,8 +8,8 @@ import { cx } from './cx'
 const IN_FLIGHT: ParseStatus[] = ['pending', 'fetching', 'parsing', 'analyzing', 'indexing']
 
 /**
- * 形状先于颜色：实心＝已完成、空心＝整理中、实心带划＝部分/失败。
- * 已完成的票不给文字——默认状态不需要喊出来，只有「还没好」才占用眼力。
+ * Shape before color: filled = done, hollow = organizing, filled with a slash = partial/failed.
+ * A finished stamp gets no text — the default state doesn't need to shout; only "not ready yet" earns attention.
  */
 export function StatusMark({
   status,
@@ -18,12 +18,12 @@ export function StatusMark({
   className,
 }: {
   status: ParseStatus
-  /** 失败原因：不同原因给不同的说法，用户才知道该做什么。 */
+  /** Failure reason: different reasons get different wording so the user knows what to do. */
   errorCode?: string | null
   withLabel?: boolean
   className?: string
 }) {
-  // 已完成不需要标记：一行末尾孤零零一个灰点，读者还得猜它是什么意思。
+  // Done needs no mark: a lone gray dot at the end of a row only makes the reader guess what it means.
   if (status === 'completed' && withLabel) return null
 
   const inFlight = IN_FLIGHT.includes(status)

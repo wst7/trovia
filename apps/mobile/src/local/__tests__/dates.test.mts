@@ -1,6 +1,6 @@
 /**
- * 日期分组文案的回归测试。
- * 跑法：npx tsx apps/mobile/src/local/__tests__/dates.test.mts
+ * Regression test for date-group labels.
+ * How to run: npx tsx apps/mobile/src/local/__tests__/dates.test.mts
  */
 import assert from 'node:assert/strict'
 import { dayLabel, relativeTime } from '../dates.ts'
@@ -16,13 +16,13 @@ assert.equal(dayLabel('2025-12-31T12:00:00+08:00', now), '2025年12月31日', '�
 assert.equal(dayLabel('not-a-date', now), '', '坏时间不编标签')
 console.log('✓ 今天/昨天/前天/同年日期/跨年日期/坏时间都按预期')
 
-// 同一天的两条必须给同一个标签，否则分组会碎
+// Two entries on the same day must get the same label, otherwise the grouping falls apart
 const a = dayLabel('2026-11-01T09:00:00+08:00', now)
 const b = dayLabel('2026-11-01T21:00:00+08:00', now)
 assert.equal(a, b)
 console.log('✓ 同一天不同时间标签一致')
 
-// 同步状态里的「多久以前」
+// The "how long ago" shown on sync status
 assert.equal(relativeTime('2026-11-02T09:59:40+08:00', now), '刚刚')
 assert.equal(relativeTime('2026-11-02T09:35:00+08:00', now), '25 分钟前')
 assert.equal(relativeTime('2026-11-02T06:00:00+08:00', now), '4 小时前')

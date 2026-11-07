@@ -1,10 +1,10 @@
 /**
- * 打一个可以直接拖进 Chrome 的 zip。
+ * Build a zip you can drag straight into Chrome.
  *
- * 打进包里的只有运行时需要的东西：manifest、脚本、图标、页面。
- * test/ 与 scripts/ 不进包——用户装的是插件，不是仓库。
+ * Only what the runtime needs goes into the package: manifest, scripts, icons, pages.
+ * test/ and scripts/ stay out of the package — users install the extension, not the repo.
  *
- * 用系统自带的 zip：Chrome 认标准 zip，自己拼一个 tar.gz 改后缀是不行的。
+ * Use the system zip: Chrome accepts a standard zip, and hand-rolling a tar.gz and renaming it does not work.
  */
 import { execFile } from 'node:child_process'
 import { mkdir, rm, stat } from 'node:fs/promises'

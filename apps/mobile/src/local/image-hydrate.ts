@@ -1,10 +1,10 @@
 /**
- * 补图：同步或导入进来的收藏只有图片地址，本机还没有文件。
+ * Image backfill: saves that arrived through sync or import only carry image URLs, with no files on this device yet.
  *
- * 不重跑解析（那会把正文、摘要、关键词全部重算一遍，还会覆盖同步过来的版本），
- * 只做一件事：按 images 里的地址把图片下载到本机，再回写 image_files。
+ * It does not re-run parsing (that would recompute body, summary and keywords and overwrite the version that came in through sync);
+ * it does exactly one thing: download the images from the addresses in images to this device, then write image_files back.
  *
- * 限量是刻意的：一次最多补几张，别让回到前台的那一下变成下载几百兆。
+ * The limit is deliberate: only a few images per pass, so that returning to the foreground does not turn into a hundreds-of-megabytes download.
  */
 import { cacheImages, usableImageCount } from './imageStore'
 import * as repo from './repo'
@@ -21,18 +21,18 @@ export async function hydrateImages(batch = BATCH): Promise<number> {
     const candidates = await repo.listWithImages(batch)
     for (const doc of candidates) {
       try {
-        // 字段里写着路径不算数，磁盘上真有字节才算；否则 404 留下的空文件会让
-        // 这篇永远停在「已经存过」，再也不会重试。
+        // A path recorded in the field does not count; only real bytes on disk do. Otherwise an empty file left behind by a 404 keeps
+        // this document stuck at "already saved" forever and it never retries.
         if ((await usableImageCount(doc.imageFiles)) > 0) continue
 
         const files = await cacheImages(doc.id, doc.images, doc.url)
-        // 一张都没成功就保持原样，下次再试，别写一串空字符串把自己标记成「已补过」。
+        // If not one image succeeded, leave it as is and try again next time; do not write a string of empty values that marks it as backfilled.
         if (files.some((file) => file.length > 0)) {
           await repo.setImageFiles(doc.id, files)
           done += 1
         }
       } catch {
-        // 单篇失败不影响其他篇
+        // One document failing does not affect the others
       }
     }
   } finally {

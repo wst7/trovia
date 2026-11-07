@@ -1,19 +1,19 @@
 import type { ExpoConfig } from 'expo/config'
 
-// 生产构建必须使用 HTTPS；开发构建才允许访问局域网 HTTP。
+// Production builds must use HTTPS; only development builds may reach LAN HTTP.
 const isProduction = process.env.APP_VARIANT === 'production'
 
-// 版本号跟发布 tag 走：CI 打 v* 标签时注入 XUNJI_APP_VERSION（v0.3.1 → 0.3.1）。
-// 本地构建回退到这里的默认值。Android 的 versionCode 由版本号推导，升级安装不会退版。
+// The version follows the release tag: CI injects XUNJI_APP_VERSION when it tags v* (v0.3.1 → 0.3.1).
+// Local builds fall back to the default here. Android's versionCode is derived from the version, so upgrades never go backwards.
 const rawVersion: string = process.env.XUNJI_APP_VERSION?.trim() || '0.13.9'
 
 /**
- * 热更新（expo-updates）的托管地址来自 EAS 项目 id。
- * 没配就整个关掉——本地构建、没登录过 Expo 的机器照样能出包，
- * 只是这个包不带热更新能力（`Updates.isEnabled` 为 false）。
+ * The hosting URL for hot updates (expo-updates) comes from the EAS project id.
+ * Without it, updates are switched off entirely — local builds and machines that never logged in to Expo can still produce a package,
+ * it just ships without hot-update capability (`Updates.isEnabled` is false).
  */
 const expoProjectId = process.env.EXPO_PROJECT_ID?.trim() ?? ''
-/** 账号 slug：eas-cli 找项目要用，没它就把 projectId 忽略了。 */
+/** Account slug: eas-cli needs it to find the project; without it the projectId is ignored. */
 const expoOwner = process.env.EXPO_OWNER?.trim() || 'wst7s-team'
 const appVersion = rawVersion.replace(/^v/, '')
 const [versionMajor = 0, versionMinor = 0, versionPatch = 0] = appVersion
@@ -21,8 +21,8 @@ const [versionMajor = 0, versionMinor = 0, versionPatch = 0] = appVersion
   .map((part) => Number.parseInt(part, 10) || 0)
 const versionCode = versionMajor * 10000 + versionMinor * 100 + versionPatch
 
-// 与 src/design/colorSchemes.ts 的 surface 保持一致，避免原生动画/启动时闪白或闪黑。
-// 纸面（集邮册世界）：light 胶面纸 / dark 深绿集邮册布。
+// Keep in sync with surface in src/design/colorSchemes.ts so the native animation and launch screen don't flash white or black.
+// Paper (stamp-album world): light coated paper / dark deep-green album cloth.
 const LIGHT_SURFACE = '#F3EDE0'
 const DARK_SURFACE = '#1C2422'
 
@@ -56,21 +56,21 @@ const config: ExpoConfig = {
     ...(expoProjectId
       ? {
           url: `https://u.expo.dev/${expoProjectId}`,
-          // 服务端要靠 expo-channel-name 找分支；本地 prebuild 的包不会自动带。
+          // The server relies on expo-channel-name to find the branch; locally prebuilt packages don't carry it automatically.
           requestHeaders: { 'expo-channel-name': 'production' },
-          // 不自动下载：是否更新由用户在「我的」里点，下载完再自己决定何时重启。
+          // No automatic download: the user taps update in the Me tab, then decides when to restart once it has downloaded.
           checkAutomatically: 'NEVER' as const,
-          // 先让用户看到内嵌的旧版本，新包在后台下好，下次启动生效。
+          // Let the user see the embedded old version first; the new bundle downloads in the background and applies on next launch.
           fallbackToCacheTimeout: 0,
         }
       : {}),
   },
   /**
-   * 原生运行时版本：**只有原生依赖、权限、包名这类东西变了才加一**。
+   * Native runtime version: **bump it only when native dependencies, permissions, the package name or the like change**.
    *
-   * 不能绑 appVersion——那样每个补丁版本都是独立运行时，只改 JS 的更新
-   * 永远装不进用户手上的旧包，热更新就白做了。改这里时必须重发一次 APK，
-   * 否则旧包会收到为「新原生版本」打的 JS，可能直接崩。
+   * Do not tie it to appVersion — that makes every patch version a separate runtime, so JS-only updates
+   * can never reach the old build in the user's hands, and hot updates become pointless. Changing this requires shipping a new APK,
+   * otherwise the old build receives JS built for the "new native version" and may crash outright.
    */
   runtimeVersion: 'native-1',
   extra: {
@@ -80,7 +80,7 @@ const config: ExpoConfig = {
   android: {
     package: 'com.trovia.app',
     versionCode,
-    // 应用内更新：把下载好的 apk 交给系统安装器（仍然由用户在系统界面点「安装」）。
+    // In-app update: hand the downloaded apk to the system installer (the user still taps "Install" in the system UI).
     permissions: ['REQUEST_INSTALL_PACKAGES'],
     predictiveBackGestureEnabled: false,
     adaptiveIcon: {
@@ -92,15 +92,15 @@ const config: ExpoConfig = {
   },
   plugins: [
     'expo-router',
-    // 正文字体打进去：Android 没有中文衬线字体，随包带一份 2.3MB 的子集。
+    // Bundle the body font: Android ships no Chinese serif, so a 2.3MB subset goes with the app.
     [
       'expo-media-library',
       {
-        // 只用来往相册里写：不读用户的照片，也不要位置信息。
+        // Used only to write into the photo library: it never reads the user's photos and asks for no location.
         photosPermission: 'Trovia 需要访问相册，才能把正文里的图片保存下来。',
         savePhotosPermission: 'Trovia 把正文图片存到你的相册。',
-        // 只要「往相册写图片」这一项，不要音乐/视频权限——弹窗问「访问音乐和音频」
-        // 会让用户怀疑这个 App 要干什么。
+        // Only the "write images to the photo library" permission, no music/video — a prompt asking for "music and audio"
+        // makes users wonder what this app is really up to.
         granularPermissions: ['photo'],
         isAccessMediaLocationEnabled: false,
       },
@@ -129,15 +129,15 @@ const config: ExpoConfig = {
         androidIntentFilters: ['text/*'],
       },
     ],
-    // 原生构建参数统一在这里配置（android/ 是 prebuild 产物，不提交）。
+    // Native build settings are configured here (android/ is a prebuild artifact and is not committed).
     [
       'expo-build-properties',
       {
         android: {
-          // 只有开发构建允许明文 HTTP：App 会直接抓网页。
+          // Only development builds allow cleartext HTTP: the app fetches web pages directly.
           usesCleartextTraffic: !isProduction,
-          // release 开 R8；ML Kit 的初始化走反射，必须显式保活，否则 OCR 会在
-          // InputImage 构造时抛 NPE（java.lang.Object.getClass() on a null object reference）。
+          // R8 is on for release; ML Kit initializes via reflection, so it must be kept explicitly, otherwise OCR throws
+          // an NPE when constructing InputImage (java.lang.Object.getClass() on a null object reference).
           enableMinifyInReleaseBuilds: true,
           enableShrinkResourcesInReleaseBuilds: true,
           extraProguardRules: [

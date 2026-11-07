@@ -5,8 +5,8 @@ import { Link } from 'react-router-dom'
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 /**
- * 登录/注册共用表单：邮箱格式 + 密码 ≥ 8 位客户端校验；
- * onSubmit 抛出的错误（服务端 message）显示在表单顶部。
+ * Shared login/registration form: client-side validation of the email format + a password of at least 8 characters;
+ * errors thrown by onSubmit (the server message) are shown at the top of the form.
  */
 export function AuthForm({
   title,

@@ -1,14 +1,14 @@
 /**
- * 正文图片落盘。
+ * Persisting body images to disk.
  *
- * 只存 URL 是不够的：原站换图、删图、或者用户断网，收藏里的图就没了。
- * 「本地优先」意味着图片也要在本地，所以解析完成之后把正文图下载到应用目录，
- * 详情页优先用本地文件，远程地址只作为兜底。
+ * Storing only the URL is not enough: if the source site swaps or deletes an image, or the user goes offline, the images in the saved article are gone.
+ * "Local-first" means images have to be local too, so once parsing finishes the body images are downloaded into the app directory,
+ * and the detail screen prefers the local file, with the remote address only as a fallback.
  *
- * 三条约束：
- *   - 每篇最多 IMAGE_LIMIT 张，超出的只保留远程地址（避免一篇长文吃掉几十 MB）
- *   - 单张超过 MAX_BYTES 的删掉，防止存下一堆 4K 原图
- *   - 下载失败就跳过，不影响正文与索引
+ * Three constraints:
+ *   - at most IMAGE_LIMIT images per article, and anything beyond that keeps only its remote address (so one long article does not eat tens of MB)
+ *   - a single image over MAX_BYTES is deleted, to avoid storing a pile of 4K originals
+ *   - a failed download is skipped, without affecting the body or the index
  */
 const UA =
   'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36'
@@ -40,8 +40,8 @@ function nameOf(index: number, url: string): string {
 }
 
 /**
- * 下载并保存；返回与 urls 等长的数组，未保存的位置是空字符串。
- * 已经是本地文件的路径原样返回，重复调用不会重复下载。
+ * Download and save; returns an array as long as urls, with an empty string where nothing was saved.
+ * Paths that are already local files are returned as is, and repeated calls do not download again.
  */
 export async function cacheImages(docId: string, urls: string[], referer: string): Promise<string[]> {
   const module = fs()
@@ -51,7 +51,7 @@ export async function cacheImages(docId: string, urls: string[], referer: string
   try {
     await module.makeDirectoryAsync(dir, { intermediates: true })
   } catch {
-    // 目录已存在
+    // Directory already exists
   }
 
   const out: string[] = []
@@ -62,7 +62,7 @@ export async function cacheImages(docId: string, urls: string[], referer: string
       continue
     }
     if (!/^https?:/i.test(url)) {
-      out.push(url) // 已经是本地路径
+      out.push(url) // Already a local path
       continue
     }
     if (index >= IMAGE_LIMIT) {
@@ -73,8 +73,8 @@ export async function cacheImages(docId: string, urls: string[], referer: string
     const target = `${dir}${nameOf(index, url)}`
     try {
       const existing = await module.getInfoAsync(target)
-      // 「文件存在」不等于「图片可用」：404 也会写下一个 0 字节的空壳。
-      // 空壳必须删掉重下，否则这一张永远是白图，而且永远不会重试。
+      // "The file exists" does not mean "the image is usable": a 404 also writes a 0-byte shell.
+      // The shell must be deleted and re-downloaded, otherwise this slot is a blank image forever and never gets retried.
       if (existing.exists) {
         const existingSize = 'size' in existing ? Number(existing.size ?? 0) : 0
         if (existingSize > 0) {
@@ -84,7 +84,7 @@ export async function cacheImages(docId: string, urls: string[], referer: string
         await module.deleteAsync(target, { idempotent: true }).catch(() => undefined)
       }
     } catch (error) {
-      // 查不到就当不存在，继续下载
+      // Treat an unreadable result as absent and keep downloading
     }
 
     try {
@@ -97,8 +97,8 @@ export async function cacheImages(docId: string, urls: string[], referer: string
       }
       const info = await module.getInfoAsync(target)
       const size = info.exists && 'size' in info ? Number(info.size ?? 0) : 0
-      // 0 字节说明这次没下到真东西（404 页面、空响应）。删掉，否则 getInfoAsync 下次
-      // 会认为「已经存过」，这个位置永远是一张空白图，再也不重试。
+      // 0 bytes means nothing real came down this time (a 404 page, an empty response). Delete it, otherwise the next getInfoAsync
+      // will consider it "already saved" and this slot stays a blank image forever, never retried again.
       if (size === 0) {
         await module.deleteAsync(target, { idempotent: true }).catch(() => undefined)
         out.push('')
@@ -117,8 +117,8 @@ export async function cacheImages(docId: string, urls: string[], referer: string
   return out
 }
 
-/** 删除这篇收藏的图片目录；删除收藏时调用，避免文件残留。 */
-/** 磁盘上真实可用的张数：0 字节或文件不存在都不算。 */
+/** Delete this saved article's image directory; called when the article is deleted, to avoid leftover files. */
+/** How many are really usable on disk: 0 bytes or a missing file does not count. */
 export async function usableImageCount(files: string[]): Promise<number> {
   const module = fs()
   if (!module) return 0
@@ -126,11 +126,11 @@ export async function usableImageCount(files: string[]): Promise<number> {
   for (const file of files) {
     if (!file) continue
     try {
-      // legacy 的 getInfoAsync 不接受 { size: true } 的类型；返回值里本来就带 size。
+      // legacy's getInfoAsync does not accept the type for { size: true }; the return value already carries size.
       const info = await module.getInfoAsync(file)
       if (info.exists && 'size' in info && Number(info.size ?? 0) > 0) count += 1
     } catch {
-      // 查不到就当没有
+      // Treat an unreadable result as none
     }
   }
   return count
@@ -143,11 +143,11 @@ export async function removeImages(docId: string): Promise<void> {
   try {
     await module.deleteAsync(dir, { idempotent: true })
   } catch {
-    // 目录不存在就算了
+    // If the directory does not exist, let it go
   }
 }
 
-/** 远程地址 → 本地文件；没有本地文件时返回远程地址。 */
+/** Remote address → local file; returns the remote address when there is no local file. */
 export function resolveImage(url: string, local: string | null | undefined): string {
   return local && local.length > 0 ? local : url
 }

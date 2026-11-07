@@ -35,7 +35,7 @@ export function DocumentsScreen() {
 
   const [keywordInput, setKeywordInput] = useState('')
   const [items, setItems] = useState<DocumentSummary[]>([])
-  // null = 还没数完：列表先显示，总数晚一拍补上
+  // null = not counted yet: the list shows first and the total is filled in one beat later
   const [total, setTotal] = useState<number | null>(null)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
@@ -43,27 +43,27 @@ export function DocumentsScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [failed, setFailed] = useState(0)
-  // 整库条数：筛选后 total 会变，但「含在 N 条里」说的应该是整个库。
+  // Whole-library count: total changes with the filters, but “of N items” should be talking about the whole library.
   const [libraryTotal, setLibraryTotal] = useState(0)
   const [retrying, setRetrying] = useState(false)
-  // 左滑删除：同一时刻只有一行是滑开的。
+  // Swipe-left to delete: only one row is swiped open at a time.
   const [swipeId, setSwipeId] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null)
   const [selecting, setSelecting] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [failedOnly, setFailedOnly] = useState(false)
-  // 导入 300 条之后，用户需要能一眼找回「这一批」；来源写在 metadata 里。
+  // After importing 300 items the user needs to find “this batch” at a glance; the source is written into metadata.
   const [importedOnly, setImportedOnly] = useState(false)
-  // 从导入页跳过来时带着 ?imported=1，直接停在「只看导入的」。
+  // Coming over from the import screen with ?imported=1 lands straight on “imported only”.
   useFocusEffect(
     useCallback(() => {
       if (routeParams.imported === '1') setImportedOnly(true)
     }, [routeParams.imported]),
   )
-  // 313 条时按日期找还行，再多就得换一条线索：按站点分组能直接跳到「那篇少数派」。
+  // At 313 items looking by date still works; beyond that another clue is needed: grouping by site jumps straight to “that post from SSPAI”.
   const [groupBy, setGroupBy] = useState<'day' | 'site'>('day')
-  // 按站点分组时先排序：日期顺序下同一个站点散落在各处，组标题会重复出现。
+  // Sort first when grouping by site: under date order the same site is scattered about and the group heading would show up again and again.
   const displayItems =
     groupBy === 'site'
       ? [...items].sort((a, b) =>
@@ -94,7 +94,7 @@ export function DocumentsScreen() {
         setItems((current) => (mode === 'replace' ? res.items : [...current, ...res.items]))
         setPage(nextPage)
         setError(null)
-        // 总数单独跑：它要扫全表，不该挡住列表出现。
+        // Run the total separately: it has to scan the whole table and must not hold up the list appearing.
         void repo
           .countMatchingDocuments({ keyword, failedOnly, importedOnly })
           .then((next) => {
@@ -130,7 +130,7 @@ export function DocumentsScreen() {
     void load(1, 'replace')
   }, [load])
 
-  // 从详情页返回时刷新，删除或重新解析后的状态才能反映到列表。
+  // Refresh on returning from the detail screen, so deletes or a re-parse show up in the list.
   const loadRef = useRef(load)
   loadRef.current = load
   const firstFocus = useRef(true)
@@ -144,8 +144,8 @@ export function DocumentsScreen() {
     }, []),
   )
 
-  // 后台整理会改状态，列表跟着变，不用手动下拉。
-  // 只在第一页自动刷新：用户翻到很后面时把列表冲回顶部比不刷新更烦。
+  // Background tidying changes statuses and the list follows along, with no manual pull-to-refresh.
+  // Auto-refresh only on the first page: when the user has scrolled far down, flushing the list back to the top is more annoying than not refreshing.
   const pageRef = useRef(1)
   pageRef.current = page
   useEffect(() => {
@@ -158,7 +158,7 @@ export function DocumentsScreen() {
   }, [])
 
   function enterSelection(id: string) {
-    // 键盘会盖住底部操作条，长按进多选时先收起来。
+    // The keyboard would cover the bottom action bar, so put it away first when a long press starts multi-select.
     Keyboard.dismiss()
     setSelecting(true)
     setSelected(new Set([id]))
@@ -249,8 +249,8 @@ export function DocumentsScreen() {
         contentContainerStyle={{ paddingHorizontal: GUTTER, paddingBottom: bottomPad }}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
-        // 关掉 Android 默认的裁剪：列表很长时它能省内存，但滚动中单元格被反复
-        // 挂载/卸载，实测更卡，且曾让图片缩略图出现空白。崩溃与此无关。
+        // Turn off Android's default clipping: it saves memory on very long lists, but while scrolling cells get repeatedly
+        // mounted/unmounted, which measured as more janky and once left image thumbnails blank. The crashes are unrelated to this.
         removeClippedSubviews={false}
         refreshControl={
           <RefreshControl
@@ -378,15 +378,15 @@ export function DocumentsScreen() {
           const label = groupOf(item)
           const previous = index > 0 ? groupOf(displayItems[index - 1]) : null
           const firstOfGroup = !label || label !== previous
-          // 组里有多少条：按站点分组时这个数字比站名本身有用。
+          // How many items the group holds: when grouping by site this number is more useful than the site name itself.
           const groupSize = displayItems.filter((doc) => groupOf(doc) === label).length
           const nextLabel = index + 1 < displayItems.length ? groupOf(displayItems[index + 1]) : null
           const lastOfGroup = nextLabel !== label
           const failed = item.parse_status === 'failed'
           return (
-            // 左轨放日期，竖线由右列的左边框连成——时间不再当分组标题重复出现，
-            // 扫读时眼睛只走一条竖线。失败的行把这条线换成 2px 红色：
-            // 「这一条要你处理」写在结构里，而不是角落的一个点。
+            // The left rail holds the date and the vertical line is joined up by the right column's left border — time no longer repeats as a group heading,
+            // so the eye follows one single vertical line while scanning. A failed row turns that line into 2px red:
+            // “this one needs you” is written into the structure, rather than being a dot in the corner.
             <View className="flex-row">
               <View className={`w-14 ${firstOfGroup && index > 0 ? 'pt-5' : ''}`}>
                 {firstOfGroup ? (
@@ -421,7 +421,7 @@ export function DocumentsScreen() {
                     }}
                     onLongPress={() => (selecting ? toggleSelected(item.id) : enterSelection(item.id))}
                     onTerminal={handleTerminal}
-                    // 按天分组时日期在左轨上；按站点分组时行内必须补回日期。
+                    // With day grouping the date lives on the left rail; with site grouping the row has to carry the date again.
                     showDate={groupBy === 'site'}
                     selecting={selecting}
                     selected={selected.has(item.id)}

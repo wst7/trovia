@@ -1,21 +1,21 @@
-/** 本地层的小工具：URL 规范化、id、时间。不依赖 DOM 或 Node。 */
+/** Small helpers for the local layer: URL normalization, ids, time. No dependency on the DOM or on Node. */
 
 export function nowIso(): string {
   return new Date().toISOString()
 }
 
-/** 设备内的稳定 id。没有 crypto.randomUUID 时退化为时间戳 + 随机数。 */
+/** Stable id within the device. Falls back to timestamp + random number when crypto.randomUUID is unavailable. */
 export function newId(): string {
   const rnd = () => Math.random().toString(36).slice(2, 10)
   return `${Date.now().toString(36)}-${rnd()}-${rnd()}`
 }
 
 /**
- * 收藏去重用的规范化 URL：小写协议与主机、去掉 fragment、去掉末尾斜杠、
- * 去掉常见的跟踪参数。返回 null 表示不是可保存的 http(s) 链接。
+ * The normalized URL used to de-duplicate saves: lowercase scheme and host, fragment removed, trailing slash removed,
+ * common tracking parameters removed. null means it is not a saveable http(s) link.
  *
- * 这里不用 URL / URLSearchParams：React Native 的 polyfill 对后者的支持
- * 并不完整，手写解析在 iOS / Android / Hermes 上行为一致。
+ * URL / URLSearchParams are not used here: React Native's polyfill support for the latter
+ * is incomplete, and hand-written parsing behaves identically on iOS / Android / Hermes.
  */
 export function normalizeUrl(raw: string): string | null {
   let input = raw.trim()
@@ -27,7 +27,7 @@ export function normalizeUrl(raw: string): string | null {
 
   const protocol = `${match[1].toLowerCase()}:`
   const host = match[2].toLowerCase()
-  // 域名要有后缀，但也允许 localhost 这类局域网地址。
+  // The domain needs a suffix, but LAN-style addresses such as localhost are allowed too.
   if (!host.replace(/:\d+$/, '').includes('.') && !/^localhost(:\d+)?$/.test(host)) return null
 
   let path = match[3] || '/'
@@ -43,7 +43,7 @@ export function normalizeUrl(raw: string): string | null {
       try {
         key = decodeURIComponent(rawKey)
       } catch {
-        // 非法的百分号编码按原文判断，不能让整条链接保存失败。
+        // Invalid percent-encoding is judged on the raw text; the whole link must not fail to save because of it.
       }
       return !junk.test(key)
     })
@@ -80,15 +80,15 @@ export function parseJsonObject(raw: string | null): Record<string, unknown> {
   }
 }
 
-/** 把任意文本压成一行，用于标题/摘要这类单行展示。 */
+/** Squash arbitrary text onto one line, for single-line display such as a title/summary. */
 export function oneLine(text: string, max = 200): string {
   const flat = text.replace(/\s+/g, ' ').trim()
   return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat
 }
 
 /**
- * 分享 / 剪贴板里通常同时带着标题和链接。取链接以外的第一行非空文字，
- * 作为标题种子；抓不到正文时至少还能显示“这是什么”，而不是一串网址。
+ * Share sheets / the clipboard usually carry the title and the link together. Take the first non-empty line of text that is not the link,
+ * as the title seed; when no body can be fetched it can at least show “what this is” instead of a bare URL.
  */
 export function titleHintFrom(text: string, url: string): string | null {
   const withoutUrl = text.split(url).join('\n').replace(/https?:\/\/\S+/g, '\n')
@@ -104,7 +104,7 @@ export function titleHintFrom(text: string, url: string): string | null {
   return null
 }
 
-/** 根据域名判断来源类型；只影响展示，不改变抓取逻辑。 */
+/** Derive the source type from the domain; this only affects display and does not change the fetch logic. */
 export function sourceTypeOf(url: string): 'web' | 'wechat' | 'github' | 'youtube' | 'bilibili' | 'twitter' {
   const host = hostOf(url).replace(/:\d+$/, '')
   if (host === 'mp.weixin.qq.com') return 'wechat'

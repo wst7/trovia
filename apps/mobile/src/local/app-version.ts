@@ -1,9 +1,9 @@
 /**
- * App 自己的版本号。
+ * The app's own version number.
  *
- * 必须读**原生**版本：热更新后 JS 里的 `expoConfig.version` 来自那条更新清单，
- * 而更新是从 main 打的，清单里的版本可能比装着的 APK 旧——用户会看到
- * 「装的是 0.13.2，界面显示 0.12.2」。原生版本只有重装才会变，这是事实。
+ * It must read the **native** version: after a hot update, `expoConfig.version` in JS comes from that update's manifest,
+ * and updates are built from main, so the version in the manifest can be older than the installed APK — users end up seeing
+ * "0.13.2 is installed but the UI shows 0.12.2". The native version only changes on reinstall; that is a fact.
  */
 export async function appVersion(): Promise<string> {
   try {
@@ -11,7 +11,7 @@ export async function appVersion(): Promise<string> {
     const native = Application.nativeApplicationVersion
     if (native) return native
   } catch {
-    // 老包里没有 expo-application：退回到 JS 清单里的版本。
+    // Older builds have no expo-application: fall back to the version in the JS manifest.
   }
   try {
     const Constants = await import('expo-constants')

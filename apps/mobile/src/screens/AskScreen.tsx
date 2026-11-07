@@ -1,9 +1,9 @@
 /**
- * 「问模型」这一屏：问一句，模型在本地收藏里找，然后给答复并列出出处。
+ * The "ask the model" screen: ask a question, the model searches the local library, then answers and lists its sources.
  *
- * 不追求聊天记录：一次问一个问题，答案和出处都在同一屏，
- * 看完了点一条出处就能回到原文。工具调用的过程也摆出来——
- * 用户得知道模型到底翻了什么，才敢信它说的话。
+ * It is not meant to be a chat log: one question at a time, with the answer and its sources on the same screen,
+ * so when you're done, tapping a source takes you back to the original. The tool calls are shown too —
+ * the user has to see what the model actually looked through before trusting what it says.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { useLocalSearchParams, useRouter } from 'expo-router'

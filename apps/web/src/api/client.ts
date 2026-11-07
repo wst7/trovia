@@ -19,7 +19,7 @@ export const api = createApiClient({
   baseUrl: API_BASE,
   getToken,
   onUnauthorized: (tokenUsed) => {
-    // 忽略旧会话迟到的 401：期间可能已经重新登录并换成了新 token。
+    // Ignore a late 401 from an old session: a re-login may have happened meanwhile and swapped in a new token.
     if (getToken() !== tokenUsed) return
     clearToken()
     if (!window.location.pathname.startsWith('/login')) {

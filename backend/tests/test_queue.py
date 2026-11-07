@@ -59,7 +59,7 @@ def test_claim_adds_lease_and_increments_attempt(db_session):
     assert claimed.locked_by == "worker-1"
     assert claimed.locked_at is not None
     assert claimed.attempt_count == 1
-    # 租约期内第二个 worker 抢不到
+    # A second worker cannot claim it within the lease
     assert queue.claim_job(db_session, "worker-2", lease_seconds=300) is None
 
 
@@ -76,10 +76,10 @@ def test_fail_job_backoff_then_terminal_failed(db_session):
     assert job.last_error_code == "FETCH_TIMEOUT"
     assert job.available_at > datetime.now(timezone.utc)
     assert job.completed_at is None
-    # 退避窗口内第二个 worker 抢不到
+    # A second worker cannot claim it within the backoff window
     assert queue.claim_job(db_session, "w2", lease_seconds=300) is None
 
-    # 走完退避直到用尽重试次数：attempt 2 → retrying，attempt 3 → 终态 failed
+    # Walk the backoff through to exhausting the retry count: attempt 2 → retrying, attempt 3 → terminal failed
     for expected_attempt in (2, 3):
         job.available_at = datetime.now(timezone.utc) - timedelta(seconds=1)
         db_session.commit()
@@ -112,7 +112,7 @@ def test_reclaim_stale_returns_job_to_queue(db_session):
     db_session.commit()
     claimed = queue.claim_job(db_session, "crashed-worker", lease_seconds=300)
     assert claimed.status == "running"
-    # 模拟 worker 崩溃：租约超时
+    # Simulate a worker crash: the lease expires
     job.locked_at = datetime.now(timezone.utc) - timedelta(seconds=600)
     db_session.commit()
 
@@ -121,7 +121,7 @@ def test_reclaim_stale_returns_job_to_queue(db_session):
     assert reclaimed == 1
     assert job.status == "queued"
     assert job.locked_by is None
-    # 可以被其他 worker 正常领取
+    # Another worker can claim it normally
     assert queue.claim_job(db_session, "worker-2", lease_seconds=300).id == job.id
 
 
@@ -136,7 +136,7 @@ def test_complete_job_marks_completed(db_session):
     assert job.status == "completed"
     assert job.completed_at is not None
     assert job.locked_by is None
-    # 终态后同一文档可以再次入队（重新解析）
+    # After a terminal state the same document can be enqueued again (reparse)
     job2, created = queue.enqueue(db_session, doc)
     assert created is True
     assert job2.id != job.id

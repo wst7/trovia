@@ -112,18 +112,18 @@ function toDetail(row: DocumentRow): DocumentDetail {
 }
 
 /**
- * 保存一条链接；同一条链接（规范化后）已存在时返回已有条目。
- * titleHint 来自分享文字或剪贴板：抓不到正文时至少保留用户当时看到的标题。
+ * Save a link; if the same link (after normalization) already exists, return the existing entry.
+ * titleHint comes from share text or the clipboard: when the body can't be fetched, at least keep the title the user saw.
  */
 /**
- * 从 Trovia 自己的导出文件恢复一篇：正文、摘要、关键词、收藏时间都照抄，
- * 不再重新抓网页。站点挂了、文章删了，备份里的那一份仍然在。
+ * Restore one article from Trovia's own export file: body, summary, keywords and saved time are all copied over,
+ * without fetching the page again. If the site is down or the article is gone, the copy in the backup still exists.
  *
- * 链接已经在库里就跳过，返回 'duplicate'——恢复不该覆盖现在更新的版本。
+ * If the link is already in the library, skip it and return 'duplicate' — a restore must not overwrite a newer version.
  */
 export async function restoreDocument(
   doc: RestoreDocument,
-  // 以前会把来源写进 metadata；那会让「导出 → 导入 → 再导出」多出一个字段，所以不再落库。
+  // The origin used to be written into metadata; that added a field to "export → import → export again", so it is no longer stored.
   _origin: string,
 ): Promise<'created' | 'duplicate'> {
   const db = await getDb()
@@ -134,7 +134,7 @@ export async function restoreDocument(
   )
   if (existing) return 'duplicate'
 
-  // 备份里的时间戳原样用，缺了才补当前时间——「导出再导入数据不能变」。
+  // Use the timestamps from the backup as they are and fill in the current time only when missing — "export then import must not change the data".
   const now = nowIso()
   const isoOr = (value: string | null | undefined) => (value && value.trim() ? value : null)
   const savedAt = doc.savedAt ? new Date(doc.savedAt).toISOString() : (isoOr(doc.updatedAt) ?? now)
@@ -142,7 +142,7 @@ export async function restoreDocument(
   const body = doc.contentMarkdown ?? doc.plainText ?? null
   const hasBody = Boolean(body && body.trim())
 
-  // id 也照搬：新库里没有就用它，有冲突才换一个。
+  // The id is copied too: use it when the new library doesn't have it, and only replace it on a clash.
   let id = doc.id?.trim() || newId()
   const clash = await db.getFirstAsync<{ id: string }>('SELECT id FROM documents WHERE id = ?', id)
   if (clash) id = newId()
@@ -179,14 +179,14 @@ export async function restoreDocument(
       keywords: doc.keywords,
       plainText: doc.plainText ?? '',
     }),
-    // 备份里写了状态就照抄（completed / failed / partial 都是真实历史）；
-    // 只有老备份没写时才按有没有正文推断。
+    // If the backup records a status, copy it (completed / failed / partial are all real history);
+    // only when an old backup has none is it inferred from whether there is a body.
     doc.parseStatus ?? (hasBody ? 'completed' : 'pending'),
     doc.parseStage,
     doc.parseErrorCode,
     savedAt,
-    // 备份里的解析时间照抄（可能是 null，那就保持 null）；
-    // 只有极老的备份连状态都没写时，才按「有正文就算刚整理完」推断。
+    // The parse time from the backup is copied (it may be null, and then it stays null);
+    // only for very old backups with no status at all is it inferred as "has a body, so it was just parsed".
     isoOr(doc.lastParsedAt) ?? (doc.parseStatus ? null : hasBody ? now : null),
     updatedAt,
     doc.rev ?? 1,
@@ -199,14 +199,14 @@ export async function restoreDocument(
 export async function createDocument(
   rawUrl: string,
   titleHint?: string | null,
-  /** 导入时带上原收藏时间：2019 年存的书签不该全都变成「今天」。 */
+  /** Carry the original saved time on import: bookmarks saved in 2019 shouldn't all turn into "today". */
   savedAt?: number | null,
   /**
-   * 来源。只记「哪种来源 + 文件名」，具体怎么说由详情页按界面语言翻译——
-   * 在这里拼一句中文，英文界面上就会露出半句中文。
+   * Origin. Only "which kind of origin + file name" is recorded; the wording is translated by the detail screen in the UI language —
+   * assembling a Chinese sentence here would leak half a Chinese sentence into the English UI.
    */
   origin?: { kind: 'import' | 'restore'; file: string } | null,
-  /** 收藏时间是否取自导入文件（没有时间列的文件不该这么声称）。 */
+  /** Whether the saved time came from the import file (a file without a time column must not claim so). */
   savedAtFromFile?: boolean,
 ): Promise<{ id: string; duplicate: boolean }> {
   const url = normalizeUrl(rawUrl)
@@ -232,7 +232,7 @@ export async function createDocument(
 
   const id = newId()
   const now = nowIso()
-  // 导入文件里的时间可能很旧；只在合理范围内采用（见 import/dates.ts）。
+  // Times in an import file can be very old; accept them only within a sensible range (see import/dates.ts).
   const saved = resolveImportedSavedAt(savedAt, Date.now())
   await db.runAsync(
     `INSERT INTO documents (id, url, canonical_url, source_type, title, parse_status, parse_stage, saved_at, updated_at, metadata, imported_at)
@@ -254,7 +254,7 @@ export async function createDocument(
   return { id, duplicate: false }
 }
 
-/** 剪贴板提示用：这条链接是否已经在收藏里（规范化后比较）。 */
+/** For the clipboard hint: whether this link is already saved (compared after normalization). */
 export async function hasDocument(rawUrl: string): Promise<boolean> {
   const url = normalizeUrl(rawUrl)
   if (!url) return false
@@ -266,7 +266,7 @@ export async function hasDocument(rawUrl: string): Promise<boolean> {
   return row !== null
 }
 
-/** 抓取失败或没有标题时，沿用保存时的标题种子。 */
+/** When fetching fails or there is no title, reuse the title seed from when it was saved. */
 export async function getSeededTitle(id: string): Promise<string | null> {
   const db = await getDb()
   const row = await db.getFirstAsync<{ title: string | null }>(
@@ -280,13 +280,13 @@ export interface ListQuery {
   page: number
   pageSize: number
   keyword?: string
-  /** 只看没能整理的条目：失败汇总点进去就是它。 */
+  /** Only items that couldn't be parsed: this is what the failure summary opens into. */
   failedOnly?: boolean
-  /** 只看从文件导入的条目：导入 300 条之后总得能找回这一批。 */
+  /** Only items imported from a file: after importing 300 of them you still need a way to find that batch. */
   importedOnly?: boolean
 }
 
-/** 列表真正用得到的列。正文动辄十几 KB，`SELECT *` 会把它一起读出来，纯粹浪费。 */
+/** The columns the list actually uses. Bodies run to tens of KB and `SELECT *` would read them too, pure waste. */
 const SUMMARY_COLUMNS =
   'id, url, title, site_name, source_type, summary_short, parse_status, parse_error_code, saved_at, images, image_files'
 
@@ -295,7 +295,7 @@ function buildListWhere(options: ListQuery): { where: string; params: (string | 
   const clauses: string[] = ['deleted_at IS NULL']
   const params: (string | number)[] = []
   if (options.failedOnly) clauses.push("parse_status = 'failed'")
-  // imported_at 是新列；老行只在 metadata 里留了 origin/origin_kind，两种都要认。
+  // imported_at is a new column; old rows only left origin/origin_kind in metadata, so both must be recognized.
   if (options.importedOnly) {
     clauses.push(
       "(imported_at IS NOT NULL OR metadata LIKE '%\"origin\"%' OR metadata LIKE '%\"origin_kind\"%')",
@@ -309,8 +309,8 @@ function buildListWhere(options: ListQuery): { where: string; params: (string | 
 }
 
 /**
- * 只要一页。**不顺手算总数**：那是一次额外的全表扫描，
- * 和取这一页一样贵。总数交给 countDocuments 异步补上，列表先出来。
+ * Just one page. **Do not compute the total along the way**: that is an extra full table scan,
+ * as expensive as fetching this page. countDocuments fills the total in asynchronously so the list comes first.
  */
 export async function listDocuments(options: ListQuery): Promise<{ items: DocumentSummary[] }> {
   const db = await getDb()
@@ -326,7 +326,7 @@ export async function listDocuments(options: ListQuery): Promise<{ items: Docume
   return { items: rows.map(toSummary) }
 }
 
-/** 命中总数：筛选栏上的「N 条」。和列表分开，慢一点不挡内容。 */
+/** Total hits: the "N items" in the filter bar. Kept apart from the list so being slow doesn't block content. */
 export async function countMatchingDocuments(
   options: Omit<ListQuery, 'page' | 'pageSize'>,
 ): Promise<number> {
@@ -407,7 +407,7 @@ function searchTextOf(fields: {
     .toLowerCase()
 }
 
-/** 抓取、摘要成功后的落库。 */
+/** Write to the database after a successful fetch and summary. */
 export async function saveParsed(
   id: string,
   article: ExtractedArticle,
@@ -450,7 +450,7 @@ export async function saveParsed(
   )
 }
 
-/** 只拿到元信息、正文不足时的部分成功。 */
+/** Partial success when only metadata was obtained and the body is too short. */
 export async function savePartial(id: string, article: ExtractedArticle): Promise<void> {
   const db = await getDb()
   const now = nowIso()
@@ -495,11 +495,11 @@ export async function savePartial(id: string, article: ExtractedArticle): Promis
 }
 
 /**
- * 抓取失败。
+ * A fetch failure.
  *
- * 已经有正文的条目（之前整理成功过）不降级：重抓失败只是「这次没拿到新的」，
- * 用户手上的内容还在，把状态打成「失败」会让他以为内容坏了。
- * 错误码照样记下来，排障和「为什么这次没更新」都用得上。
+ * An item that already has a body (parsed successfully before) is not downgraded: a failed refetch only means "no new copy this time",
+ * the content the user has is still there, and marking it "failed" would make them think it broke.
+ * The error code is recorded anyway, which helps both debugging and answering "why didn't this update".
  */
 export async function markFailed(id: string, errorCode: string): Promise<void> {
   const db = await getDb()
@@ -522,7 +522,7 @@ export async function markFailed(id: string, errorCode: string): Promise<void> {
   )
 }
 
-/** 重新解析：回到 pending，清掉上一轮的错误。 */
+/** Re-parse: back to pending, clearing the previous round's error. */
 export async function markForRetry(id: string): Promise<void> {
   const db = await getDb()
   await db.runAsync(
@@ -534,15 +534,15 @@ export async function markForRetry(id: string): Promise<void> {
 }
 
 /**
- * 删除写墓碑而不是物理删除：本机不再显示，但保留更新与删除时间，
- * 以后接入多端同步时可以直接传播这次删除。
+ * Deleting writes a tombstone instead of removing the row: it no longer shows on this device, but the update and delete times are kept,
+ * so once multi-device sync lands this deletion can be propagated directly.
  */
 /**
- * 有图片地址的收藏（按最近更新排序）。
+ * Saved items that have image URLs (ordered by most recently updated).
  *
- * 要不要补图不能只看数据库里的 image_files 字段：字段写着路径、文件却可能已经
- * 被删掉或者是 0 字节（404 响应也会写一个空文件）。真正的判断在 image-hydrate 里，
- * 这里只负责把候选捞出来。
+ * Whether an image needs filling in can't be judged from the image_files column alone: it may list a path whose file has already
+ * been removed or is 0 bytes (a 404 response also writes an empty file). The real decision lives in image-hydrate;
+ * this only fishes out the candidates.
  */
 export async function listWithImages(limit = 20): Promise<{ id: string; url: string; images: string[]; imageFiles: string[] }[]> {
   const db = await getDb()
@@ -562,7 +562,7 @@ export async function listWithImages(limit = 20): Promise<{ id: string; url: str
     .filter((row) => row.images.length > 0)
 }
 
-/** 导入去重用：本机已有的全部链接。 */
+/** For import dedupe: every link already on this device. */
 export async function listUrls(): Promise<string[]> {
   const db = await getDb()
   const rows = await db.getAllAsync<{ url: string }>(
@@ -571,10 +571,10 @@ export async function listUrls(): Promise<string[]> {
   return rows.map((row) => row.url)
 }
 
-/** 导出用：全部有效收藏（含正文与图片路径），按收藏时间正序。 */
+/** For export: all live saved items (with body and image paths), oldest saved first. */
 /**
- * 备份专用的整行视图：在 Detail 之上多带 updated_at 与 rev，
- * 否则「导出 → 导入 → 再导出」会在这两列上漂移。
+ * Full-row view just for backups: Detail plus updated_at and rev,
+ * otherwise "export → import → export again" would drift on those two columns.
  */
 export interface ExportDocument extends DocumentDetail {
   updated_at: string
@@ -595,7 +595,7 @@ export async function listAllForExportFidelity(): Promise<ExportDocument[]> {
   }))
 }
 
-/** 图片落盘后回写本地路径，与 images 按下标对齐。 */
+/** Write the local paths back once images are on disk, aligned by index with images. */
 export async function setImageFiles(id: string, files: string[]): Promise<void> {
   const db = await getDb()
   await db.runAsync('UPDATE documents SET image_files = ? WHERE id = ?', JSON.stringify(files), id)
@@ -623,16 +623,16 @@ export async function countDocuments(): Promise<number> {
 
 export interface DocumentStats {
   total: number
-  /** completed 与 partial 都写入了 search_text，可以被检索到。 */
+  /** Both completed and partial write search_text, so they can be searched. */
   searchable: number
   processing: number
   failed: number
 }
 
 /**
- * 值得再试一次的失败：当时网络不通、站点抽风、或者我们自己的解析崩了。
- * 被站点明确拒绝（FETCH_BLOCKED）、只能在 App 内打开、正文要靠脚本渲染的，
- * 重试一百次也是同一个结果，不该出现在「重试」按钮里。
+ * Failures worth trying again: the network was down, the site misbehaved, or our own parser crashed.
+ * Ones the site explicitly refused (FETCH_BLOCKED), that only open inside the App, or whose body needs a script to render,
+ * give the same result a hundred times over and should not appear behind a "Retry" button.
  */
 export { isRetryableError, RETRYABLE_CODES } from './retry'
 
@@ -663,7 +663,7 @@ export async function retryFailedBatch(limit = 60): Promise<number> {
   return rows.length
 }
 
-/** 设置页的深色统计面板只需要这四个数。 */
+/** The settings page's dark stats panel needs only these four numbers. */
 export async function documentStats(): Promise<DocumentStats> {
   const db = await getDb()
   const row = await db.getFirstAsync<{
@@ -687,7 +687,7 @@ export async function documentStats(): Promise<DocumentStats> {
 }
 
 // ---------------------------------------------------------------------------
-// 本地检索
+// Local search
 // ---------------------------------------------------------------------------
 
 function excerptAround(text: string, terms: string[]): string | null {
@@ -707,11 +707,11 @@ function excerptAround(text: string, terms: string[]): string | null {
 
 export interface SearchOutcome {
   results: SearchResult[]
-  /** 人话解释，例如「昨天保存的」；没有时间条件时为 null。 */
+  /** Plain-language explanation, e.g. "saved yesterday"; null when there is no time condition. */
   interpretation: string | null
 }
 
-/** 这一行命中的时间区间（按收藏时间或发表时间），没命中返回 null。 */
+/** The time range this row matched (by saved or published time); null when nothing matched. */
 function dateHitOf(row: DocumentRow, ranges: DateRange[]): DateRange | null {
   if (ranges.length === 0) return null
   for (const range of ranges) {
@@ -726,15 +726,15 @@ function dateLabelOf(range: DateRange): string {
   return `${range.label}${range.field === 'published' ? '发表' : '保存'}的`
 }
 
-/** 用于排序的参考时间：有时间条件时用命中的那天，否则用收藏时间。 */
+/** Reference time for sorting: the matched day when there is a time condition, otherwise the saved time. */
 function sortTimeOf(row: DocumentRow, hit: DateRange | null): number {
   const field = hit?.field ?? 'saved'
   return timeOf(field === 'published' ? row.published_at : row.saved_at) ?? 0
 }
 
 /**
- * 配置了大模型（且开了「理解搜索意图」）时，把这句话交给模型翻译；
- * 没配、超时、报错都返回 null，搜索退回规则层，不会因此变慢或失败。
+ * When an LLM is configured (and "understand search intent" is on), hand the sentence to the model to translate;
+ * not configured, timed out, or errored all return null, and search falls back to the rule layer without getting slower or failing.
  */
 async function intentCompleter(): Promise<Completer | null> {
   try {
@@ -748,13 +748,13 @@ async function intentCompleter(): Promise<Completer | null> {
   }
 }
 
-/** 字面结果少于这个数，才去算向量：够用的查询不额外付一次模型调用。 */
+/** Only compute vectors when literal results are fewer than this: a query that already suffices doesn't pay for an extra model call. */
 const LITERAL_ENOUGH = 3
 const SEMANTIC_LIMIT = 5
 
 /**
- * 语义兜底：只补字面没找到的部分，且必须过相似度门槛。
- * 任何一步失败都返回空数组——搜索不能因为模型不可用而变差。
+ * Semantic fallback: only fills in what literal search missed, and must clear the similarity threshold.
+ * Any failure at any step returns an empty array — search must not get worse because the model is unavailable.
  */
 async function semanticMatches(text: string, exclude: Set<string>, limit: number): Promise<SearchResult[]> {
   if (!text.trim() || exclude.size >= 500) return []
@@ -793,7 +793,7 @@ async function semanticMatches(text: string, exclude: Set<string>, limit: number
           site_name: row.site_name,
           summary: row.summary_short ?? row.summary_long,
           score: Math.min(1, Math.round(score * 100) / 100),
-          // 原因只写事实：这是语义相近，不是「命中了某个词」。
+          // State only the fact as the reason: this is semantic similarity, not "matched a word".
           match_reason: '内容与这句话的意思相近',
           matched_excerpt: null,
           saved_at: row.saved_at,
@@ -823,7 +823,7 @@ export async function searchDocuments(query: string, limit = 20): Promise<Search
 async function searchDocumentsInner(query: string, limit = 20): Promise<SearchOutcome> {
   const parsed = await resolveIntent(query, { complete: await intentCompleter() })
   const terms = queryTerms(parsed.text)
-  // 「找找昨天的」没有关键词，也必须出结果——所以不能因为 terms 为空就直接返回。
+  // "Find yesterday's" has no keywords and must still return results — so an empty terms list must not short-circuit.
   if (terms.length === 0 && parsed.ranges.length === 0) return { results: [], interpretation: null }
 
   const db = await getDb()
@@ -881,13 +881,13 @@ async function searchDocumentsInner(query: string, limit = 20): Promise<SearchOu
       if (matchedThisTerm) matchedTerms += 1
     }
 
-    // 只有时间条件时，区间内的每条都算命中，靠时间排序。
+    // With a time condition only, every item in the range counts as a hit, and time does the ordering.
     if (!dateOnly && score <= 0) continue
-    // 覆盖率：中文二元组会让一句无关的话也蹭上一个词（「...这种东西」命中「这种」）。
-    // 至少对上一半的词才算这条跟查询有关，否则就是噪声。
+    // Coverage: Chinese bigrams let an unrelated sentence graze one term ("...this kind of thing" hits "this kind").
+    // At least half the terms must match for the row to relate to the query, otherwise it is noise.
     if (!dateOnly && !passesCoverage(matchedTerms, terms.length)) continue
 
-    // 命中原因要说给人听，所以按界面语言拼，不在数据层写死中文。
+    // The match reason is read by humans, so it is assembled in the UI language; never hard-code Chinese in the data layer.
     const sep = t('search.reason.sep')
     const why = (kind: string, words: string[]) =>
       words.length ? t(`search.reason.${kind}`, { terms: words.join(sep) }) : null
@@ -913,7 +913,7 @@ async function searchDocumentsInner(query: string, limit = 20): Promise<SearchOu
     })
   }
 
-  // 有时间条件时按那条时间倒序；否则相关度优先，同分再看时间。
+  // With a time condition, sort descending by that time; otherwise relevance first, then time for ties.
   scored.sort((a, b) => (dateOnly ? b.at - a.at : b.score - a.score || b.at - a.at))
 
   const results = scored.slice(0, limit).map(({ row, score, reason, excerpt }) => ({
@@ -931,8 +931,8 @@ async function searchDocumentsInner(query: string, limit = 20): Promise<SearchOu
     parse_error_code: row.parse_error_code,
   }))
 
-  // 字面不够好才补语义；时间条件是硬过滤，语义只在同一天里找没有意义。
-  // 另外，句子里没有实词时不做语义兜底：否则「zzzz没有这种东西」也会拿到几条「意思相近」。
+  // Only top up with semantics when literal results are thin; a time condition is a hard filter, and searching semantically within one day means nothing.
+  // Also, no semantic fallback when the sentence has no content words: otherwise "zzzz no such thing" would also get a few "roughly similar" hits.
   let extra: SearchResult[] = []
   if (!dateOnly && hasContentTerm(parsed.text) && results.length < LITERAL_ENOUGH) {
     const shown = new Set(results.map((item) => item.document_id))
@@ -949,7 +949,7 @@ function bigrams(text: string): Set<string> {
   return grams
 }
 
-/** 相关收藏：共享关键词 + 标题相似度，完全是本地计算。 */
+/** Related saved items: shared keywords plus title similarity, computed entirely locally. */
 export async function relatedDocuments(id: string, limit = 5): Promise<RelatedItem[]> {
   const db = await getDb()
   const target = await db.getFirstAsync<DocumentRow>(

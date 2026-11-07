@@ -1,12 +1,12 @@
 /**
- * 可重试的失败，回到前台时偷偷再试一次。
+ * Retryable failures are quietly tried once more when the app returns to the foreground.
  *
- * 「没能连上站点」多半是当时信号断了：地铁里点保存、飞机上、电梯里。用户不该为此
- * 记得回来点一次重试——但也不能每次切到前台就把几十条链接全部重打一遍（那是对
- * 站点的不礼貌，也耗电）。
+ * "Could not connect to the site" is mostly a signal drop at the time: saving in the subway, on a plane, in a lift. The user should not have to
+ * remember to come back and tap retry — but neither may we re-hit dozens of links every time the app comes to the foreground (that is rude
+ * to the sites and drains the battery).
  *
- * 所以：只挑「我们这边的问题」那几类，每次最多 20 条，两轮之间至少隔 30 分钟，
- * 失败照样静默。站点拒绝读取的条目一条都不碰——它们的错误码本来就不在可重试列表里。
+ * So: only the categories that are "our side's problem", at most 20 per round, at least 30 minutes between rounds,
+ * and failures stay silent. Entries the site refused to serve are not touched at all — their error codes are never in the retryable list.
  */
 import { processPendingQueue } from './pipeline'
 import { isRetryableError, RETRYABLE_CODES } from './retry'
@@ -14,21 +14,21 @@ import * as repo from './repo'
 import { readSetting, writeSetting } from './settings'
 
 const LAST_ATTEMPT_KEY = 'trovia.autoRetry.at'
-/** 两轮之间至少隔这么久：刚失败过就再试，多半还是同样的结果。 */
+/** Minimum gap between two rounds: retrying right after a failure mostly gives the same result. */
 const MIN_INTERVAL_MS = 30 * 60 * 1000
-/** 一次最多排这么多：避免一口气打 40 个站点。 */
+/** Maximum per round: avoid hitting 40 sites in one go. */
 const BATCH = 20
 
 let running = false
 
 /**
- * 只统计「本机可以改善」的失败，和界面上的口径一致。
+ * Only counts failures "this device can improve on", the same criterion the UI uses.
  */
 export async function countRetryableFailures(): Promise<number> {
   return repo.countRetryableFailed()
 }
 
-/** 是否有值得自动重试的条目（不触发重试，纯查询）。 */
+/** Whether there are entries worth auto-retrying (query only, does not trigger a retry). */
 export async function hasRetryableFailures(): Promise<boolean> {
   return (await countRetryableFailures()) > 0
 }
@@ -44,7 +44,7 @@ export async function maybeRetryFailed(): Promise<number> {
       if (Number.isFinite(age) && age < MIN_INTERVAL_MS) return 0
     }
   } catch {
-    // 读不到时间就当作从没试过：多试一次不会伤人。
+    // Treat an unreadable timestamp as never tried: one extra attempt does no harm.
   }
 
   running = true
@@ -54,14 +54,14 @@ export async function maybeRetryFailed(): Promise<number> {
     if (queued > 0) await processPendingQueue()
     return queued
   } catch {
-    // 静默：自动重试失败不该弹窗，用户没请求过它。
+    // Silent: an auto-retry failure must not show a dialog, the user never asked for it.
     return 0
   } finally {
     running = false
   }
 }
 
-/** 供设置页展示：这些错误码才是自动重试会碰的。 */
+/** For the settings screen: these are the error codes auto-retry will touch. */
 export function autoRetryCodes(): string[] {
   return [...RETRYABLE_CODES]
 }

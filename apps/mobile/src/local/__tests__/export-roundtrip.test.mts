@@ -1,13 +1,13 @@
 /**
- * 「导出 → 导入，数据不能变」的回归测试。
+ * Regression test for "export → import leaves the data unchanged".
  *
- * 三件事必须成立：
- *   1. 写出去的是 zip，体积明显小于原 JSON；
- *   2. 读回来之后，每一篇的每个字段都和导出时一致（包括 id、canonical_url、
- *      两个时间戳、rev、metadata、topics、image_files）；
- *   3. 过渡期的 .json.gz 和老版本的纯 .json 仍然读得进来。
+ * Three things must hold:
+ *   1. what is written out is a zip, noticeably smaller than the original JSON;
+ *   2. after reading it back, every field of every article matches the export (including id, canonical_url,
+ *      both timestamps, rev, metadata, topics, image_files);
+ *   3. the transitional .json.gz and the old plain .json still import.
  *
- * 跑法：npx tsx apps/mobile/src/local/__tests__/export-roundtrip.test.mts
+ * How to run: npx tsx apps/mobile/src/local/__tests__/export-roundtrip.test.mts
  */
 import assert from 'node:assert/strict'
 import { gzipSync, strToU8 } from 'fflate'
@@ -52,7 +52,7 @@ function doc(overrides: Partial<ExportDocument> = {}): ExportDocument {
 const docs: ExportDocument[] = [
   doc(),
   doc({ id: 'doc-2', url: 'https://sspai.com/post/73145', canonical_url: 'https://sspai.com/post/73145', title: '少数派早报', rev: 1 }),
-  // 边界：没有正文、状态是失败、没有关键词与图片
+  // Edge case: no body, failed status, no keywords and no images
   doc({
     id: 'doc-3',
     url: 'http://example.com/legacy',
@@ -76,14 +76,14 @@ const bundle = { version: 2, exported_at: '2026-11-06T00:00:00.000Z', count: doc
 const json = JSON.stringify(bundle)
 const markdown = docs.map((d) => `## ${d.title ?? d.url}`).join('\n\n')
 
-// 1. 写出去：zip，且明显更小
+// 1. Write out: a zip, and noticeably smaller
 const encoded = encodeBackup(json, markdown)
 assert.ok(encoded.zipBytes < encoded.rawBytes, '压缩后必须更小')
 const ratio = encoded.zipBytes / encoded.rawBytes
 console.log(`体积：${encoded.rawBytes} B → ${encoded.zipBytes} B（${(ratio * 100).toFixed(1)}%）`)
 assert.ok(ratio < 0.6, `压缩率异常：${ratio}`)
 
-// 2. 导回来：字段逐个对齐
+// 2. Read it back: verify the fields one by one
 const decoded = decodeBackupBase64(encoded.base64)
 assert.equal(decoded.kind, 'zip')
 assert.equal(decoded.text, json, 'JSON 文本必须逐字节一致')
@@ -121,11 +121,11 @@ for (const original of docs) {
   assert.equal(got.rev, original.rev, `${original.id}.rev`)
   assert.equal(got.importedAt, original.imported_at, `${original.id}.imported_at`)
   assert.deepEqual(got.metadata, original.metadata, `${original.id}.metadata`)
-  // 判重键只用于跳过重复，不影响落库的值
+  // The dedupe key only skips duplicates; it does not affect the stored values
   assert.ok(got.dedupeKey.startsWith('https://'), `${original.id}.dedupeKey`)
 }
 
-// 3. 过渡期格式：.json.gz 与纯 .json 都要能读
+// 3. Transitional formats: both .json.gz and plain .json must load
 const gz = decodeBackupBase64(bytesToBase64(gzipSync(strToU8(json))))
 assert.equal(gz.kind, 'gzip')
 assert.equal(gz.text, json)
@@ -134,7 +134,7 @@ const plain = decodeBackupBase64(bytesToBase64(strToU8(json)))
 assert.equal(plain.kind, 'plain')
 assert.equal(plain.text, json)
 
-// 4. 老备份（v1，没有 updated_at / rev）照样能读
+// 4. An old backup (v1, no updated_at / rev) still loads
 const legacyDocs = docs.map(({ updated_at, rev, ...rest }) => rest)
 const legacy = parseImport(JSON.stringify({ version: 1, exported_at: '2026-01-01T00:00:00.000Z', documents: legacyDocs }))
 assert.equal(legacy.format, 'trovia-json')

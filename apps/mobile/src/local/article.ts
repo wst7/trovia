@@ -6,45 +6,45 @@ import { publishedDateOf } from './published'
 import { hostOf, oneLine } from './util'
 
 /**
- * 在手机上抓取并抽取正文。
+ * Fetch and extract the article body on the phone.
  *
- * 用 cheerio/slim（htmlparser2，纯 JS，不要 DOM 环境）解析 HTML：
- * 先按选择器挑正文容器，再去掉脚本/导航/按钮，最后把结构转成 Markdown。
- * 比正则切片可靠：嵌套标签、畸形 HTML、公众号的富文本都能正确走完。
- * 页面把正文藏在脚本 JSON 里时，还会再按 JSON-LD / Next / Nuxt 状态兜底。
+ * Parse the HTML with cheerio/slim (htmlparser2, pure JS, no DOM environment needed):
+ * first pick the body container by selector, then strip scripts/nav/buttons, and finally convert the structure to Markdown.
+ * More reliable than slicing with regex: nested tags, malformed HTML and the rich text of WeChat official accounts all come through correctly.
+ * When a page hides its body in script JSON, it falls back further to JSON-LD / Next / Nuxt state.
  */
 export interface ExtractedArticle {
   url: string
   title: string | null
   siteName: string | null
   author: string | null
-  /** 原文发表日期（YYYY-MM-DD）。抓不到就是 null —— 不用收藏时间冒充。 */
+  /** Original publication date (YYYY-MM-DD). null when it cannot be found — never faked with the time it was saved. */
   publishedAt: string | null
   description: string | null
   language: string | null
   markdown: string
   plainText: string
-  /** 正文里出现过的图片（绝对地址，已去重、去图标）。图多字少时正文可能就是这些图。 */
+  /** Images that appeared in the body (absolute URLs, de-duplicated, icons removed). When there are many images and little text, the body may be exactly these images. */
   images: string[]
-  /** 页面只是脚本外壳（内容靠 JS 渲染，或只是打开另一个 App 的桥），正文抓不到。 */
+  /** The page is only a script shell (content rendered by JS, or just a bridge that opens another app), so no body could be fetched. */
   scriptOnly: boolean
-  /** 页面要求验证 / 登录，正文拿不到。 */
+  /** The page demanded verification / login, so the body was not obtainable. */
   blocked: boolean
-  /** 这只是一张“打开飞书 / Lark 客户端”的跳转页，内容本身不在网页里。 */
+  /** This is only a redirect page that opens the Feishu / Lark client; the content itself is not on the web page. */
   appOnly: boolean
 }
 
 type CheerioDoc = ReturnType<typeof load>
 
 /**
- * 当前正在解析的页面地址，给 <img> 的相对路径用。
- * 解析是同步的、队列是单飞的，所以用模块变量最省事。
+ * URL of the page currently being parsed, used for relative <img> paths.
+ * Parsing is synchronous and the queue runs one job at a time, so a module variable is the least fuss.
  */
 let imageBaseUrl = ''
 
 const MAX_HTML_CHARS = 2_000_000
 
-/** 自称 bot 的 UA 会被一大半站点直接 403；统一用一个真实的移动 Chrome。 */
+/** A UA that calls itself a bot gets a flat 403 from more than half of all sites; uniformly use a real mobile Chrome. */
 const REQUEST_UA =
   'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36'
 const FETCH_TIMEOUT_MS = 25_000
@@ -103,9 +103,9 @@ function firstMatch(html: string, pattern: RegExp): string | null {
 }
 
 /**
- * 很多站点（Next.js / Nuxt / 各家 CMS）其实把正文整段塞在 <script> 的 JSON 里，
- * 只是页面外壳由 JS 渲染。这里把这些“已经跟着 HTML 发过来”的正文挖出来，
- * 网页自己没渲染出文字时也能存下内容。
+ * Many sites (Next.js / Nuxt / assorted CMSs) actually stuff the whole body into JSON inside a <script>,
+ * with only the page shell rendered by JS. This digs out the bodies that “already arrived along with the HTML”,
+ * so the content can be saved even when the page itself rendered no text.
  */
 interface EmbeddedArticleData {
   title: string | null
@@ -122,7 +122,7 @@ function looksLikeProse(text: string): boolean {
   return text.length >= 400 && (text.match(/\s+/g)?.length ?? 0) >= 50
 }
 
-/** 在任意 JSON 结构里找最长的一段正文；宁缺毋滥，太短或不像文章的字符串直接跳过。 */
+/** Find the longest stretch of body text in an arbitrary JSON structure; better nothing than junk, so strings that are too short or do not look like an article are skipped outright. */
 function findLongText(value: unknown, depth = 0, budget = { left: 4000 }): string | null {
   if (depth > 6 || value === null || typeof value !== 'object' || budget.left <= 0) return null
   budget.left -= 1
@@ -193,7 +193,7 @@ function embeddedArticleData(html: string): EmbeddedArticleData {
     const data = parseJsonLoose(match[1] ?? '')
     if (!data) continue
 
-    // JSON-LD 的 Article 节点字段最规整，先按它取元信息。
+    // JSON-LD Article nodes have the most regular fields, so take the metadata from them first.
     const nodes: Record<string, unknown>[] = []
     const collect = (value: unknown, depth = 0) => {
       if (depth > 5 || nodes.length > 800 || value === null || typeof value !== 'object') return
@@ -226,7 +226,7 @@ function embeddedArticleData(html: string): EmbeddedArticleData {
   return result
 }
 
-// ── HTML → Markdown（基于 cheerio 的 DOM 遍历）────────────────────────────
+// ── HTML → Markdown (cheerio DOM traversal)────────────────────────────
 
 function isTag(node: AnyNode): node is Element {
   return node.type === 'tag'
@@ -238,7 +238,7 @@ function rawText(node: AnyNode): string {
   return node.children.map(rawText).join('')
 }
 
-/** 行内内容：保留粗体/斜体/行内代码/链接，压掉多余空白。 */
+/** Inline content: keep bold/italic/inline code/links, squeeze out extra whitespace. */
 function renderInline(node: AnyNode): string {
   if (node.type === 'text') return node.data.replace(/[ \t\r\n ]+/g, ' ')
   if (!isTag(node)) return ''
@@ -270,7 +270,7 @@ function renderInline(node: AnyNode): string {
     case 'img': {
       const alt = node.attribs?.alt?.trim() ?? ''
       const image = imageMarkdownOf(node.attribs ?? {}, alt)
-      // 段落里夹着的图也让它单独成段：图片在文中的位置比排版连续性重要。
+      // An image wedged inside a paragraph still gets its own block: where the image sits in the text matters more than continuity of layout.
       if (image) return `\n\n${image}\n\n`
       return alt ? ` ${alt} ` : ' '
     }
@@ -279,7 +279,7 @@ function renderInline(node: AnyNode): string {
   }
 }
 
-/** 把 <img> 变成 markdown 图片，过滤规则与 collectImages 保持一致。 */
+/** Turn an <img> into a markdown image; the filter rules stay consistent with collectImages. */
 function imageMarkdownOf(attrs: Record<string, string>, alt: string): string | null {
   const raw =
     attrs['data-src'] ??
@@ -307,8 +307,8 @@ function inlineText(children: AnyNode[]): string {
   return children.map(renderInline).join('').replace(/[ \t ]+/g, ' ').trim()
 }
 
-// 公众号这类站点常拿 <section>/<div> 当段落，正文里根本没有 <p>。
-// 没有块级子元素时，把整个容器当成一段，否则逐块递归。
+// Sites like WeChat official accounts often use <section>/<div> as paragraphs; the body has no <p> at all.
+// With no block-level child elements, treat the whole container as one paragraph; otherwise recurse block by block.
 const BLOCK_TAGS = new Set([
   'p',
   'div',
@@ -357,7 +357,7 @@ function renderTable(table: Element): string {
   return rows.length > 0 ? `\n\n${rows.join('\n')}\n\n` : ''
 }
 
-/** 块级内容：标题、段落、列表、引用、代码块、表格。 */
+/** Block content: headings, paragraphs, lists, quotes, code blocks, tables. */
 function renderBlock(node: AnyNode): string {
   if (node.type === 'text') return node.data.replace(/[ \t\r\n ]+/g, ' ')
   if (!isTag(node)) return ''
@@ -422,7 +422,7 @@ function renderMarkdown(node: AnyNode): string {
   return renderBlock(node)
 }
 
-// 公众号页面正文周围的固定按钮/提示，逐行完全匹配才删，避免误伤正文。
+// The fixed buttons/prompts around the body on WeChat official-account pages; delete only on an exact whole-line match so the body is not damaged by mistake.
 const WECHAT_NOISE_LINE =
   /^(?:原创|预览时标签不可点|微信扫一扫|关注该公众号|知道了|使用小程序|取消|允许|分析|不喜欢|轻点两下取消赞|轻点两下取消在看|使用完整服务|在小说阅读器读本章|去阅读|在公众号小说中沉浸阅读|赞|在看|分享|留言|收藏|听过|视频|小程序|上一篇|下一篇)[\s，。！？、]*$/
 const PUNCT_ONLY_LINE = /^[\s，。、；：！？“”‘’"'·…—\-()（）【】]+$/
@@ -464,7 +464,7 @@ function toPlainText(markdown: string): string {
     .trim()
 }
 
-// 正文容器：公众号固定 #js_content，其余按常见块挑“文字最多”的一个。
+// Body containers: WeChat official accounts always use #js_content, everything else picks the “most textual” of the common blocks.
 const CONTENT_SELECTORS = [
   'article',
   'main',
@@ -478,7 +478,7 @@ const CONTENT_SELECTORS = [
   '[class*="entry_content"]',
   '[class*="markdown-body"]',
   '[class*="rich_media_content"]',
-  // 各家自成一派的正文容器：博客园、SegmentFault、澎湃、果壳、腾讯云
+  // Sites that each have their own kind of body container: cnblogs, SegmentFault, The Paper, Guokr, Tencent Cloud
   '#cnblogs_post_body',
   '.postBody',
   '#post_body',
@@ -514,7 +514,7 @@ const NOISE_SELECTOR = [
   '[hidden]',
 ].join(', ')
 
-// 公众号底部的二维码、工具栏、赞赏、推荐卡片——都在正文容器里，但不是正文。
+// QR codes, toolbars, tip jars and recommendation cards at the bottom of WeChat official-account pages — all inside the body container, but none of them body text.
 const WECHAT_NOISE_SELECTOR = [
   '#js_pc_qr_code',
   '.qr_code_pc',
@@ -532,7 +532,7 @@ function textLength($: CheerioDoc, node: AnyNode): number {
   return $(node).text().replace(/\s+/g, '').length
 }
 
-/** 链接文字几乎不计入正文：导航、相关阅读、页脚链接多的容器会被排到后面。 */
+/** Linked text barely counts towards the body: containers heavy with nav, related-reading and footer links get pushed to the back. */
 function proseLength($: CheerioDoc, node: AnyNode): number {
   const total = textLength($, node)
   const linked = $(node).find('a').text().replace(/\s+/g, '').length
@@ -543,8 +543,8 @@ function pickBody($: CheerioDoc): { node: AnyNode; wechat: boolean } {
   const wechat = $('#js_content').first()[0]
   if (wechat && textLength($, wechat) >= 80) return { node: wechat, wechat: true }
 
-  // GitHub 仓库页：正文是 README，但 <main> 里还有整棵文件树和提交列表，
-  // 按「最大的块」去挑会挑到文件树，正文变成 BranchesTags… 一串垃圾。
+  // GitHub repo pages: the body is the README, but <main> also holds the entire file tree and commit list,
+  // so picking the “biggest block” lands on the file tree and the body turns into a run of BranchesTags… junk.
   const readme = $('article.markdown-body').first()[0] ?? $('#readme .markdown-body').first()[0]
   if (readme && textLength($, readme) >= 80) return { node: readme, wechat: false }
 
@@ -561,8 +561,8 @@ function pickBody($: CheerioDoc): { node: AnyNode; wechat: boolean } {
   }
   if (best && bestLength >= 200) return { node: best, wechat: false }
 
-  // 站点用自定义 class 时选择器全军覆没：退一步按「非链接文字量」扫所有块级容器，
-  // 取最大的那个，再由 trimMarkdownEdges 把两头的外壳剥掉。
+  // When a site uses custom classes every selector is wiped out: step back and scan all block-level containers by “non-link text volume”,
+  // take the largest one, then let trimMarkdownEdges peel the shell off both ends.
   let fallback: AnyNode | null = null
   let fallbackLength = 0
   $('div, section, article, td').each((_, element) => {
@@ -583,19 +583,19 @@ function stripNoise($: CheerioDoc, node: AnyNode, wechat: boolean): void {
   if (wechat) scope.find(WECHAT_NOISE_SELECTOR).remove()
 }
 
-/** 正文极少、脚本却很多：内容由 JS 渲染，或者页面只是打开另一个 App 的桥。 */
+/** Very little body but many scripts: the content is rendered by JS, or the page is only a bridge that opens another app. */
 function looksScriptOnly(html: string, plainText: string): boolean {
   if (plainText.length >= 120) return false
   const scripts = html.match(/<script\b/gi)?.length ?? 0
   return scripts >= 3
 }
 
-/** 微信/部分站点会先返回验证或“请在客户端打开”的提示页，而不是正文。 */
+/** WeChat and some sites first return a verification or “please open in the client” notice page instead of the body. */
 function looksBlocked(html: string, plainText: string): boolean {
   if (plainText.length >= 200) return false
   if (/环境异常/.test(html) && /验证/.test(html)) return true
   if (/请在微信客户端打开|访问过于频繁|完成验证后即可继续访问/.test(html)) return true
-  // Cloudflare / Akamai / 各家 WAF 的拦截页：正文永远拿不到，别把它当成"脚本外壳"。
+  // Cloudflare / Akamai / other WAF block pages: the body will never be obtainable, so do not treat this as a "script shell".
   if (/__waf_verification_challenge|cf-browser-verification|Just a moment\.\.\.|Attention Required!|Checking your browser before accessing/i.test(html)) {
     return true
   }
@@ -603,8 +603,8 @@ function looksBlocked(html: string, plainText: string): boolean {
   return false
 }
 
-// 飞书 / Lark 的 applink：/client/message/link/open 这类地址只是“拉起客户端”的跳板，
-// 正文在 App 内、需要登录和会话权限，网页端不分发任何内容。
+// Feishu / Lark applinks: addresses like /client/message/link/open are only a springboard for “pulling up the client”,
+// the body lives inside the app behind login and session permissions, and the web side distributes no content at all.
 function looksAppOnly(url: string, plainText: string): boolean {
   if (plainText.length >= 200) return false
   const host = hostOf(url)
@@ -612,12 +612,12 @@ function looksAppOnly(url: string, plainText: string): boolean {
   return /^(?:feishu\.cn|larksuite\.com)$/i.test(host) && /\/client\//i.test(url)
 }
 
-/** 头像、图标、二维码、占位像素：它们在正文容器里，但不是内容。 */
+/** Avatars, icons, QR codes, placeholder pixels: they sit inside the body container but are not content. */
 const IMAGE_SKIP = /(?:avatar|icon|logo|emoji|spacer|blank|pixel|tracker|qrcode|qr_code|badge|\/1x1|blank\.gif)/i
 
 /**
- * 正文里的图片。公众号和小红书这类内容常常「正文就是几张长图」，
- * 抽不到文字时，图片地址本身就是唯一的内容线索（交给 OCR 补文字）。
+ * Images in the body. Content on WeChat official accounts and Xiaohongshu is often “the body is just a few long images”,
+ * and when no text can be extracted the image URLs are the only clue to the content (handed to OCR to supply the text).
  */
 function collectImages($: CheerioDoc, node: AnyNode, baseUrl: string): string[] {
   const out: string[] = []
@@ -678,8 +678,8 @@ export function extractFromHtml(html: string, url: string): ExtractedArticle {
   const language = firstMatch(html, /<html\b[^>]*\blang\s*=\s*["']([^"']+)["']/i)
   const publishedAt = publishedDateOf($, meta, html)
 
-  // noscript 里的内容在解析后可能被当成普通节点，也可能是一整段原始 HTML 文本；
-  // 先原样留一份，再清理正文，避免清理时把它一起删掉。
+  // After parsing, content inside noscript may end up as ordinary nodes or as one blob of raw HTML text;
+  // keep a copy as-is first and clean the body afterwards, so the cleanup pass does not delete it along with everything else.
   const noscriptRaw = $('noscript')
     .map((_, element) => $(element).text())
     .get()
@@ -693,7 +693,7 @@ export function extractFromHtml(html: string, url: string): ExtractedArticle {
   let markdown = trimMarkdownEdges(tidyMarkdown(renderMarkdown(picked.node), picked.wechat), title)
   let plainText = toPlainText(markdown)
 
-  // 页面外壳没渲染出正文时，按“已有信息量”从大到小再试三轮。
+  // When the page shell rendered no body, try three more rounds ordered from the most to the least information already available.
   if (plainText.length < 120 && noscriptRaw.length >= 200 && /<\w+/.test(noscriptRaw)) {
     const inner = load(noscriptRaw)
     const node = inner('body').first()[0] ?? inner.root()[0]
@@ -720,20 +720,20 @@ export function extractFromHtml(html: string, url: string): ExtractedArticle {
     }
   }
 
-  // 只有摘要可拿时也存下来，至少让这条收藏能被搜到、能看懂大概。
+  // When only the summary is obtainable, store it anyway so at least this saved item can be found by search and roughly understood.
   if (plainText.length < 80 && description && description.length >= 60) {
     markdown = description
     plainText = description
   }
 
-  // 放在最后一步：中途的「描述兜底」可能把整段 meta 文本塞进 markdown，
-  // 那些文本里也带着「登录打开应用」这类提示语。
-  // 两头之外还有整行噪声（评分条、徽章、广告标签），这类在整篇范围按行删。
+  // Placed last: the “description fallback” along the way may shove a whole block of meta text into the markdown,
+  // and that text also carries prompts like “log in to open the app”.
+  // Beyond the two ends there is also whole-line noise (rating bars, badges, ad labels); that kind is deleted line by line across the whole document.
   markdown = stripNoiseLines(markdown)
   const cleaned = scrubAppPrompts(markdown)
   if (cleaned !== markdown) markdown = cleaned
-  // 清理之后要重新剥一次两头：第一轮剥的时候，开头还压着站点的图标和统计条，
-  // 正文容器看起来「第一行就是标题」，于是那条作者名留了下来。
+  // Both ends have to be peeled again after cleaning: in the first round the site icons and stats bar still sat over the start,
+  // so the body container looked like “the first line is the title” and that author-name line survived.
   markdown = trimMarkdownEdges(markdown, title)
   plainText = toPlainText(markdown)
 
@@ -758,10 +758,10 @@ export function extractFromHtml(html: string, url: string): ExtractedArticle {
 
 
 /**
- * X / Twitter：页面本身是 JS 壳，官方接口还能给出正文。
+ * X / Twitter: the page itself is a JS shell, but the official endpoints can still supply the body.
  *
- * syndication 先来——字段干净（正文、作者、时间、图片）；oembed 兜底，
- * 它给的是 blockquote 片段，正文尾巴上挂着「— 作者 日期」，要剥掉。
+ * Syndication comes first — clean fields (body, author, time, images); oembed is the fallback,
+ * it returns a blockquote fragment with “— author date” hanging off the tail of the body, which has to be stripped.
  */
 async function fetchTweet(url: string, id: string): Promise<ExtractedArticle> {
   const headers = { 'User-Agent': REQUEST_UA, Accept: 'application/json' }
@@ -800,7 +800,7 @@ async function fetchTweet(url: string, id: string): Promise<ExtractedArticle> {
       }
     }
   } catch {
-    // 落到 oembed。
+    // Fall through to oembed.
   }
 
   const res = await fetch(
@@ -809,7 +809,7 @@ async function fetchTweet(url: string, id: string): Promise<ExtractedArticle> {
   )
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const data = (await res.json()) as { author_name?: string; html?: string }
-  // 片段末尾那行「— jack (@jack) March 21, 2006」是页脚，不是正文。
+  // The “— jack (@jack) March 21, 2006” line at the end of the fragment is a footer, not body text.
   const text = htmlToMarkdownLite(data.html ?? '')
     .split('\n')
     .filter((line) => !/^\s*—/.test(line))
@@ -833,7 +833,7 @@ async function fetchTweet(url: string, id: string): Promise<ExtractedArticle> {
   }
 }
 
-/** oembed 给的是 blockquote 片段，够用就好：去标签、留文字。 */
+/** oembed returns a blockquote fragment, which is good enough: drop the tags, keep the text. */
 function htmlToMarkdownLite(html: string): string {
   return decodeEntities(
     html
@@ -843,7 +843,7 @@ function htmlToMarkdownLite(html: string): string {
   )
 }
 
-/** Reddit：HTML 是壳；`<帖子>.json` 能拿到标题、正文与图片。 */
+/** Reddit: the HTML is a shell; `<post>.json` yields the title, body and images. */
 async function fetchReddit(url: string): Promise<ExtractedArticle> {
   const jsonUrl = `${url.replace(/[?#].*$/, '').replace(/\/$/, '')}.json`
   try {
@@ -878,10 +878,10 @@ async function fetchReddit(url: string): Promise<ExtractedArticle> {
       }
     }
   } catch {
-    // 落到底下的「被挡住」。
+    // Fall through to the “blocked” result below.
   }
 
-  // Reddit 对非登录用户只给外壳：认下来，让界面说「站点没让读正文」，而不是存一段空壳。
+  // Reddit only serves a shell to logged-out users: accept that and let the UI say “the site did not let us read the body” instead of storing an empty shell.
   return {
     url,
     title: hostOf(url),
@@ -910,7 +910,7 @@ function redditImages(preview: unknown): string[] {
 }
 
 export async function fetchArticle(url: string): Promise<ExtractedArticle> {
-  // 这两个站点页面本身读不出正文，先走各自的数据接口。
+  // The pages of these two sites carry no readable body, so go through their own data endpoints first.
   const host = hostOf(url)
   if (/(^|\.)(x\.com|twitter\.com)$/i.test(host)) {
     const id = /\/status(?:es)?\/(\d+)/.exec(url)?.[1]
@@ -925,7 +925,7 @@ export async function fetchArticle(url: string): Promise<ExtractedArticle> {
     response = await fetch(url, {
       signal: controller.signal,
       headers: {
-        // 用一个真实的移动 Chrome UA：自称 bot 的 UA 会被一大半站点直接 403。
+        // Use a real mobile Chrome UA: a UA that calls itself a bot gets a flat 403 from more than half of all sites.
         'User-Agent': REQUEST_UA,
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
         'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',

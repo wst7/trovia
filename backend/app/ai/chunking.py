@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 
 _SENTENCE_TERMINALS = "。！？…；;.!?"
-# 段落边界：连续空行（容忍 Windows 换行与全角空格）
+# Paragraph boundary: consecutive blank lines (tolerating Windows line endings and full-width spaces)
 _PARAGRAPH_RE = re.compile(r"\r?\n[ \t　]*\r?\n+")
 
 
@@ -27,7 +27,7 @@ def split_sentences(text: str) -> list[str]:
                 j += 1
             if char == "." and j < n and not text[j].isspace():
                 i += 1
-                continue  # 小数/缩写，不断句
+                continue  # a decimal point or an abbreviation, so do not break the sentence
             while j < n and text[j].isspace():
                 j += 1
             segment = text[start:j].strip()
@@ -70,7 +70,7 @@ def _tail_boundary(text: str, overlap: int) -> str:
     if len(text) <= overlap:
         return text
     tail = text[-overlap:]
-    # 在前 1/3 内找最近的边界（空白/标点），避免从词中间断开
+    # Look for the nearest boundary (whitespace/punctuation) within the first 1/3, so the cut does not fall in the middle of a word
     window = tail[: max(1, len(tail) // 3)]
     candidates = [tail.find(ch, len(window) // 2) for ch in " \n。！？.!?\t，,；;"]
     cuts = [pos for pos in candidates if pos > 0]
@@ -84,7 +84,7 @@ def _pack_long(paragraph: str, max_chars: int) -> list[str]:
     pieces: list[str] = []
     buffer = ""
     for sentence in split_sentences(paragraph):
-        if len(sentence) > max_chars:  # 极端：单句比整个块还长
+        if len(sentence) > max_chars:  # extreme case: a single sentence longer than the whole chunk
             if buffer:
                 pieces.append(buffer)
                 buffer = ""
@@ -133,7 +133,7 @@ def chunk_text(text: str, max_chars: int = 1200, overlap: int = 150) -> list[str
             continue
         chunks.append(buffer)
         tail = _tail_boundary(buffer, overlap)
-        # 重叠段与下一块用原文的段落分隔符相连，保证块仍是原文的连续片段
+        # The overlapping run and the next chunk are joined with the original paragraph separator, so the chunk stays a contiguous slice of the original
         while tail and len(tail) + 2 + len(piece) > max_chars:
             tail = _tail_boundary(buffer, len(tail) // 2)
         buffer = f"{tail}\n\n{piece}" if tail else piece

@@ -1,9 +1,9 @@
 /**
- * WebDAV 客户端的端到端测试。
+ * End-to-end tests for the WebDAV client.
  *
- * 前面那个 sync.test.mjs 只验「算出来的记录对不对」，不验「真的能写进去」。
- * 这里起一个最小 WebDAV 服务（PROPFIND / MKCOL / PUT / GET），用真的 fetch 跑一遍：
- * 只有这一层被打过，才敢说插件装上就能用。
+ * sync.test.mjs above only checks that the computed record is right, not that it can actually be written.
+ * This file starts a minimal WebDAV server (PROPFIND / MKCOL / PUT / GET) and runs it with a real fetch:
+ * only once this layer has been exercised can we claim the extension works as soon as it is installed.
  */
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
@@ -18,7 +18,7 @@ const ROOT = '/dav'
 
 const expectedAuth = `Basic ${Buffer.from(`${USER}:${PASSWORD}`).toString('base64')}`
 
-/** 最小可用的 WebDAV：够插件跑通「建目录 → 写文件 → 读回来」。 */
+/** Minimal working WebDAV: enough for the extension to get through "create folder → write file → read it back". */
 function startServer() {
   const files = new Map() // path → string
   const dirs = new Set()
@@ -51,7 +51,7 @@ function startServer() {
         return
       }
       const parent = rel.split('/').slice(0, -1).join('/')
-      // 父目录不存在时 WebDAV 会拒绝，正好测插件有没有按顺序建
+      // WebDAV rejects a missing parent, which is exactly what tests whether the extension creates folders in order
       if (parent && !dirs.has(parent)) {
         res.writeHead(409).end()
         return
@@ -102,7 +102,7 @@ function startServer() {
 }
 
 test('路径逐段编码：中文与空格都要转义', () => {
-  // folder 由 putRecord 拼进 path，resolveUrl 只负责编码传进来的每一段
+  // putRecord joins folder into the path; resolveUrl only encodes each segment it is handed
   const url = resolveUrl({ base: 'https://dav.example.com/dav' }, '我的收藏/docs/a b.json')
   assert.equal(url, 'https://dav.example.com/dav/%E6%88%91%E7%9A%84%E6%94%B6%E8%97%8F/docs/a%20b.json')
 })
@@ -137,7 +137,7 @@ test('空云盘上第一次保存：自动建目录再写入', async () => {
     const record = buildRecord({ url: 'https://sspai.com/post/73145', title: '效率系统' })
     await putRecord(srv.config, record)
 
-    // 两级目录都建出来了，文件落在 docs/ 下
+    // Both folder levels were created, and the file landed under docs/
     assert.ok(srv.dirs.has('trovia'))
     assert.ok(srv.dirs.has('trovia/docs'))
     const stored = JSON.parse(srv.files.get(`trovia/docs/${record.id}.json`))
@@ -173,7 +173,7 @@ test('第二次保存同一个链接：覆盖同一个文件，rev 递增', asyn
     const again = buildRecord({ url: 'https://example.com/post', title: '新标题', rev: Number(existing.rev) + 1 })
     await putRecord(srv.config, again)
 
-    // 规范化后是同一个 id，所以云端只有一份
+    // After normalization it is the same id, so the cloud holds only one copy
     assert.equal(again.id, first.id)
     assert.equal(srv.files.size, 1)
     const stored = JSON.parse(srv.files.get(`trovia/docs/${again.id}.json`))

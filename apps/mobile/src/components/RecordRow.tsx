@@ -11,9 +11,9 @@ import { LiveStatusMark } from './LiveStatusMark'
 import { useT } from '../i18n'
 
 /**
- * 没有标题的收藏怎么显示才不别扭：
- * 标题位置放路径（r/programming），来源位置放域名（old.reddit.com）。
- * 这样「标题 + 来源」的结构和别的行一致，也不会把同一个域名说两遍。
+ * How to show a save with no title without it looking odd:
+ * the path goes where the title would be (r/programming) and the domain where the source goes (old.reddit.com).
+ * That keeps the title + source structure consistent with other rows and avoids stating the same domain twice.
  */
 function urlTitleAndHost(url: string): { title: string; host: string } {
   try {
@@ -26,7 +26,7 @@ function urlTitleAndHost(url: string): { title: string; host: string } {
   }
 }
 
-/** 没有缩略图时的占位字：站点域名首字母，读起来像一排字母索引，不像缺失。 */
+/** Placeholder when there is no thumbnail: the first letter of the site domain, which reads like an alphabetical index rather than something missing. */
 function initialOf(item: DocumentSummary | SearchResult): string {
   const host = domainOf(item.url) ?? ''
   const first = host.replace(/^www\./, '').slice(0, 1)
@@ -40,26 +40,26 @@ function titleOf(item: DocumentSummary | SearchResult): string {
 }
 
 function metaOf(item: DocumentSummary | SearchResult, showDate: boolean): string {
-  // 列表按天分组时，日期已经在分组标题上，行里再写一遍就是同一件事说两遍。
+  // When the list is grouped by day the date is already in the group header, so repeating it in the row states the same thing twice.
   const date = showDate ? formatRelativeDate(item.saved_at) : ''
-  // 标题本身就是链接时，再写站名等于把同一件事说两遍；
-  // 但只剩一个日期又会让这一行缺一条腿，所以统一叫「链接」。
+  // When the title is itself the URL, repeating the site name states the same thing twice;
+  // but leaving only a date would make the row lose a leg, so it is uniformly labelled "link".
   const titleIsUrl = !item.title || item.title.trim() === item.url
-  // 标题位置已经是域名时，再写一遍没有意义，只留时间。
+  // When the title slot already holds the domain, repeating it means nothing; keep the time only.
   if (titleIsUrl) {
     const { title, host } = urlTitleAndHost(item.url)
     if (!host || title === host) return date
     return date ? `${host} · ${date}` : host
   }
-  // 站点名和域名经常是同一件事（「x.com · X (formerly Twitter)」），统一只写域名。
+  // Site name and domain are often the same thing ("x.com · X (formerly Twitter)"), so only the domain is written.
   const host = domainOf(item.url)
   if (!host) return date
   return date ? `${host} · ${date}` : host
 }
 
 /**
- * 收藏列表的一行：标题在上、出处与时间在下，右侧一个状态标记。
- * 没有卡片、没有缩略图、没有箭头——一行就是一条内容。
+ * One row of the saved-items list: title on top, source and time below, a status mark on the right.
+ * No card, no thumbnail, no chevron — one row is one item.
  */
 export function RecentRow({
   item,
@@ -75,21 +75,21 @@ export function RecentRow({
   onPress: () => void
   onLongPress?: () => void
   onTerminal?: (status: ParseStatus) => void
-  /** 列表已经按天分组时传 false，避免日期重复。 */
+  /** Pass false when the list is already grouped by day, to avoid repeating the date. */
   showDate?: boolean
-  /** 多选模式下的选中状态；undefined 表示不在多选模式。 */
+  /** Selection state in multi-select mode; undefined means multi-select mode is not active. */
   selected?: boolean
   selecting?: boolean
-  /** 单条重试：只有「没能整理」筛选里才给，其它场景不该出现这个入口。 */
+  /** Single-item retry: offered only in the "could not be processed" filter; this entry point should not appear in other contexts. */
   onRetry?: () => void
 }) {
   const p = usePalette()
   const t = useT()
-  // 有些站点的 favicon 地址能打开但内容是空的（0 字节/透明图），会留下一个空框。
-  // 加载失败就退回首字母，左列至少还是「有东西」的。
+  // On some sites the favicon URL opens but the content is empty (0 bytes / transparent image), leaving an empty box behind.
+  // On load failure fall back to the first letter, so the left column at least still has something in it.
   const [imageBroken, setImageBroken] = useState(false)
-  // 缩略图优先级：本机文件 > 远程地址 > 不显示（很多站点没有正文图）。
-  // 缩略图优先级：本机文件 > 远程地址 > 站点首字母占位
+  // Thumbnail priority: local file > remote URL > not shown (many sites have no body image).
+  // Thumbnail priority: local file > remote URL > site initial placeholder
   const thumbnail = (item.image_files ?? []).find((file) => Boolean(file)) ?? (item.images ?? [])[0]
   return (
     <Pressable
@@ -104,12 +104,12 @@ export function RecentRow({
       className="min-h-[60px] justify-center"
     >
       {({ pressed }) => (
-        // 不给行加底色：行是表格里的一行，铺底会让整列变成一张张白卡。
-        // 按压只降透明度——底色方案在画布色上行不通，sunken 只比 canvas 深 2/255。
+        // No background on the row: a row is a row in a table, and a fill turns the whole column into one white card after another.
+        // Pressing only lowers opacity — the background-fill approach does not work on a canvas-coloured surface, where sunken is only 2/255 darker than canvas.
         <View style={{ opacity: pressed ? 0.6 : 1 }} className="flex-row items-center gap-3 py-3">
-          {/* 真图标和字母占位共用同一个 34×34 容器：favicon 有方有横，
-              不套容器时左列看着「直」但重量不齐，扫视时会跳。
-              多选时这个容器原地换成勾选圈，左列宽度不变，整列文字不会横跳。 */}
+          {/* Real icons and letter placeholders share the same 34×34 container: favicons come in square and wide shapes,
+              and without a container the left column looks "straight" but has uneven weight and jumps when scanning.
+              In multi-select mode this container turns into a check circle in place, so the left column keeps its width and the text does not shift sideways. */}
           <View
             className={
               selecting
@@ -127,7 +127,7 @@ export function RecentRow({
                 color={selected ? p.accent : p.faint}
               />
             ) : thumbnail && !imageBroken ? (
-              // 铺满瓦片：这是文章首图，不是站点图标；缩成小块再留白反而像缺了图。
+              // Fill the tile: this is the article's lead image, not a site icon; shrinking it into a small block with padding makes it look like the image is missing.
               <Image
                 source={{ uri: thumbnail }}
                 style={{ width: 34, height: 34 }}
@@ -160,7 +160,7 @@ export function RecentRow({
                     accessibilityRole="button"
                     accessibilityLabel={t('row.retryOne')}
                   >
-                    {/* 行内重试不用强调色：一屏七个红字，强调色就失效了。 */}
+                    {/* Inline retry does not use the accent colour: with seven red labels on one screen the accent stops meaning anything. */}
                     <Text className="text-caption text-ink">{t('common.retry')}</Text>
                   </Pressable>
                 ) : null}
@@ -174,10 +174,10 @@ export function RecentRow({
 }
 
 /**
- * 搜索结果的一行：多一段「为什么找到它」。
- * 匹配理由只由真实命中证据拼出，不给它加图标或色块——证据本身够轻。
+ * One row of search results: it carries an extra "why it was found" line.
+ * The match reason is assembled only from genuine hit evidence; no icon or colour block is added — the evidence itself is light enough.
  */
-/** 把查询词在文本里标出来（大小写不敏感，中文按子串）。 */
+/** Mark the query terms inside the text (case-insensitive; Chinese is matched as a plain substring). */
 function highlight(text: string, terms: string[]): [...(string | { hit: string })[]] {
   if (!text || terms.length === 0) return [text]
   const escaped = terms
@@ -186,7 +186,7 @@ function highlight(text: string, terms: string[]): [...(string | { hit: string }
     .sort((a, b) => b.length - a.length)
   if (escaped.length === 0) return [text]
   const re = new RegExp(`(${escaped.join('|')})`, 'gi')
-  // split 带捕获组时，命中项固定落在奇数下标——这比再 test 一遍可靠。
+  // With a capturing group, split always puts the hits at odd indices — more reliable than testing every part again.
   return text.split(re).map((part, index) => (index % 2 === 1 ? { hit: part } : part))
 }
 
@@ -201,12 +201,12 @@ export function ResultRow({
   onPress: () => void
   onTerminal?: (status: ParseStatus) => void
   showDate?: boolean
-  /** 当前查询的词，用来在结果里标出命中位置。 */
+  /** The terms of the current query, used to highlight where the results matched. */
   terms?: string[]
 }) {
   const t = useT()
-  // 命中类型先说，标题后说：这一屏要回答的是「是不是这一篇」，
-  // 而判断依据是命中的那句话，不是标题像不像。
+  // Match kind first, title second: this screen has to answer "is it this one",
+  // and the evidence is the sentence that matched, not whether the title looks similar.
   const kind = item.match_kind === 'semantic' ? t('result.kind.semantic') : t('result.kind.literal')
   return (
     <Pressable

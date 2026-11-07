@@ -1,39 +1,39 @@
 /**
- * 正文字体：思源宋体（子集）。
+ * Body font: Source Han Serif (a subset).
  *
- * Android 系统没有中文衬线字体，想要「读起来像纸书」只能自带一份。
- * 字体是 7542 个常用字（GB2312 全表 + ASCII + 中西文标点）的子集，
- * 2.3MB；生僻字会落到系统字体上，样式略有差别但不会缺字。
+ * Android has no Chinese serif in the system, so if it should read like a paper book we have to ship one ourselves.
+ * The font is a subset of 7542 common characters (the full GB2312 table + ASCII + CJK and Latin punctuation),
+ * weighing 2.3MB; rare characters fall back to the system font, slightly different in style but never missing.
  *
- * 用 useSyncExternalStore 做一个「加载好了没有」的订阅：正文在字体
- * 到位后重渲染一次，而不是永远停在系统字体上。
+ * useSyncExternalStore provides an "is it loaded yet" subscription, so the body re-renders once the font
+ * is in place instead of staying stuck on the system font forever.
  */
 import { useSyncExternalStore } from 'react'
 import { Platform } from 'react-native'
 
 /**
- * 字体名来自 expo-font 插件按文件名注册的结果。
- * 字体是随包打进原生的（app.config 的 expo-font 插件），不再运行时下载——
- * 运行时 loadAsync 会在没有嵌入 asset 表时失败（ExpoAsset.downloadAsync）。
+ * The font name comes from what the expo-font plugin registers, based on the file name.
+ * The font is baked into the native binary (the expo-font plugin in app.config) and is no longer downloaded at runtime —
+ * a runtime loadAsync fails when there is no embedded asset table (ExpoAsset.downloadAsync).
  */
 export const SERIF_FAMILY = 'NotoSerifSC-Regular'
 
 /**
- * 界面字体：显式点名，不吃厂商皮肤。
- * iOS 的 System 已经是苹方，不需要额外写字族名。
+ * UI font: named explicitly, so it does not inherit vendor skins.
+ * On iOS, System is already PingFang, so no extra family name is needed.
  */
 export const SANS_FAMILY = Platform.OS === 'android' ? 'sans-serif' : undefined
 
 
 /**
- * 一键切换正文/标题字体，方便对比：
- *   true  = 宋体（思源宋体子集）
- *   false = 系统黑体
- * 定下来之后把这个开关删掉，只留选中的那一套。
+ * One switch to flip the body/title font, for easy comparison:
+ *   true  = serif (the Source Han Serif subset)
+ *   false = the system sans-serif
+ * Once it is settled, delete this switch and keep only the chosen face.
  */
 export const SERIF_ENABLED = true
 
-// 原生已注册，随时可用；保留这套订阅是为了以后换成可变字体再加载。
+// Registered natively and available at any time; the subscription is kept for a future switch to a variable font that needs loading.
 let ready = true
 const listeners = new Set<() => void>()
 
@@ -46,17 +46,17 @@ function subscribe(listener: () => void): () => void {
   return () => listeners.delete(listener)
 }
 
-/** 字体是否已经可用；加载完成会触发一次重渲染。 */
+/** Whether the font is available yet; finishing the load triggers one re-render. */
 export function useSerifReady(): boolean {
   const loaded = useSyncExternalStore(subscribe, isSerifReady, isSerifReady)
   return SERIF_ENABLED && loaded
 }
 
 /**
- * 全 app 只有一套字体：思源宋体。
+ * The whole app uses a single typeface: Source Han Serif.
  *
- * 之前是「界面黑体 + 阅读宋体」，屏幕之间一眼能看出两套字形，列表和文章
- * 像两个应用。现在除了等宽（日志）之外，所有文字都用这一个字族；
- * SANS_FAMILY 只留给需要跟着系统走的极端情况。
+ * It used to be "sans for the UI + serif for reading", and the two shapes were obvious from screen to screen, so lists and articles
+ * looked like two apps. Now, apart from monospace (logs), all text uses this one family;
+ * SANS_FAMILY is kept only for the edge cases that have to follow the system.
  */
 export const APP_FAMILY = SERIF_ENABLED ? SERIF_FAMILY : SANS_FAMILY

@@ -1,4 +1,4 @@
-/** 统一 API 错误：携带后端错误码与中文 message。 */
+/** Unified API error: carries the backend error code and the Chinese message. */
 export class ApiError extends Error {
   readonly code: string
 
@@ -10,7 +10,7 @@ export class ApiError extends Error {
   }
 }
 
-// 异常兜底文案：服务端未给 message 时按错误码展示。
+// Fallback copy: shown by error code when the server supplies no message.
 export const FRIENDLY_MESSAGES: Record<string, string> = {
   INVALID_URL: '请输入有效的网页链接。',
   FETCH_TIMEOUT: '已保存链接，但暂时无法读取网页。你可以稍后重试。',

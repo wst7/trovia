@@ -23,7 +23,7 @@ import { ToastProvider } from '../src/providers/ToastProvider'
 import { ShareIntentBridge } from '../src/share/ShareIntentBridge'
 import { usePalette } from '../src/ui/palette'
 
-// 尽早装：模块加载期间抛的错也要留下来。
+// Installed as early as possible: even errors thrown while modules load must be captured.
 installCrashLogger()
 void loadDevMode()
 
@@ -35,12 +35,12 @@ export default function RootLayout() {
   )
 }
 
-/** StatusBar 与系统底色都要跟着明暗走，所以单独一层。 */
+/** Both the StatusBar and the system background must follow light/dark, so this gets its own layer. */
 function AppShell() {
   const p = usePalette()
   const scheme = useColorScheme()
 
-  // Android 根视图默认白底，跟随主题换掉，避免切换/启动时闪一下。
+  // The Android root view is white by default; swap it to follow the theme so switching or launching does not flash white.
   useEffect(() => {
     void SystemUI.setBackgroundColorAsync(p.canvas).catch(() => undefined)
   }, [p.canvas])
@@ -59,12 +59,12 @@ function RootNavigator() {
   const [ready, setReady] = useState(false)
   const p = usePalette()
 
-  // 打开本地库后继续处理上次没整理完的收藏；回到前台时再扫一遍。
+  // Once the local DB is open, keep processing the saves left unprocessed last time; scan again when the app returns to the foreground.
   useEffect(() => {
     let cancelled = false
     void (async () => {
       try {
-        // 先装回语言与外观，再渲染第一屏：否则会先闪一下系统默认，再跳过去。
+        // Restore locale and appearance before rendering the first screen: otherwise the system default flashes first and then jumps to the real one.
         await Promise.all([loadLocalePreference(), loadThemePreference()])
         await getDb()
       } finally {

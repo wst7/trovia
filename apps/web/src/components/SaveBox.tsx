@@ -4,8 +4,8 @@ import { extractHttpUrl } from '@trovia/shared'
 import { PlusIcon } from './Icons'
 
 /**
- * 保存输入框：接受纯链接，也接受带标题/描述的手机分享文字。
- * onSave 返回 Promise，成功后清空输入。
+ * Save input: accepts a bare link, and also phone share text that carries a title/description.
+ * onSave returns a Promise; the input is cleared on success.
  */
 export function SaveBox({
   onSave,

@@ -111,20 +111,20 @@ def _mount_spa(app) -> None:
         logger.warning("web_dir_missing", extra={"web_dir": str(web_dir)})
         return
 
-    # 带 hash 的构建产物单独挂载，交给 StaticFiles 处理缓存头与 304。
+    # Hashed build assets are mounted separately and left to StaticFiles for cache headers and 304s.
     assets = web_dir / "assets"
     if assets.is_dir():
         app.mount("/assets", StaticFiles(directory=assets), name="assets")
 
     @app.get("/{full_path:path}", include_in_schema=False)
     def spa_fallback(full_path: str):
-        # API 前缀下的未知路径必须返回 JSON 404，不能回落到 index.html。
+        # Unknown paths under the API prefix must return a JSON 404, never fall back to index.html.
         if full_path == "api" or full_path.startswith("api/"):
             return JSONResponse(
                 status_code=404, content=error_body("NOT_FOUND", "接口不存在。")
             )
         candidate = (web_dir / full_path).resolve()
-        # 只发构建目录内的真实文件；其余（含 ../ 穿越）一律回 index.html 交给前端路由。
+        # Only real files inside the build directory are served; everything else (including ../ traversal) goes to index.html for the frontend router.
         if candidate.is_file() and web_dir in candidate.parents:
             return FileResponse(candidate)
         return FileResponse(index)

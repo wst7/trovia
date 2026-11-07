@@ -56,7 +56,7 @@ def enqueue(
     try:
         session.flush()
     except IntegrityError:
-        # 并发下另一事务已入队：回滚后复用它
+        # Another transaction already enqueued it concurrently: roll back and reuse that job
         session.rollback()
         existing = active_job(session, document.id, job_type)
         if existing is not None:

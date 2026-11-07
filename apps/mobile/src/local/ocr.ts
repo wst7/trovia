@@ -1,16 +1,16 @@
 import { Platform } from 'react-native'
 
 /**
- * 图片文字识别（OCR）。
+ * Image text recognition (OCR).
  *
- * 用 ML Kit 的端侧中文识别模型：不联网、不上传图片，识别结果只进本机数据库。
+ * Uses ML Kit's on-device Chinese recognition model: no network, no image uploads, and results go only into the local database.
  *
- * 图片要先落到本地文件再交给 ML Kit：直接用 http 地址在 Android 上会失败。
- * 而各家图床（少数派、公众号、掘金）普遍对不带 Referer 的请求返回 403，
- * 所以下载时按浏览器的方式带上 UA + Referer；还不行就退回 fetch + base64 落盘。
+ * Images must first be written to a local file before being handed to ML Kit: passing an http URL directly fails on Android.
+ * And the various image hosts (sspai, WeChat public accounts, juejin) commonly return 403 for requests without a Referer,
+ * so downloads carry a browser-like UA + Referer; if that still fails, fall back to fetch + base64 written to disk.
  *
- * 这个模块永远不抛错：识别不出来就当「这张图没有文字」，不能因为一张图
- * 让整条收藏变成失败。
+ * This module never throws: an image that cannot be recognised is treated as "this image has no text", because one image must not
+ * turn the whole saved item into a failure.
  */
 
 type TextRecognitionModule = {
@@ -22,7 +22,7 @@ type TextRecognitionModule = {
 
 type TextRecognitionExports = {
   module: TextRecognitionModule
-  /** 这个包把 recognize 放在 default 上，把 script 枚举放在具名导出里。 */
+  /** This package puts recognize on default and the script enum on the named export. */
   scripts: Record<string, string>
 }
 
@@ -39,7 +39,7 @@ function loadModule(): TextRecognitionExports | null {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const mod = require('@react-native-ml-kit/text-recognition')
     const module = (mod?.default ?? mod) as TextRecognitionModule
-    // 枚举可能在 default 上，也可能是具名导出（取决于打包方式）。
+    // The enum may sit on default or be a named export (depending on how the package is bundled).
     const fromDefault = (module as unknown as Record<string, unknown>)?.TextRecognitionScript
     const scripts = ((mod?.TextRecognitionScript ?? fromDefault) || {}) as Record<string, string>
     cached = module ? { module, scripts } : null
@@ -62,7 +62,7 @@ export function isOcrAvailable(): boolean {
   return loadModule() !== null && fileSystem() !== null
 }
 
-/** 下载一张图；先走原生下载（带请求头），失败再走 fetch + base64 落盘。 */
+/** Download one image: try the native download first (with request headers), then fall back to fetch + base64 written to disk. */
 async function fetchImage(url: string, referer: string): Promise<string | null> {
   const fs = fileSystem()
   if (!fs) return null
@@ -73,7 +73,7 @@ async function fetchImage(url: string, referer: string): Promise<string | null> 
     const result = await fs.downloadAsync(url, target, { headers })
     if (result.status === 200) return result.uri
   } catch {
-    // 落到下面的 fetch 兜底。
+    // Falls through to the fetch fallback below.
   }
 
   try {
@@ -104,7 +104,7 @@ async function recognizeOne(url: string, referer: string): Promise<string> {
     const script = loaded.scripts.CHINESE ?? 'Chinese'
     const result = await loaded.module.recognize(local, script)
     const text = (result.text ?? '').trim()
-    // 识别噪声：字符太少，或几乎没有汉字/字母数字。
+    // Recognition noise: too few characters, or almost no Chinese characters / alphanumerics.
     if (text.length < 12) return ''
     const meaningful = (text.match(/[\u4e00-\u9fa5A-Za-z0-9]/g) ?? []).length
     if (meaningful < text.length * 0.3) return ''
@@ -117,18 +117,18 @@ async function recognizeOne(url: string, referer: string): Promise<string> {
 }
 
 /**
- * 批量识别。默认最多 3 张——一张长图往往就是几千字，再多既慢又没必要。
- * referer 传原文地址：图床普遍按它判断「是不是从页面里点进来的」。
+ * Batch recognition. Three images at most by default — one long image often holds thousands of characters, so more would be slow and pointless.
+ * Pass the original article URL as referer: image hosts generally use it to decide whether the request came from a page.
  */
-/** 一次解析最多读这么多张图：正文里的装饰图不会超过这个数量。 */
+/** At most this many images are read per parse: the decorative images in a body never exceed this count. */
 export const MAX_OCR_IMAGES = 24
-/** 一轮 OCR 的总时间预算：图再多也不能把本机队列卡在这里。 */
+/** Total time budget for one OCR round: however many images there are, the local queue must not get stuck here. */
 const OCR_BUDGET_MS = 45_000
 
 /**
- * 批量识别**所有**图片。逐张串行（ML Kit 不擅长并发），
- * 只受两个上限约束：图片总数 24 张，以及整轮 45 秒预算——
- * 超时的图片就跳过，已经读到的文字照常入库。
+ * Batch-recognise **all** images. One at a time, serially (ML Kit is not good at concurrency),
+ * bounded only by two limits: 24 images in total, and a 45-second budget per round —
+ * images that run past the deadline are skipped, and text already read is still stored as usual.
  */
 export async function ocrImages(urls: string[], referer: string): Promise<string[]> {
   if (Platform.OS === 'web' || !isOcrAvailable()) return []

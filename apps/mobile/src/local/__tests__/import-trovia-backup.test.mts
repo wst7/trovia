@@ -1,7 +1,7 @@
 /**
- * 恢复 Trovia 自己的备份：不能当成「链接列表」处理。
+ * Restoring Trovia's own backup: it must not be treated as a plain "link list".
  *
- * 跑法：npx tsx apps/mobile/src/local/__tests__/import-trovia-backup.test.mts
+ * How to run: npx tsx apps/mobile/src/local/__tests__/import-trovia-backup.test.mts
  */
 import assert from 'node:assert/strict'
 
@@ -41,7 +41,7 @@ const bundle = {
 
 const content = JSON.stringify(bundle)
 
-// 1. 认得出是自己的备份，而不是「链接列表」
+// 1. It is recognised as its own backup, not as a "link list"
 assert.equal(detectFormat(content), 'trovia-json', '备份文件必须识别成 trovia-json')
 
 const parsed = parseImport(content)
@@ -49,7 +49,7 @@ assert.equal(parsed.format, 'trovia-json')
 assert.equal(parsed.items.length, 2)
 assert.equal(parsed.documents?.length, 2, '要带出可恢复的正文')
 
-// 2. 正文、摘要、关键词、时间都不能丢
+// 2. Body, summary, keywords and time must all survive
 const withBody = parsed.documents![0]
 assert.equal(withBody.title, '关于睡眠的一篇长文')
 assert.equal(withBody.contentMarkdown, '# 关于睡眠\n\n正文第一段。')
@@ -57,12 +57,12 @@ assert.equal(withBody.summaryLong, '睡眠与记忆的关系，以及为什么�
 assert.deepEqual(withBody.keywords, ['睡眠', '记忆'])
 assert.equal(new Date(withBody.savedAt!).toISOString(), '2026-10-30T09:00:00.000Z')
 
-// 3. 没有正文的那条也要恢复，只是交给队列重新抓
+// 3. The entry without a body is restored too, it is only handed to the queue for a refetch
 const noBody = parsed.documents![1]
 assert.equal(noBody.contentMarkdown, null)
 assert.equal(noBody.plainText, null)
 
-// 4. 非法链接被跳过并说明原因，不会静默消失
+// 4. Invalid links are skipped with a stated reason and do not vanish silently
 const mixed = parseImport(
   JSON.stringify({
     version: 1,
@@ -77,7 +77,7 @@ assert.equal(mixed.items.length, 1, 'javascript: 不该被当成可收藏链接'
 assert.equal(mixed.skipped.length, 1)
 assert.match(mixed.skipped[0].reason, /网页链接/)
 
-// 5. 坏文件给出可读的原因，不抛异常
+// 5. A broken file produces a readable reason instead of throwing
 const broken = parseImport('{"documents": [')
 assert.equal(broken.format, 'trovia-json')
 assert.equal(broken.items.length, 0)

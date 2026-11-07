@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react'
 
 /**
- * 受限 Markdown 渲染器：仅将标题、段落、列表、引用、代码块、粗体、斜体、行内代码、
- * http(s) 链接转成 React 元素。文本始终由 React 转义输出，不解析任何原始 HTML
- * （不使用 dangerouslySetInnerHTML）。
+ * Restricted Markdown renderer: it only turns headings, paragraphs, lists, quotes, code blocks, bold, italics, inline code
+ * and http(s) links into React elements. Text is always escaped by React and no raw HTML is parsed
+ * (dangerouslySetInnerHTML is not used).
  */
 
 const INLINE_PATTERN = /(`[^`]+`|\*\*[^*]+?\*\*|\*[^*]+?\*|\[[^\]]+\]\([^)\s]+\))/g
@@ -101,7 +101,7 @@ function renderBlocks(source: string): ReactNode[] {
     const heading = /^(#{1,6})\s+(.*)$/.exec(trimmed)
     if (heading) {
       flushAll()
-      const level = Math.min(heading[1].length + 3, 6) // 正文内标题从 h4 开始，避免与页面结构冲突
+      const level = Math.min(heading[1].length + 3, 6) // In-body headings start at h4 so they do not clash with the page structure
       const Tag = `h${level}` as 'h4' | 'h5' | 'h6'
       blocks.push(<Tag key={`h-${blocks.length}`}>{renderInline(heading[2], `h${blocks.length}`)}</Tag>)
       continue

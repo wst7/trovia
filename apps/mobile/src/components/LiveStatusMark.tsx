@@ -15,7 +15,7 @@ interface LiveStatusMarkProps {
 }
 
 /**
- * 非终态每 1.2s 查询一次状态（见 useLiveStatus），到达终态后停止并回调。
+ * Polls the status every 1.2s while non-terminal (see useLiveStatus), and stops with a callback once a terminal state is reached.
  */
 export function LiveStatusMark({
   docId,
@@ -40,7 +40,7 @@ export function LiveStatusMark({
   return <StatusMark status={status} errorCode={errorCode} withLabel={withLabel} />
 }
 
-/** 供只需要颜色时使用（详情页的分段、分割线等）。 */
+/** For callers that only need the color (detail screen sections, dividers, etc.). */
 export function useStatusColor(status: ParseStatus): string {
   const p = usePalette()
   if (status === 'failed') return p.danger
@@ -49,7 +49,7 @@ export function useStatusColor(status: ParseStatus): string {
   return p.muted
 }
 
-/** 详情页顶部返回：图标 + 8dp 触区，交给页面自己放。 */
+/** Detail screen top back button: icon + 8dp touch area, placed by the page itself. */
 export function useBack(): () => void {
   const router = useRouter()
   return () => {
