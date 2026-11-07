@@ -208,6 +208,8 @@ export function SyncScreen() {
           </View>
 
           {result ? <Text className="mt-6 text-body-sm text-ink">{result}</Text> : null}
+          {/* 文件数和收藏数对不上是常态：删除的条目在云端还留一个文件。 */}
+          {result ? <Text className="mt-1 text-caption text-faint">{t('sync.filesNote')}</Text> : null}
           {lastAt ? (
             <Text className="mt-1 text-caption text-faint">
               {t('sync.lastAt', { when: lastAt.replace('T', ' ').slice(0, 16) })}

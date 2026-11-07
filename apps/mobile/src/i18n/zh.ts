@@ -430,7 +430,7 @@ export const zh: Dictionary = {
   'update.toast.prompt': '已交给系统安装界面',
   'update.toast.failed': '更新失败',
   'sync.report.emptyRemote': '云端这个文件夹里还没有数据，本机也没有新内容要上传。',
-  'sync.report.uptodate': '已是最新：云端 {count} 份文件，本机没有新改动。',
+  'sync.report.uptodate': '已是最新：云端 {count} 个文件，本机没有新改动。',
   'update.ota.state': '热更新',
   'update.ota.embedded': '内嵌包',
   'update.ota.running': '热更新 {id}',
@@ -483,4 +483,5 @@ export const zh: Dictionary = {
   'settings.dev.logSubtitle': '环境、崩溃记录与保存日志',
   'update.state.restart': '新版本已下好 · 点这里重启生效',
   'update.state.otaDownloading': '正在下载更新…',
+  'sync.filesNote': '删除的条目在云端也留一个文件，所以这里的文件数常比收藏多 1–2 个。',
 }

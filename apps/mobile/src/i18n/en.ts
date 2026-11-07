@@ -428,7 +428,7 @@ export const en: Dictionary = {
   'update.toast.prompt': 'Handed over to the system installer',
   'update.toast.failed': 'Update failed',
   'sync.report.emptyRemote': 'The remote folder is empty and this device has nothing new to upload.',
-  'sync.report.uptodate': 'Up to date: {count} files in the cloud, no local changes.',
+  'sync.report.uptodate': 'Up to date: {count} files in the cloud, nothing new here.',
   'update.ota.state': 'Hot update',
   'update.ota.embedded': 'Embedded bundle',
   'update.ota.running': 'Update {id}',
@@ -481,4 +481,5 @@ export const en: Dictionary = {
   'settings.dev.logSubtitle': 'Environment, crashes and save log',
   'update.state.restart': 'Update ready · tap to restart',
   'update.state.otaDownloading': 'Downloading the update…',
+  'sync.filesNote': 'A deleted item still leaves one file in the cloud, so file counts often run 1–2 above your library.',
 }
