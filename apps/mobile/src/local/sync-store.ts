@@ -115,6 +115,15 @@ async function listDirty(): Promise<SyncRecord[]> {
  * 云端的数据被当成「本机已经有了」而永远不再拉取——表现就是同步显示
  * 「两端已经一致」，本地却是空的。这里顺手把孤儿行清掉，让老用户自愈。
  */
+/** doc_id → 远端文件的 etag；没记过的条目不在表里。 */
+async function baseEtags(): Promise<Map<string, string>> {
+  const db = await getDb()
+  const rows = await db.getAllAsync<{ doc_id: string; remote_etag: string }>(
+    'SELECT doc_id, remote_etag FROM sync_base WHERE remote_etag IS NOT NULL',
+  )
+  return new Map(rows.map((row) => [row.doc_id, row.remote_etag]))
+}
+
 async function baseRevs(): Promise<Map<string, number>> {
   const db = await getDb()
   await db
@@ -233,18 +242,34 @@ async function applyOne(db: Awaited<ReturnType<typeof getDb>>, record: SyncRecor
   )
 }
 
-async function markSynced(records: SyncRecord[], syncedAt: string): Promise<void> {
+async function markSynced(
+  records: SyncRecord[],
+  syncedAt: string,
+  etags?: Map<string, string>,
+): Promise<void> {
   const db = await getDb()
   for (const record of records) {
     await db.runAsync(
-      'INSERT OR REPLACE INTO sync_base (doc_id, rev) VALUES (?, ?)',
+      'INSERT OR REPLACE INTO sync_base (doc_id, rev, remote_etag) VALUES (?, ?, ?)',
       record.id,
       record.rev,
+      etags?.get(record.id) ?? null,
     )
+  }
+  // 只读不改的条目也要记下 etag，否则下一轮还会再读它一遍。
+  if (etags) {
+    for (const [id, etag] of etags) {
+      await db.runAsync(
+        'UPDATE sync_base SET remote_etag = ? WHERE doc_id = ? AND (remote_etag IS NULL OR remote_etag != ?)',
+        etag,
+        id,
+        etag,
+      )
+    }
   }
   await db.runAsync("INSERT OR REPLACE INTO settings (key, value) VALUES ('sync_last_at', ?)", syncedAt)
 }
 
 export function createSyncStore(): LocalStore {
-  return { listDirty, baseRevs, applyRemote, markSynced }
+  return { listDirty, baseRevs, baseEtags, applyRemote, markSynced }
 }

@@ -7,6 +7,7 @@ import { useT } from '../i18n'
 import { titleHintFrom } from '../local/util'
 import { composerHint } from '../local/composer-hint'
 import { recordProblem } from '../local/crash-log'
+import { devLog, isDevMode } from '../local/dev-log'
 import { classifySaveError, SAVE_FAILURE_KEY } from '../local/save-error'
 import { cx } from '../ui/cx'
 import { usePalette } from '../ui/palette'
@@ -91,11 +92,14 @@ export function Composer({
     }
     setError(null)
     setSaving(true)
+    if (isDevMode()) await devLog('composer.save.start', { url: detectedUrl })
     try {
       await onSave(detectedUrl, titleHintFrom(value, detectedUrl))
+      if (isDevMode()) await devLog('composer.save.ok', { url: detectedUrl })
     } catch (e) {
       console.warn('[composer] save failed', e)
       recordProblem('composer-save', e)
+      await devLog('composer.save.failed', { url: detectedUrl }, e)
       setError(t(SAVE_FAILURE_KEY[classifySaveError(e)]))
     } finally {
       setSaving(false)

@@ -102,6 +102,11 @@ CREATE TABLE IF NOT EXISTS settings (
   if (!columns.some((column) => column.name === 'images')) {
     await db.runAsync("ALTER TABLE documents ADD COLUMN images TEXT NOT NULL DEFAULT '[]'")
   }
+  // 同步基准带上远端文件的 etag：没变过的文件就不必再 GET 一遍。
+  const baseColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(sync_base)')
+  if (!baseColumns.some((column) => column.name === 'remote_etag')) {
+    await db.runAsync('ALTER TABLE sync_base ADD COLUMN remote_etag TEXT')
+  }
   // 同步用的 rev：老库补列，并用触发器在每次 UPDATE 时自增，
   // 这样所有写路径（解析、状态、删除）都不用各自记得改 rev。
   if (!columns.some((column) => column.name === 'rev')) {

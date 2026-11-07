@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { DocumentSummary, ParseStatus, SearchResult } from '@trovia/shared'
 import { queryTerms } from '../local/terms'
 import { hasCrashLog } from '../local/crash-log'
+import { isDevMode, setDevMode } from '../local/dev-log'
 import { useT } from '../i18n'
 import { errorText } from '../i18n/errors'
 
@@ -336,7 +337,18 @@ export function HomeScreen() {
             <>
               {/* 首页只有一句话要有重量：它是这个 App 唯一的产品说明。 */}
               <View className="mt-6">
-                <Text className="text-[30px] font-semibold leading-[38px] tracking-[-0.4px] text-ink">
+                <Text
+                  // 长按标题：打开/关闭开发者模式。藏在这里是因为出问题时设置页可能正崩着。
+                  onLongPress={() => {
+                    void (async () => {
+                      const next = !isDevMode()
+                      await setDevMode(next)
+                      toast(next ? t('dev.on') : t('dev.off'))
+                      if (next) router.push('/diagnostics')
+                    })()
+                  }}
+                  className="text-[30px] font-semibold leading-[38px] tracking-[-0.4px] text-ink"
+                >
                   {t('home.title')}
                 </Text>
               </View>

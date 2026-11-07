@@ -20,6 +20,8 @@ import { clearAllDocuments } from '../local/db'
 import { relativeTime } from '../local/dates'
 import { lastSyncAt } from '../local/sync-config'
 import { formatBytes, writeExport } from '../local/exporter'
+import { checkForUpdate, type CheckResult } from '../local/update'
+import { downloadApk, formatMb, installApk, type DownloadProgress } from '../local/update-install'
 import { listAllForExportFidelity } from '../local/repo'
 import { loadLlmState } from '../local/llm'
 import * as repo from '../local/repo'
@@ -146,6 +148,10 @@ export function SettingsScreen() {
   const [llm, setLlm] = useState<{ enabled: boolean; model: string | null } | null>(null)
   const [exporting, setExporting] = useState(false)
   const [version, setVersion] = useState<string | null>(null)
+  // 版本行自己就是更新入口：不用单开一页，也不用分成「整包 / 热更新」两种下载。
+  const [update, setUpdate] = useState<CheckResult | null>(null)
+  const [updatePhase, setUpdatePhase] = useState<'idle' | 'checking' | 'downloading' | 'installing' | 'error'>('idle')
+  const [progress, setProgress] = useState<DownloadProgress | null>(null)
   const [sync, setSync] = useState<{ configured: boolean; at: string | null } | null>(null)
   const [localePref, setLocalePref] = useState<LocalePreference>('system')
 
@@ -158,6 +164,38 @@ export function SettingsScreen() {
    * 导出诊断：版本、运行环境、库的规模，加上崩溃日志。
    * 用户只会在「出问题想告诉我」的时候点它，所以内容宁全勿缺。
    */
+  /** 版本行的副标题就是更新状态，一句话说完。 */
+  const updateSubtitle = (): string => {
+    if (updatePhase === 'checking') return t('update.state.checking')
+    if (updatePhase === 'downloading') {
+      const percent = progress && progress.ratio >= 0 ? Math.round(progress.ratio * 100) : null
+      return percent === null ? t('update.state.downloading.noSize') : t('update.state.downloading', { percent })
+    }
+    if (updatePhase === 'installing') return t('update.state.installing')
+    if (updatePhase === 'error') return t('update.state.retry')
+    if (update?.hasUpdate && update.latest) {
+      return t('update.state.available', { version: update.latest.version, size: formatMb(update.latest.asset?.size ?? 0) })
+    }
+    // 没更新、也没出错的时候不多话：这一行本来是「只保存在这台手机上」。
+    return t('settings.about.local')
+  }
+
+  /** 下载 + 交系统安装器。中途失败要把原因留在副标题上，别一闪而过。 */
+  const startUpdate = async () => {
+    if (!update?.latest?.asset) return
+    setUpdatePhase('downloading')
+    setProgress({ ratio: 0, written: 0, total: update.latest.asset.size })
+    try {
+      const name = update.latest.asset.name || `trovia-${update.latest.version}.apk`
+      const file = await downloadApk(update.latest.asset.url, name, (next) => setProgress(next))
+      setUpdatePhase('installing')
+      await installApk(file)
+      setUpdatePhase('idle')
+    } catch {
+      setUpdatePhase('error')
+    }
+  }
+
   const shareDiagnostics = async () => {
     try {
       const [crashLog, stats] = await Promise.all([readCrashLog(), repo.documentStats()])
@@ -217,7 +255,12 @@ export function SettingsScreen() {
   const bottomPad = insets.bottom + TAB_BAR_HEIGHT + 24
 
   const reload = useCallback(async () => {
-    void appVersion().then(setVersion)
+    void appVersion().then((next) => {
+      setVersion(next)
+      void checkForUpdate(next, false)
+        .then(setUpdate)
+        .catch(() => setUpdate(null))
+    })
     try {
       const [nextStats, llm, configured, syncedAt] = await Promise.all([
         repo.documentStats(),
@@ -430,14 +473,9 @@ export function SettingsScreen() {
             <Row
               icon="information-circle-outline"
               title={APP_NAME}
-              subtitle={t('settings.about.local')}
+              subtitle={updateSubtitle()}
               value={`v${version ?? '—'}`}
-            />
-            <Row
-              icon="cloud-download-outline"
-              title={t('update.title')}
-              subtitle={t('update.rowHint')}
-              onPress={() => router.push('/settings/update')}
+              onPress={update?.hasUpdate ? () => void startUpdate() : undefined}
             />
             <Row
               icon="document-text-outline"

@@ -12,7 +12,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "tsx test/sync.test.mts && tsx test/fs.test.mts && tsx test/webdav.test.mts && tsx test/webdav-409.test.mts"
+    "test": "tsx test/sync.test.mts && tsx test/sync-many.test.mts && tsx test/fs.test.mts && tsx test/webdav.test.mts && tsx test/webdav-409.test.mts"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

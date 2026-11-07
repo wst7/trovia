@@ -1,41 +1,134 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ScrollView, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { readCrashLog } from '../src/local/crash-log'
+import { clearDevLog, diagnosticsSnapshot, isDevMode, readDevLog, setDevMode } from '../src/local/dev-log'
 import { useT } from '../src/i18n'
 import { Button } from '../src/ui/Button'
 import { Screen } from '../src/ui/Screen'
 
-/** 崩溃记录页：给用户一条「出事了，把这段发给我」的路，不藏在设置里。 */
+/**
+ * 诊断页：崩溃记录 + 开发日志 + 环境快照，一键分享成 txt。
+ *
+ * 入口有两个——首页那行红字（出过问题才出现），以及长按首页标题进开发者模式。
+ * 不放设置里：设置页本身可能就是崩掉的那一页。
+ */
 export default function DiagnosticsScreen() {
   const t = useT()
   const router = useRouter()
   const insets = useSafeAreaInsets()
-  const [log, setLog] = useState<string | null>(null)
+  const [crash, setCrash] = useState<string | null>(null)
+  const [dev, setDev] = useState<string | null>(null)
+  const [snapshot, setSnapshot] = useState('')
+  const [devOn, setDevOn] = useState(false)
+
+  const reload = useCallback(async () => {
+    const [crashLog, devLogText, snap] = await Promise.all([
+      readCrashLog(),
+      readDevLog(),
+      diagnosticsSnapshot(),
+    ])
+    setCrash(crashLog)
+    setDev(devLogText)
+    setSnapshot(snap)
+    setDevOn(isDevMode())
+  }, [])
 
   useEffect(() => {
-    void readCrashLog().then(setLog)
-  }, [])
+    void reload()
+  }, [reload])
+
+  const share = async () => {
+    try {
+      const body = [
+        t('diagnostics.title'),
+        '',
+        '--- environment ---',
+        snapshot,
+        '',
+        '--- crash log ---',
+        crash ?? '(none)',
+        '',
+        '--- dev log ---',
+        dev ?? '(none)',
+        '',
+      ].join('\n')
+      const FS = await import('expo-file-system/legacy')
+      const path = `${FS.documentDirectory}diagnostics.txt`
+      await FS.writeAsStringAsync(path, body)
+      const Sharing = await import('expo-sharing')
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(path, { mimeType: 'text/plain', dialogTitle: t('diagnostics.share') })
+      }
+    } catch {
+      // 分享失败就让用户照着屏幕念给我们听。
+    }
+  }
 
   return (
     <Screen>
-      <View className="flex-row items-center px-4 pt-3" style={{ paddingTop: insets.top + 8 }}>
+      <View className="flex-row items-center justify-between px-4" style={{ paddingTop: insets.top + 8 }}>
         <Text onPress={() => router.back()} className="text-body text-muted">
           {t('detail.back')}
         </Text>
+        <Text onPress={() => void share()} className="text-body text-accent">
+          {t('diagnostics.share')}
+        </Text>
       </View>
+
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 40 }}>
         <Text className="text-title font-semibold text-ink">{t('diagnostics.title')}</Text>
         <Text className="mt-2 text-body-sm text-muted">{t('diagnostics.hint')}</Text>
-        <View className="mt-5 rounded-md border border-line p-3">
-          <Text className="text-caption leading-5 text-muted" style={{ fontFamily: 'monospace' }}>
-            {log ?? t('diagnostics.empty')}
+
+        <Text className="mt-6 text-caption text-muted">{t('diagnostics.env')}</Text>
+        <View className="mt-2 rounded-md border border-line p-3">
+          <Text className="text-caption leading-5 text-ink" style={{ fontFamily: 'monospace' }}>
+            {snapshot || '—'}
           </Text>
         </View>
-        <View className="mt-6 self-start">
-          <Button label={t('diagnostics.back')} onPress={() => router.replace('/')} size="sm" />
+
+        <Text className="mt-6 text-caption text-muted">{t('diagnostics.crash')}</Text>
+        <View className="mt-2 rounded-md border border-line p-3">
+          <Text className="text-caption leading-5 text-muted" style={{ fontFamily: 'monospace' }}>
+            {crash ?? t('diagnostics.empty')}
+          </Text>
+        </View>
+
+        <View className="mt-6 flex-row items-center justify-between">
+          <Text className="text-caption text-muted">{devOn ? t('dev.onTitle') : t('dev.offTitle')}</Text>
+          <Text
+            className="text-caption text-accent"
+            onPress={() => {
+              void (async () => {
+                await setDevMode(!devOn)
+                await reload()
+              })()
+            }}
+          >
+            {devOn ? t('dev.turnOff') : t('dev.turnOn')}
+          </Text>
+        </View>
+        <View className="mt-2 rounded-md border border-line p-3">
+          <Text className="text-caption leading-5 text-muted" style={{ fontFamily: 'monospace' }}>
+            {dev ?? t('diagnostics.empty')}
+          </Text>
+        </View>
+
+        <View className="mt-6 flex-row items-center gap-3">
+          <Button label={t('diagnostics.share')} onPress={() => void share()} size="sm" />
+          <Button
+            label={t('diagnostics.clear')}
+            onPress={() => {
+              void (async () => {
+                await clearDevLog()
+                await reload()
+              })()
+            }}
+            size="sm"
+            variant="quiet"
+          />
         </View>
       </ScrollView>
     </Screen>

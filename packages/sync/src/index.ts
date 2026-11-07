@@ -54,10 +54,15 @@ export interface LocalStore {
   listDirty(): Promise<SyncRecord[]>
   /** doc_id → 上次同步时看到的 rev。三方比较的「基准」，没有它就分不清谁先改。 */
   baseRevs(): Promise<Map<string, number>>
+  /**
+   * doc_id → 上次同步时远端文件的 etag。
+   * 有它就能跳过没变过的文件，不必每轮把整个云端读一遍；没有就退回「每次都读」。
+   */
+  baseEtags?(): Promise<Map<string, string>>
   /** 按远端状态落库（顺带把基准 rev 更新成远端的）。 */
   applyRemote(records: SyncRecord[]): Promise<void>
   /** 推成功后调用：清 dirty，并把基准 rev 记为这条的 rev。 */
-  markSynced(records: SyncRecord[], syncedAt: string): Promise<void>
+  markSynced(records: SyncRecord[], syncedAt: string, etags?: Map<string, string>): Promise<void>
 }
 
 export interface SyncReport {
@@ -125,9 +130,25 @@ export async function syncOnce(options: SyncOptions): Promise<SyncReport> {
   const baseRevs = await store.baseRevs()
 
   const allEntries = await target.list(DOCS_PREFIX)
-  const entries = allEntries.slice(0, limit)
+  const baseEtags = (await store.baseEtags?.()) ?? new Map<string, string>()
   const remoteById = new Map<string, SyncRecord>()
-  for (const entry of entries) {
+  const seenEtags = new Map<string, string>()
+
+  // 扫的是全部条目，不是前 limit 条——否则第 N 条之后的文件永远轮不到。
+  // limit 现在限制的是「这一轮最多读几个文件」，没变过的（etag 与基准一致、
+  // 本地也没改动）直接跳过，不占额度也不发请求。
+  let reads = 0
+  for (const entry of allEntries) {
+    const id = idFromPath(entry.path)
+    if (!id) continue
+    const unchanged = Boolean(entry.etag) && baseEtags.get(id) === entry.etag && !dirtyById.has(id)
+    if (unchanged) {
+      if (entry.etag) seenEtags.set(id, entry.etag)
+      continue
+    }
+    if (reads >= limit) continue
+    reads += 1
+    if (entry.etag) seenEtags.set(id, entry.etag)
     const raw = await target.read(entry.path)
     if (!raw) continue
     try {
@@ -221,9 +242,15 @@ export async function syncOnce(options: SyncOptions): Promise<SyncReport> {
   // 拉下来的记录也要记基准 rev：否则下一轮「本地 rev > 0 且远端 rev > 0」会被判成
   // 两端都改过——真机上表现为「本地删了一条从别的设备同步来的文章，它又变成冲突副本冒回来」。
   // 即使这次什么都没推进也要标记一次：界面上的「上次同步」应该是「上次尝试」。
-  await store.markSynced([...pushedRecords, ...applied], syncedAt)
+  await store.markSynced([...pushedRecords, ...applied], syncedAt, seenEtags)
 
   return { pushed, pulled, deleted, conflicts, conflictNames, remoteFiles: allEntries.length, syncedAt }
+}
+
+/** `docs/<id>.json` → `<id>`；不是这个形状的条目直接忽略。 */
+function idFromPath(path: string): string | null {
+  const match = /^docs\/(.+)\.json$/.exec(path)
+  return match ? match[1] : null
 }
 
 /** 冲突副本：新 id、标题带「冲突副本」，两端内容都不会被悄悄丢掉。 */

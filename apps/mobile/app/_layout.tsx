@@ -9,6 +9,7 @@ import { useColorScheme } from 'react-native'
 import '../global.css'
 
 import { installCrashLogger } from '../src/local/crash-log'
+import { loadDevMode } from '../src/local/dev-log'
 import { maybeAutoSync } from '../src/local/auto-sync'
 import { maybeRetryFailed } from '../src/local/auto-retry'
 import { hydrateImages } from '../src/local/image-hydrate'
@@ -23,6 +24,7 @@ import { usePalette } from '../src/ui/palette'
 
 // 尽早装：模块加载期间抛的错也要留下来。
 installCrashLogger()
+void loadDevMode()
 
 export default function RootLayout() {
   return (
