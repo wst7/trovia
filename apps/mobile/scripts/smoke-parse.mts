@@ -15,6 +15,8 @@ declare const process: { argv: string[]; exit(code: number): void }
 interface Case {
   url: string
   label: string
+  /** 站点自己的 5xx / 网络抖动：只提醒，不拦发版。 */
+  flaky?: boolean
   /** 这个站点至少要有多少正文字符，才算真读到了。 */
   minChars?: number
   /** 站点本身时好时坏，失败只提醒不拦发版。 */
@@ -29,7 +31,7 @@ const CASES: Case[] = [
   },
   { label: '少数派', url: 'https://sspai.com/post/73145', minChars: 800 },
   { label: '掘金', url: 'https://juejin.cn/post/7433790333576822784', minChars: 500 },
-  { label: 'CSDN', url: 'https://blog.csdn.net/weixin_44707404/article/details/106360770', minChars: 500 },
+  { label: 'CSDN', url: 'https://blog.csdn.net/weixin_44707404/article/details/106360770', minChars: 500, flaky: true },
   { label: 'GitHub', url: 'https://github.com/facebook/react', minChars: 200 },
   { label: 'V2EX', url: 'https://v2ex.com/t/1254622', minChars: 100, optional: true },
   { label: 'Martin Fowler', url: 'https://martinfowler.com/articles/patterns-of-distributed-systems/', minChars: 1500 },
@@ -64,29 +66,51 @@ const cases = args.length > 0 ? args.map((url: string) => ({ url, label: url }))
 
 const rows: Array<{ label: string; ok: boolean; detail: string; optional: boolean }> = []
 
-for (const item of cases) {
+/** 5xx 与网络错误是站点自己的事，不是我们的回归；403/404/空正文才是。 */
+function isTransient(message: string): boolean {
+  return /HTTP 5\d\d|fetch failed|aborted|ECONNRESET|ETIMEDOUT|socket/i.test(message)
+}
+
+async function attempt(url: string) {
   const started = Date.now()
-  try {
-    const article = await fetchArticle(item.url)
-    const chars = article.plainText.trim().length
-    const need = item.minChars ?? 300
-    const ok = !article.blocked && chars >= need && Boolean(article.title)
-    rows.push({
-      label: item.label,
-      ok,
-      optional: Boolean(item.optional),
-      detail: ok
-        ? `${chars} 字 · ${article.images.length} 图 · ${Date.now() - started}ms`
-        : article.blocked
-          ? `被挡住（blocked）· ${chars} 字`
-          : `正文只有 ${chars} 字（要 ≥${need}）· 标题「${article.title}」`,
-    })
-  } catch (error) {
+  const article = await fetchArticle(url)
+  return { article, ms: Date.now() - started }
+}
+
+for (const item of cases) {
+  let lastError: unknown = null
+  let done = false
+  // 一次重试：站点的 5xx 多半是几秒的事，直接判死会误伤发版。
+  for (let round = 0; round < 2 && !done; round += 1) {
+    try {
+      const { article, ms } = await attempt(item.url)
+      const chars = article.plainText.trim().length
+      const need = item.minChars ?? 300
+      const ok = !article.blocked && chars >= need && Boolean(article.title)
+      rows.push({
+        label: item.label,
+        ok,
+        optional: Boolean(item.optional),
+        detail: ok
+          ? `${chars} 字 · ${article.images.length} 图 · ${ms}ms`
+          : article.blocked
+            ? `被挡住（blocked）· ${chars} 字`
+            : `正文只有 ${chars} 字（要 ≥${need}）· 标题「${article.title}」`,
+      })
+      done = true
+    } catch (error) {
+      lastError = error
+      if (round === 0) await new Promise((resolve) => setTimeout(resolve, 3000))
+    }
+  }
+  if (!done) {
+    const message = lastError instanceof Error ? lastError.message : String(lastError)
     rows.push({
       label: item.label,
       ok: false,
-      optional: Boolean(item.optional),
-      detail: `抓取失败：${error instanceof Error ? error.message : String(error)}`,
+      // 5xx / 网络问题只当提醒；403、404、空正文才算我们这边退步了。
+      optional: Boolean(item.optional) || item.flaky || isTransient(message),
+      detail: `抓取失败：${message}`,
     })
   }
 }
