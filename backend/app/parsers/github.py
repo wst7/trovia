@@ -68,9 +68,9 @@ def _html_to_markdown(node) -> str:
     blocks: list[str] = []
     for el in node.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "pre", "blockquote", "hr"]):
         if el.name != "li" and el.find_parent(["li", "blockquote"]):
-            continue  # 文本已由外层列表项/引用块覆盖
+            continue  # the outer list item or blockquote already covered this text
         if el.name == "li" and el.find_parent("li"):
-            continue  # 嵌套列表取最外层
+            continue  # nested lists: only take the outermost
         if el.name == "pre":
             code = el.get_text("", strip=False).strip("\n")
             blocks.append(f"```\n{code}\n```" if code else "")

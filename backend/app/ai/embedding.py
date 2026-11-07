@@ -48,9 +48,9 @@ def tokenize_text(text: str) -> list[str]:
         return []
     tokens = [word.lower() for word in _WORD_RE.findall(text) if len(word) >= 2]
     for run in _CJK_RUN_RE.findall(text):
-        tokens.extend(run)  # 单字
+        tokens.extend(run)  # single characters
         for i in range(len(run) - 1):
-            tokens.append(run[i : i + 2])  # 二元组
+            tokens.append(run[i : i + 2])  # adjacent bigrams
     return tokens
 
 

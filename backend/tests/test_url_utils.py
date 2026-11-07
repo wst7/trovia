@@ -22,7 +22,7 @@ def test_equivalent_urls_share_hash():
     second = normalize_url("https://example.com/a?y=2&x=1")
     third = normalize_url("http://example.com:80/a?x=1&y=2")
     assert first.url_hash == second.url_hash
-    assert third.url_hash != first.url_hash  # scheme 影响内容身份，不合并
+    assert third.url_hash != first.url_hash  # the scheme is part of content identity, so do not merge
 
 
 def test_drops_default_port_and_trailing_slash():

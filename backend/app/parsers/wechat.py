@@ -88,7 +88,7 @@ def _content_markdown(node) -> tuple[str | None, str | None, list[str], list[str
         text = _inline_text(block)
         if not text:
             continue
-        if paragraphs and paragraphs[-1] == text:  # 嵌套容器重复
+        if paragraphs and paragraphs[-1] == text:  # nested container repeat
             continue
         paragraphs.append(text)
     if not paragraphs:

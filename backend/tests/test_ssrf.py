@@ -34,7 +34,7 @@ def test_blocks_unsafe_targets(url):
 
 
 def test_allows_public_literal_ip():
-    validate_ssrf("https://93.184.216.34/doc", PORTS)  # 不抛异常即通过
+    validate_ssrf("https://93.184.216.34/doc", PORTS)  # passing means it did not raise
 
 
 def test_blocks_dns_resolving_to_private_ip(monkeypatch):
