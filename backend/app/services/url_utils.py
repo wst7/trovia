@@ -1,4 +1,4 @@
-"""URL 规范化、去重哈希与来源识别。规范化必须保守：只移除已知追踪参数。"""
+"""URL normalization, deduplication hashing and source detection. Normalization must stay conservative: only known tracking parameters are removed."""
 from __future__ import annotations
 
 import hashlib
@@ -53,7 +53,7 @@ class NormalizedUrl:
 
 
 def extract_first_url(raw: str) -> str | None:
-    """从纯链接或分享文字中提取第一条 http(s) 链接。"""
+    """Extract the first http(s) link from a bare URL or from share text."""
     match = _URL_IN_TEXT_RE.search(raw or "")
     if not match:
         return None

@@ -1,4 +1,4 @@
-"""SSRF 防护下的网页抓取：每次请求与每一跳重定向都重新校验目标。"""
+"""Web fetching behind SSRF protection: the target is re-validated on every request and on every redirect hop."""
 from __future__ import annotations
 
 import ipaddress
@@ -64,7 +64,7 @@ def _blocked_ip(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
 
 
 def validate_ssrf(url: str, allowed_ports: set[int] | None = None) -> None:
-    """scheme/host/DNS 解析结果全部通过才允许请求。"""
+    """The request is allowed only once scheme, host and all DNS resolution results have passed."""
     settings = get_settings()
     ports = allowed_ports if allowed_ports is not None else settings.allowed_ports
     try:

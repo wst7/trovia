@@ -1,4 +1,4 @@
-"""SQLAlchemy ORM 模型，与 migrations/0001_init.sql 一一对应。"""
+"""SQLAlchemy ORM models, one-to-one with migrations/0001_init.sql."""
 from __future__ import annotations
 
 import uuid

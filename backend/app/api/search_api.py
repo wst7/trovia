@@ -1,4 +1,4 @@
-"""搜索接口。"""
+"""Search API."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends

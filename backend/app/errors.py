@@ -1,4 +1,4 @@
-"""统一错误：所有 API 错误响应形如 {"error": {"code", "message"}}。"""
+"""Unified errors: every API error response looks like {"error": {"code", "message"}}."""
 from __future__ import annotations
 
 import logging
@@ -20,7 +20,7 @@ class ApiError(Exception):
 
 
 class FetchError(Exception):
-    """抓取阶段错误，可携带错误码，由 pipeline 转换为任务失败原因。"""
+    """Fetch-stage error; may carry an error code, which the pipeline turns into the job failure reason."""
 
     def __init__(self, code: str, message: str):
         super().__init__(message)
@@ -29,7 +29,7 @@ class FetchError(Exception):
 
 
 class RetryableJobError(Exception):
-    """可重试的任务错误。"""
+    """A retryable job error."""
 
     def __init__(self, code: str, message: str, retryable: bool = True):
         super().__init__(message)
@@ -39,7 +39,7 @@ class RetryableJobError(Exception):
 
 
 class FatalJobError(Exception):
-    """不可重试的任务错误（如 URL 被安全策略拒绝）。"""
+    """A non-retryable job error (e.g. the URL was rejected by the safety policy)."""
 
     def __init__(self, code: str, message: str):
         super().__init__(message)

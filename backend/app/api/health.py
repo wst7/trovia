@@ -1,4 +1,4 @@
-"""健康检查。"""
+"""Health check."""
 from __future__ import annotations
 
 from fastapi import APIRouter

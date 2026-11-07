@@ -1,4 +1,4 @@
-"""摘要与 Embedding：本地算法真实性、确定性与错误映射。"""
+"""Summaries and embeddings: authenticity of the local algorithms, determinism, and error mapping."""
 from __future__ import annotations
 
 import json

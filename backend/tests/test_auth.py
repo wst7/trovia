@@ -1,4 +1,4 @@
-"""认证与会话。"""
+"""Authentication and sessions."""
 from __future__ import annotations
 
 

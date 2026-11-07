@@ -1,4 +1,4 @@
-"""流水线端到端：注入假抓取，不联网。"""
+"""Pipeline end to end: injected fake fetching, no network."""
 from __future__ import annotations
 
 import hashlib
@@ -125,7 +125,7 @@ def test_pipeline_end_to_end_completed_with_chunks_and_relations(db_session):
 
 
 def test_pipeline_summary_failure_falls_back_and_indexes(db_session, monkeypatch):
-    """远程摘要失败时回退本地抽取式，正文仍完成切分/向量化/索引。"""
+    """When remote summarization fails it falls back to the local extractive algorithm, and the body still gets chunked/embedded/indexed."""
     settings = get_settings()
     user = make_user(db_session)
     doc, job = make_doc(db_session, user, "https://blog.example.com/post/1")

@@ -1,4 +1,4 @@
-"""GitHub 仓库页解析：og 元数据 + 渲染后 README 转 Markdown + 语言/stars。"""
+"""GitHub repository page parsing: og metadata + rendered README converted to Markdown + language/stars."""
 from __future__ import annotations
 
 import re
@@ -39,7 +39,7 @@ def _parse_count(value: str | None) -> int | None:
 
 
 def _inline_markdown(node) -> str:
-    """把行内元素渲染为 markdown 文本。"""
+    """Render inline elements as markdown text."""
     parts: list[str] = []
     for child in node.children:
         if isinstance(child, NavigableString):
@@ -64,7 +64,7 @@ def _inline_markdown(node) -> str:
 
 
 def _html_to_markdown(node) -> str:
-    """渲染后的 HTML README → 近似 Markdown 文本。"""
+    """Rendered HTML README → approximate Markdown text."""
     blocks: list[str] = []
     for el in node.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "pre", "blockquote", "hr"]):
         if el.name != "li" and el.find_parent(["li", "blockquote"]):

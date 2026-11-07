@@ -1,4 +1,4 @@
-"""结构化 JSON 行日志。禁止输出 API 密钥与完整正文。"""
+"""Structured JSON line logging. API keys and full article bodies must never be logged."""
 from __future__ import annotations
 
 import json

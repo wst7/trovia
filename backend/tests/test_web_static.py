@@ -1,4 +1,4 @@
-"""单容器部署：API 顺带托管前端构建产物（XUNJI_WEB_DIR）。"""
+"""Single-container deployment: the API also serves the frontend build output (XUNJI_WEB_DIR)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -61,7 +61,7 @@ def test_without_web_dir_only_api_is_served(monkeypatch):
 
 
 def test_missing_web_dir_is_ignored(tmp_path, monkeypatch):
-    """配错了目录不应该让服务起不来，只是不发页面。"""
+    """A misconfigured directory must not stop the service from starting; it just means no pages are served."""
     from fastapi.testclient import TestClient
 
     from app.main import create_app

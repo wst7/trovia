@@ -1,4 +1,4 @@
-"""通用网页解析：OG/JSON-LD 元数据 + trafilatura 正文（bs4 兜底）。"""
+"""Generic web page parsing: OG/JSON-LD metadata + trafilatura body (bs4 fallback)."""
 from __future__ import annotations
 
 import re
@@ -27,7 +27,7 @@ _MD_URL_RE = re.compile(r"\[([^\]]*)\]\([^)]*\)")
 
 
 def _markdown_to_plain(markdown: str) -> str:
-    """粗略去掉 Markdown 标记，得到可检索的纯文本。"""
+    """Roughly strip Markdown markup to get searchable plain text."""
     text = markdown
     text = re.sub(r"```[a-zA-Z0-9_-]*\n?", "", text)
     text = text.replace("```", "")
@@ -45,7 +45,7 @@ def _markdown_to_plain(markdown: str) -> str:
 
 
 def _bs4_extract(soup) -> str | None:
-    """bs4 正文兜底：去掉脚本与站点框架后按块取文本。"""
+    """bs4 body fallback: drop scripts and the site chrome, then take text block by block."""
     for tag in soup(["script", "style", "noscript", "nav", "header", "footer", "aside", "form", "iframe", "svg"]):
         tag.decompose()
     root = soup.body or soup

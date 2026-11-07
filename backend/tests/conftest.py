@@ -1,4 +1,4 @@
-"""pytest 共享基建：真实 PostgreSQL（trovia_test 库）+ FastAPI TestClient。"""
+"""Shared pytest infrastructure: a real PostgreSQL database (the trovia_test DB by default) plus a FastAPI TestClient."""
 from __future__ import annotations
 
 import os
@@ -53,7 +53,7 @@ def database():
 
 @pytest.fixture(autouse=True)
 def db_session(database):
-    """每个测试之间清空业务表，返回一个可用会话。"""
+    """Clear the business tables between each test and return a usable session."""
     from app.db import get_session_factory
 
     session = get_session_factory()()

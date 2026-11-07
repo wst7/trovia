@@ -1,13 +1,13 @@
-"""混合检索测试：四路召回、0-1 融合分、真实证据解释与跨用户隔离。
+"""Hybrid retrieval tests: four-way recall, 0-1 fused scores, real-evidence explanations and cross-user isolation.
 
-覆盖（对应契约 6.6）：
-(a) 关键词查询命中正确文档，match_reason 含真实命中词；
-(b) 措辞完全不同的语义查询靠注入向量召回（断言写明向量依据）；
-(c) 中文整句（无空格标点）查询命中；
-(d) 无关查询返回空列表且不报错（四路均无真实证据）；
-(e) 跨用户隔离：second_auth_headers 用户搜不到别人的文档；
-(f) 分数在 0-1 且按降序；
-(g) 摘要/正文为空的 failed 文档按标题仍可被搜到。
+Coverage (contract 6.6):
+(a) a keyword query hits the right document and match_reason carries the real matched term;
+(b) a semantically phrased query with completely different wording is recalled through injected vectors (the assertion states the vector basis);
+(c) a full Chinese sentence (no spaces, no punctuation) query hits;
+(d) an unrelated query returns an empty list and raises nothing (no real evidence on any of the four channels);
+(e) cross-user isolation: the second_auth_headers user cannot search out another user's documents;
+(f) scores stay within 0-1 and are sorted descending;
+(g) a failed document with an empty summary/body is still findable by title.
 """
 from __future__ import annotations
 
@@ -75,7 +75,7 @@ def _chunk(session, doc: Document, content: str, vec: list[float]) -> DocumentCh
 
 
 def test_keyword_query_hits_correct_document_with_real_reason(db_session):
-    """(a) 关键词查询只命中正确文档，解释里列出真实命中的词。"""
+    """(a) The keyword query hits only the right document, and the explanation lists the genuinely matched terms."""
     uid = _user(db_session)
     sched = _doc(
         db_session,
@@ -105,11 +105,12 @@ def test_keyword_query_hits_correct_document_with_real_reason(db_session):
 
 
 def test_semantic_recall_via_injected_vectors(db_session, monkeypatch):
-    """(b) 措辞完全不同的查询靠语义通道召回，词面/三元组/全文四路均无交集。
+    """(b) A query with completely different wording is recalled by the semantic channel; the literal/trigram/full-text channels share nothing with it.
 
-    依据：注入的查询向量与 doc_cat 的 chunk 向量完全相同（余弦=1，远高于
-    _SEMANTIC_MIN_COS），与 doc_pg 的 chunk 向量正交（余弦=0，低于门槛被剔除）；
-    查询串在 title/body/keywords/URL 中均无字面出现，三元组无 3 字公共子串。
+    Basis: the injected query vector is identical to doc_cat's chunk vector (cosine = 1, far above
+    _SEMANTIC_MIN_COS) and orthogonal to doc_pg's chunk vector (cosine = 0, below the threshold, so
+    it is dropped); the query string appears literally nowhere in title/body/keywords/URL, and no
+    3-character common substring exists for the trigram channel.
     """
     uid = _user(db_session)
     doc_cat = _doc(
@@ -149,7 +150,7 @@ def test_semantic_recall_via_injected_vectors(db_session, monkeypatch):
 
 
 def test_chinese_full_sentence_query(db_session):
-    """(c) 中文整句（无空格无标点）作为整串 ILIKE 模式命中正文。"""
+    """(c) A full Chinese sentence (no spaces, no punctuation) matches the body as a single whole-string ILIKE pattern."""
     uid = _user(db_session)
     doc = _doc(
         db_session,
@@ -170,7 +171,7 @@ def test_chinese_full_sentence_query(db_session):
 
 
 def test_unrelated_query_returns_empty(db_session):
-    """(d) 无关查询四路都无真实证据 → 空列表且不报错。"""
+    """(d) An unrelated query has no real evidence on any of the four channels → empty list, no error."""
     uid = _user(db_session)
     doc = _doc(
         db_session,
@@ -190,7 +191,7 @@ def test_unrelated_query_returns_empty(db_session):
 
 
 def test_cross_user_isolation(client, auth_headers, second_auth_headers, db_session):
-    """(e) 第二个用户（second_auth_headers）搜不到别人的文档，只能搜到自己的。"""
+    """(e) The second user (second_auth_headers) cannot find other people's documents, only their own."""
     owner_id = uuid.UUID(
         client.get("/api/v1/auth/me", headers=auth_headers).json()["data"]["id"]
     )
@@ -217,7 +218,7 @@ def test_cross_user_isolation(client, auth_headers, second_auth_headers, db_sess
 
 
 def test_natural_language_filler_query_finds_content_terms(db_session):
-    """自然语言回忆里的「之前看过」「讲的是」「好像」等外壳不应淹没内容词。"""
+    """Narrative shells in a natural-language recall ("I read it before", "it was about", "seems like") must not drown out the content words."""
     uid = _user(db_session)
     target = _doc(
         db_session,
@@ -247,7 +248,7 @@ def test_natural_language_filler_query_finds_content_terms(db_session):
 
 
 def test_summary_only_match_is_recalled(db_session):
-    """正文没出现查询词、但摘要出现时，仍应靠摘要召回并给出真实证据。"""
+    """When the query terms do not appear in the body but do appear in the summary, the summary must still recall the document and give real evidence."""
     uid = _user(db_session)
     target = _doc(
         db_session,
@@ -271,7 +272,7 @@ def test_summary_only_match_is_recalled(db_session):
 
 
 def test_scores_bounded_and_sorted_desc(db_session):
-    """(f) 分数在 [0,1]、按降序、且都不低于 search_min_score。"""
+    """(f) Scores are in [0,1], sorted descending, and none below search_min_score."""
     settings = get_settings()
     uid = _user(db_session)
     both = _doc(
@@ -296,7 +297,7 @@ def test_scores_bounded_and_sorted_desc(db_session):
 
 
 def test_failed_document_without_body_found_by_title(db_session):
-    """(g) 摘要/正文为空的 failed 文档按标题仍可被搜到，不虚构片段。"""
+    """(g) A failed document with an empty summary/body is still findable by title, and no excerpt is fabricated."""
     uid = _user(db_session)
     failed = _doc(
         db_session,

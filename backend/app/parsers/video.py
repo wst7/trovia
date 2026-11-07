@@ -1,6 +1,6 @@
-"""视频页解析（YouTube / Bilibili / Twitter）：仅提取 OG 与 JSON-LD 元数据。
+"""Video page parsing (YouTube / Bilibili / Twitter): extracts OG and JSON-LD metadata only.
 
-无字幕/转录能力，不伪造正文：有元数据时 parse_status='partial'。
+No subtitle/transcription capability, and no faked body text: with metadata present parse_status='partial'.
 """
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ _DURATION_RE = re.compile(r"^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$", re.I)
 
 
 def _duration_seconds(value: str | None) -> int | None:
-    """ISO-8601 时长（PT12M34S）或纯秒数 → 秒。"""
+    """ISO-8601 duration (PT12M34S) or plain seconds → seconds."""
     text = (value or "").strip()
     if not text:
         return None

@@ -1,4 +1,4 @@
-"""数据库引擎、会话与迁移执行。"""
+"""Database engine, sessions and migration execution."""
 from __future__ import annotations
 
 import sys
@@ -20,7 +20,7 @@ MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "migrations"
 
 
 class Base(DeclarativeBase):
-    """所有 ORM 模型的基类；表结构由 migrations/*.sql 定义，不使用 metadata.create_all。"""
+    """Base class for all ORM models; the schema is defined by migrations/*.sql and metadata.create_all is not used."""
 
 
 _engine: Engine | None = None
@@ -53,7 +53,7 @@ def get_session_factory() -> sessionmaker:
 
 
 def get_db():
-    """FastAPI 依赖：请求结束后关闭会话，事务由视图显式提交。"""
+    """FastAPI dependency: the session is closed after the request, and transactions are committed explicitly by the view."""
     session = get_session_factory()()
     try:
         yield session
@@ -63,7 +63,7 @@ def get_db():
 
 @contextmanager
 def session_scope() -> Iterator[Session]:
-    """Worker / 脚本用：退出时自动 commit 或 rollback。"""
+    """For workers / scripts: commit or roll back automatically on exit."""
     session = get_session_factory()()
     try:
         yield session
@@ -85,10 +85,11 @@ MIGRATION_LOCK_ID = 727_001
 
 
 def run_migrations() -> list[str]:
-    """顺序执行 migrations/*.sql，记录到 schema_migrations；整体幂等。
+    """Run migrations/*.sql in order and record them in schema_migrations; idempotent as a whole.
 
-    整个迁移过程持有事务级 advisory lock：并发启动的进程会在这里排队，
-    后到的进程拿到锁时前面的迁移已提交，于是自然跳过。
+    The whole migration holds a transaction-level advisory lock: processes that start concurrently queue
+    up here, and by the time a later process gets the lock the earlier migrations are committed, so it
+    skips them naturally.
     """
     settings = get_settings()
     dim = str(settings.embedding_dim)

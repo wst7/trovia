@@ -1,4 +1,4 @@
-"""应用配置：全部通过环境变量提供，禁止把密钥写入源码。"""
+"""Application configuration: everything comes from environment variables; never put secrets in source."""
 from __future__ import annotations
 
 from functools import lru_cache
@@ -18,10 +18,11 @@ class Settings(BaseSettings):
     @field_validator("database_url")
     @classmethod
     def _normalize_database_url(cls, value: str) -> str:
-        """托管平台给的是 postgres://… 或 postgresql://…，统一补成 psycopg3 驱动。
+        """Hosting platforms hand out postgres://… or postgresql://…, so the psycopg3 driver is filled in uniformly.
 
-        SQLAlchemy 对裸 postgresql:// 会找 psycopg2；本服务只装 psycopg3，
-        不转换会导致启动时 ModuleNotFoundError。显式带驱动的 URL 原样保留。
+        SQLAlchemy looks for psycopg2 behind a bare postgresql://; this service only installs psycopg3,
+        so without the conversion startup hits ModuleNotFoundError. A URL that already names a driver is
+        kept as is.
         """
         for prefix in ("postgres://", "postgresql://"):
             if value.startswith(prefix):
@@ -98,7 +99,7 @@ def get_settings() -> Settings:
 
 
 def validate_settings(settings: Settings) -> None:
-    """启动即校验：provider 与维度配置不合法时直接失败，不允许不兼容向量入库。"""
+    """Validated at startup: an invalid provider or dimension configuration fails immediately; incompatible vectors are never allowed into the database."""
     from app.ai.embedding import get_embedding_provider
     from app.ai.openai_compat import (
         is_openai_compatible,

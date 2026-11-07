@@ -1,4 +1,4 @@
-"""URL 规范化、去重与来源识别。"""
+"""URL normalization, deduplication and source detection."""
 from __future__ import annotations
 
 import pytest

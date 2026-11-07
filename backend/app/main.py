@@ -1,4 +1,4 @@
-"""FastAPI 应用入口：python -m uvicorn app.main:app --port 8000"""
+"""FastAPI application entry point: python -m uvicorn app.main:app --port 8000"""
 from __future__ import annotations
 
 import os
@@ -95,12 +95,12 @@ def create_app():
 
 
 def _mount_spa(app) -> None:
-    """让 API 进程顺带托管前端构建产物（单容器部署用）。
+    """Let the API process also serve the frontend build output (for single-container deployment).
 
-    免费 PaaS 通常只给一个 Web 服务，没有单独放 Nginx 的位置。把 `XUNJI_WEB_DIR`
-    指向 `apps/web` 的构建目录，页面和接口就是同一个源：不需要 CORS，也不需要
-    再维护一份反向代理配置。未设置该变量、或目录里没有 index.html 时完全跳过，
-    行为与只跑 API 时一致。
+    Free PaaS usually gives you one web service only, with nowhere to put a separate Nginx. Point
+    `XUNJI_WEB_DIR` at the build output directory of `apps/web` and pages and API share one origin:
+    no CORS needed, and no second reverse-proxy configuration to maintain. When the variable is unset,
+    or the directory has no index.html, everything is skipped and behaviour matches running the API alone.
     """
     raw = os.environ.get("XUNJI_WEB_DIR", "").strip()
     if not raw:

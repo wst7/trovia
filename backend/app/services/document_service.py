@@ -1,4 +1,4 @@
-"""收藏的创建、查询、删除、重解析与状态读取。"""
+"""Creating, querying and deleting saved items, re-parsing, and reading status."""
 from __future__ import annotations
 
 import uuid
@@ -21,7 +21,7 @@ SORT_COLUMNS = {
 
 
 def create_document(session: Session, user_id: uuid.UUID, raw_url: str) -> tuple[Document, bool]:
-    """保存链接：立即落库并入队；重复 URL 返回已有记录（duplicate=True）。"""
+    """Save a link: persist and enqueue immediately; a duplicate URL returns the existing record (duplicate=True)."""
     norm = normalize_url(raw_url)
     existing = dedupe(session, user_id, norm.url_hash)
     if existing is not None:
@@ -97,7 +97,7 @@ def list_documents(
 
 
 def get_document(session: Session, user_id: uuid.UUID, document_id: str | uuid.UUID) -> Document | None:
-    """越权访问一律返回 None（对外表现为 404）。"""
+    """Unauthorized access always returns None (which surfaces as 404)."""
     try:
         parsed_id = uuid.UUID(str(document_id))
     except ValueError:

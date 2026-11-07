@@ -1,4 +1,4 @@
-"""PostgreSQL 持久化任务队列：租约、重试、去重、崩溃恢复。"""
+"""PostgreSQL-backed persistent job queue: leases, retries, deduplication, crash recovery."""
 from __future__ import annotations
 
 import uuid
@@ -39,7 +39,7 @@ def enqueue(
     *,
     max_attempts: int | None = None,
 ) -> tuple[ProcessingJob, bool]:
-    """入队；同一文档已有活跃任务时复用（幂等），返回 (job, created)。"""
+    """Enqueue; reuse an active job for the same document (idempotent), returning (job, created)."""
     settings = get_settings()
     existing = active_job(session, document.id, job_type)
     if existing is not None:
@@ -66,7 +66,7 @@ def enqueue(
 
 
 def claim_job(session: Session, worker_id: str, *, lease_seconds: int | None = None) -> ProcessingJob | None:
-    """取一个可执行任务（FOR UPDATE SKIP LOCKED），并加租约。"""
+    """Take one runnable job (FOR UPDATE SKIP LOCKED) and give it a lease."""
     now = _now()
     candidate = (
         select(ProcessingJob)
@@ -110,7 +110,7 @@ def fail_job(
     message: str,
     retryable: bool = True,
 ) -> str:
-    """失败任务：可重试则退避后重回队列，否则终态 failed。返回最终状态。"""
+    """Failed job: if retryable, back off and re-enter the queue; otherwise it ends failed. Returns the final state."""
     now = _now()
     job.last_error_code = error_code
     job.last_error_message = (message or "")[:2000]
@@ -129,7 +129,7 @@ def fail_job(
 
 
 def reclaim_stale(session: Session, *, lease_seconds: int | None = None) -> int:
-    """Worker 崩溃恢复：租约超时的 running 任务重新排队。"""
+    """Worker crash recovery: running jobs whose lease timed out are re-queued."""
     settings = get_settings()
     lease = lease_seconds if lease_seconds is not None else settings.worker_lease_seconds
     cutoff = _now() - timedelta(seconds=lease)

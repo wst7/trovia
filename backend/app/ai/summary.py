@@ -1,4 +1,4 @@
-"""摘要与关键词：OpenAI 兼容接口 + 本地抽取式算法（离线、确定性）。"""
+"""Summaries and keywords: OpenAI-compatible API + local extractive algorithm (offline, deterministic)."""
 from __future__ import annotations
 
 import json
@@ -29,7 +29,7 @@ LONG_MAX_CHARS = 600
 
 
 class SummaryProviderError(Exception):
-    """摘要调用失败，携带契约错误码（默认 AI_PROVIDER_ERROR）。"""
+    """The summary call failed; carries the contract error code (AI_PROVIDER_ERROR by default)."""
 
     def __init__(self, code: str, message: str):
         super().__init__(message)
@@ -76,7 +76,7 @@ _CJK_FUNCTION_CHARS = set(
 
 
 def _term_tokens(text: str) -> list[str]:
-    """过滤停用词、纯数字、单字与含虚字的二元组后的词元。"""
+    """Tokens left after dropping stopwords, pure digits, single characters and bigrams containing function characters."""
     tokens = []
     for token in tokenize_text(text):
         if token in _STOPWORDS or token.isdigit() or len(token) < 2:
@@ -92,9 +92,7 @@ def _truncate(text: str, limit: int) -> str:
 
 
 class ExtractiveSummaryProvider:
-    """抽取式摘要：句子按 TF-IDF 打分选关键句，词元按词频选关键词与主题。
-
-    全部基于原文，不生成新句子；同输入同输出。
+    """Extractive summary: sentences are scored by TF-IDF to pick the key sentences, tokens pick keywords and topics by frequency.
     """
 
     name = "extractive"
@@ -175,7 +173,7 @@ class ExtractiveSummaryProvider:
         return picked
 
     def _topics(self, tf: Counter[str], sentences: list[str], limit: int = 5) -> list[str]:
-        """主题：出现在多个句子里的高频词元（覆盖面更广的概念）。"""
+        """Topics: high-frequency tokens that occur across several sentences (broader concepts)."""
         if len(sentences) < 2:
             return list(self._keywords(tf, {w: 1.0 for w in tf}, limit=limit))
         bins = max(2, min(8, len(sentences) // 2))
@@ -215,10 +213,10 @@ _SUMMARY_SYSTEM_PROMPT = (
 
 
 class OpenAISummaryProvider:
-    """任意 OpenAI 兼容 /chat/completions 摘要，JSON 输出，有限重试。
+    """Summarization through any OpenAI-compatible /chat/completions endpoint, JSON output, bounded retries.
 
-    base URL、路径、鉴权头、额外请求头均可配置，个人服务商、中转站、
-    Ollama、vLLM 等只要兼容该协议即可接入。
+    base URL, path, auth header and extra request headers are all configurable; personal providers, relay
+    stations, Ollama, vLLM and the like can plug in as long as they speak the protocol.
     """
 
     name = "openai-compatible"
@@ -307,7 +305,7 @@ class OpenAISummaryProvider:
 
 
 def get_summary_provider(settings) -> SummaryProvider:
-    """工厂：openai / openai-compatible | extractive。"""
+    """Factory: openai / openai-compatible | extractive."""
     if is_openai_compatible(getattr(settings, "ai_provider", "")):
         require_openai_settings(
             base_url=getattr(settings, "ai_base_url", ""),

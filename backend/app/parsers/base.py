@@ -1,4 +1,4 @@
-"""解析器公共契约（6.3）与 HTML 辅助工具。"""
+"""Shared parser contract (6.3) and HTML helper utilities."""
 from __future__ import annotations
 
 import json
@@ -57,7 +57,7 @@ def make_soup(html: str) -> BeautifulSoup:
 
 
 def clean_text(value: str | None) -> str | None:
-    """折叠空白，返回 None 表示缺失。"""
+    """Collapse whitespace; returning None means the value is missing."""
     if value is None:
         return None
     text = _WS_RE.sub(" ", value)
@@ -66,7 +66,7 @@ def clean_text(value: str | None) -> str | None:
 
 
 def meta_content(soup: BeautifulSoup, *names: str) -> str | None:
-    """按顺序找 meta/property/itemprop 的 content。"""
+    """Look up the content of meta/property/itemprop in order."""
     for name in names:
         tag = soup.find("meta", attrs={"property": name}) or soup.find(
             "meta", attrs={"name": name}
@@ -79,7 +79,7 @@ def meta_content(soup: BeautifulSoup, *names: str) -> str | None:
 
 
 def parse_json_ld(soup: BeautifulSoup) -> list[dict]:
-    """提取全部 JSON-LD script，解析失败忽略。"""
+    """Extract every JSON-LD script; parse failures are ignored."""
     payloads: list[dict] = []
     for script in soup.find_all("script", attrs={"type": re.compile("ld\\+json", re.I)}):
         raw = script.string or script.get_text() or ""
@@ -98,7 +98,7 @@ def parse_json_ld(soup: BeautifulSoup) -> list[dict]:
 
 
 def first_json_ld(soup: BeautifulSoup, types: set[str]) -> dict | None:
-    """找 @type 命中的 JSON-LD 对象（含 @graph 内嵌套）。"""
+    """Find the JSON-LD object whose @type matches (including ones nested inside @graph)."""
     wanted = {t.lower() for t in types}
 
     def _walk(obj: dict) -> dict | None:
@@ -134,7 +134,7 @@ _TIME_FORMATS = (
 
 
 def parse_datetime(value: str | None) -> datetime | None:
-    """解析常见发布时间格式，统一为 UTC；无时区信息时按 UTC 处理。"""
+    """Parse common publish-time formats and normalize to UTC; a timestamp without zone information is treated as UTC."""
     text = (value or "").strip()
     if not text:
         return None
@@ -156,7 +156,7 @@ def parse_datetime(value: str | None) -> datetime | None:
 
 
 def absolute_urls(base: str, urls: list[str], *, limit: int = 50) -> list[str]:
-    """转绝对 URL，仅保留 http(s)，去重保序，截断到 limit。"""
+    """Turn into absolute URLs, keep only http(s), deduplicate preserving order, truncate to limit."""
     seen: set[str] = set()
     result: list[str] = []
     for url in urls:

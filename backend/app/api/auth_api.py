@@ -1,4 +1,4 @@
-"""认证接口：注册 / 登录 / 登出 / 当前用户。"""
+"""Auth API: register / login / logout / current user."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request, Response, status

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Every comment in this repo is English. Only copy that ships to users is
+ * Every comment in this repo is English, and so is every Python
+ * docstring: both are read by whoever maintains the code. Only copy that ships to users is
  * translated, and that lives in the i18n dictionaries.
  *
  * Why a checker: a convention nobody can run is a convention that decays.
@@ -82,7 +83,26 @@ for (const file of await collect(target)) {
     continue
   }
   const ext = rel.slice(rel.lastIndexOf('.'))
+  // Python docstrings are strings to the parser but documentation to a
+  // reader, so they follow the same rule as comments.
+  let docState = null
   text.split('\n').forEach((line, index) => {
+    if (ext === '.py') {
+      const stripped = line.trim()
+      if (docState) {
+        if (stripped.includes(docState)) docState = null
+        else if (CJK.test(line)) findings.push({ rel, line: index + 1, text: stripped.slice(0, 120) })
+        return
+      }
+      for (const quote of ['"""', "'''"]) {
+        if (stripped.startsWith(quote)) {
+          const rest = stripped.slice(quote.length)
+          if (!rest.includes(quote)) docState = quote
+          else if (CJK.test(line)) findings.push({ rel, line: index + 1, text: stripped.slice(0, 120) })
+          return
+        }
+      }
+    }
     const comment = commentText(line, ext)
     if (comment && CJK.test(comment)) {
       findings.push({ rel, line: index + 1, text: line.trim().slice(0, 120) })

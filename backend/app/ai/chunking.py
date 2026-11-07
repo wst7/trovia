@@ -1,4 +1,4 @@
-"""文本切分：段落优先、句子兜底、带重叠、不拆散句子。"""
+"""Text splitting: paragraphs first, sentences as a fallback, with overlap, without breaking sentences apart."""
 from __future__ import annotations
 
 import re
@@ -9,9 +9,9 @@ _PARAGRAPH_RE = re.compile(r"\r?\n[ \t　]*\r?\n+")
 
 
 def split_sentences(text: str) -> list[str]:
-    """中英文混排的句子切分：句末标点后断句；英文句点后必须跟空白或结尾。
+    """Sentence splitting for mixed Chinese/English text: split after sentence-final punctuation; an English period must be followed by whitespace or the end.
 
-    返回的每个句子都是原文的连续子串（strip 后）。
+    Every returned sentence is a contiguous substring of the original text (after strip).
     """
     if not text:
         return []
@@ -44,7 +44,7 @@ def split_sentences(text: str) -> list[str]:
 
 
 def join_sentences(sentences: list[str]) -> str:
-    """按边界拼回：两个 ASCII 字母数字相邻时补空格，其余直接相连。"""
+    """Rejoin at boundaries: insert a space when two ASCII alphanumerics become adjacent, concatenate everything else directly."""
     result = ""
     for sentence in sentences:
         if not sentence:
@@ -64,7 +64,7 @@ def join_sentences(sentences: list[str]) -> str:
 
 
 def _tail_boundary(text: str, overlap: int) -> str:
-    """取文本末尾 overlap 字符作为重叠，尽量从词/句边界起切。"""
+    """Take the last overlap characters of the text as the overlap, cutting from a word/sentence boundary where possible."""
     if overlap <= 0 or not text:
         return ""
     if len(text) <= overlap:
@@ -80,7 +80,7 @@ def _tail_boundary(text: str, overlap: int) -> str:
 
 
 def _pack_long(paragraph: str, max_chars: int) -> list[str]:
-    """超长段落按句子成组，句子优先；单句超限才退化为定长硬切。"""
+    """Group an over-long paragraph by sentences, preferring whole sentences; only a single over-limit sentence degrades to a fixed-length hard cut."""
     pieces: list[str] = []
     buffer = ""
     for sentence in split_sentences(paragraph):
@@ -105,9 +105,9 @@ def _pack_long(paragraph: str, max_chars: int) -> list[str]:
 
 
 def chunk_text(text: str, max_chars: int = 1200, overlap: int = 150) -> list[str]:
-    """段落优先的贪心打包：段落成块，超长段落按句子切；块间带重叠。
+    """Paragraph-first greedy packing: paragraphs become chunks, over-long paragraphs are split by sentence; chunks carry overlap.
 
-    每个块都是原文的连续内容（重叠部分除外），空文本返回 []。
+    Every chunk is contiguous original content (apart from the overlap); empty text returns [].
     """
     if not text or not text.strip() or max_chars <= 0:
         return []

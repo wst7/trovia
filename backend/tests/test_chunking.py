@@ -1,4 +1,4 @@
-"""chunk_text 边界与行为测试。"""
+"""Boundary and behaviour tests for chunk_text."""
 from __future__ import annotations
 
 from app.ai.chunking import chunk_text, split_sentences

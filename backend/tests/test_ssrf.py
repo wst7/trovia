@@ -1,4 +1,4 @@
-"""SSRF 防护：地址黑名单、端口限制、逐跳重定向校验、抓取限制。"""
+"""SSRF protection: address blocklist, port restrictions, per-hop redirect validation, fetch limits."""
 from __future__ import annotations
 
 import httpx

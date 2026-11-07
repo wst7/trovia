@@ -1,4 +1,4 @@
-"""解析器测试：全部使用 tests/fixtures 下的离线 HTML，不联网。"""
+"""Parser tests: all use offline HTML from tests/fixtures, no network access."""
 from __future__ import annotations
 
 from pathlib import Path

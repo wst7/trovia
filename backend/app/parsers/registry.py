@@ -1,4 +1,4 @@
-"""解析器注册表：wechat > github > video > generic。"""
+"""Parser registry: wechat > github > video > generic."""
 from __future__ import annotations
 
 from app.parsers.base import Parser
@@ -11,7 +11,7 @@ _PARSER_CLASSES = (WechatParser, GithubParser, VideoParser, GenericParser)
 
 
 def get_parser(url: str, source_type: str) -> Parser:
-    """按优先级返回第一个匹配的解析器；generic 永远兜底。"""
+    """Return the first matching parser in priority order; generic is always the fallback."""
     for parser_class in _PARSER_CLASSES:
         parser = parser_class()
         if parser.matches(url, source_type):

@@ -1,4 +1,4 @@
-"""任务队列：幂等入队、租约、退避重试、崩溃回收。"""
+"""Job queue: idempotent enqueue, leases, backoff retries, crash recovery."""
 from __future__ import annotations
 
 import uuid

@@ -1,4 +1,4 @@
-"""文档处理流水线：抓取→解析→摘要关键词→切分→向量化→关联→完成。"""
+"""Document processing pipeline: fetch→parse→summary/keywords→chunk→embed→relate→done."""
 from __future__ import annotations
 
 import hashlib
@@ -48,7 +48,7 @@ def _sha256(value: str) -> str:
 
 
 def _estimate_tokens(text: str) -> int:
-    """粗略 token 估算：拉丁词数 + 中文字数。"""
+    """Rough token estimate: Latin word count + Chinese character count."""
     words = len(re.findall(r"[A-Za-z0-9_]+", text))
     cjk = len(_CJK_RE.findall(text))
     return words + cjk
@@ -88,7 +88,7 @@ def _mean_embedding(session: Session, document_id: uuid.UUID) -> list[float] | N
 def _update_relations(
     session: Session, doc: Document, source_vector: list[float] | None
 ) -> None:
-    """同用户其他文档：语义（chunk 均值余弦）+ 主题重叠 + 同来源；每文档保留 top 5。"""
+    """Other documents of the same user: semantic (cosine of the mean chunk vector) + topic overlap + same source; keep the top 5 per document."""
     session.execute(
         delete(DocumentRelation).where(
             DocumentRelation.source_document_id == doc.id
@@ -168,9 +168,9 @@ def process_document(
     *,
     fetch_fn=None,
 ) -> None:
-    """处理单个文档全流程；可恢复错误抛 RetryableJobError，不可恢复抛 FatalJobError。
+    """Full pipeline for a single document; recoverable errors raise RetryableJobError, unrecoverable ones FatalJobError.
 
-    任何情况下不删除 documents 记录；partial 解析结果保留并止步于 partial。
+    The documents record is never deleted; a partial parse result is kept and stops at partial.
     """
     fetch = fetch_fn or safe_fetch
     doc = session.get(Document, _coerce_uuid(document_id))
@@ -339,7 +339,7 @@ def process_document(
 
 
 def _raise_fetch_error(session: Session, doc: Document, exc: FetchError) -> None:
-    """抓取失败：可重试的抛 RetryableJobError；终态错误同步置文档 failed。"""
+    """Fetch failure: retryable ones raise RetryableJobError; terminal ones also mark the document failed."""
     if exc.code in RETRYABLE_FETCH_CODES:
         raise RetryableJobError(exc.code, exc.message) from exc
     code = exc.code if exc.code in {

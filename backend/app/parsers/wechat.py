@@ -1,4 +1,4 @@
-"""微信公众号文章（mp.weixin.qq.com）解析：多套选择器容错提取。"""
+"""WeChat official-account articles (mp.weixin.qq.com): fault-tolerant extraction with several selector sets."""
 from __future__ import annotations
 
 import re
@@ -53,7 +53,7 @@ def _parse_publish_time(soup, fetched_text: str) -> datetime | None:
 
 
 def _inline_text(node) -> str:
-    """行内拼接：中文直接相连，两个 ASCII 单词之间补空格。"""
+    """Inline joining: Chinese is concatenated directly, a space is inserted between two ASCII words."""
     result = ""
     for part in node.stripped_strings:
         if not part:
@@ -73,7 +73,7 @@ def _inline_text(node) -> str:
 
 
 def _content_markdown(node) -> tuple[str | None, str | None, list[str], list[str]]:
-    """从正文节点产出 (markdown, plain_text, images, links)。"""
+    """Produce (markdown, plain_text, images, links) from the body node."""
     images = [
         img.get("data-src") or img.get("data-original") or img.get("src") or ""
         for img in node.find_all("img")

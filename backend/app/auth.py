@@ -1,4 +1,4 @@
-"""认证：scrypt 口令哈希 + 不透明 Bearer token（数据库只存 SHA-256）。"""
+"""Authentication: scrypt password hashing plus opaque Bearer tokens (the database stores only SHA-256)."""
 from __future__ import annotations
 
 import base64
@@ -86,7 +86,7 @@ def current_user(
     request: Request,
     session: Session = Depends(get_db),
 ) -> User:
-    """从经过验证的认证上下文取当前用户；永远不信前端传来的 user_id。"""
+    """Resolve the current user from the verified auth context; never trust a user_id sent by the frontend."""
     header = request.headers.get("Authorization", "")
     if not header.startswith("Bearer "):
         raise ApiError("UNAUTHORIZED", "请先登录。", 401)

@@ -68,12 +68,13 @@ The app is local-first: no API address, backend, or login is needed to run it.
 ## Comments
 
 Code comments are English, everywhere: source, tests, scripts, workflows,
-shell, CSS. Chinese appears only where it ships to a user — the i18n
+shell, CSS. Python docstrings count as comments here — they are read the same
+way — so they are English too. Chinese appears only where it ships to a user — the i18n
 dictionaries (`apps/mobile/src/i18n/zh.ts`) and copy with no translation
 layer (the extension's popup and options strings).
 
 `npm run lint:comments` enforces it. Run it before a commit; it fails on any
-CJK character sitting in a comment.
+CJK character sitting in a comment or a Python docstring.
 
 ## Architecture
 

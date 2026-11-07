@@ -1,7 +1,7 @@
-"""Worker 主循环：python -m app.workers.runner [--once]。
+"""Worker main loop: python -m app.workers.runner [--once].
 
-每轮：reclaim_stale → claim → process_document → complete/fail；
-SIGTERM/SIGINT 优雅退出；任务失败时同步把 document 置为 failed（保留已抓到的内容）。
+Each round: reclaim_stale → claim → process_document → complete/fail;
+SIGTERM/SIGINT exit gracefully; when a job fails the document is also marked failed (the content already fetched is kept).
 """
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ def _handle_signal(signum, _frame) -> None:
 def _mark_document_failed(
     document_id: uuid.UUID, *, error_code: str, error_message: str
 ) -> str | None:
-    """任务终态 failed：文档置 failed 并写错误码，保留已抓内容；返回当时的 stage。"""
+    """Job ended failed: mark the document failed, write the error code and keep the fetched content; return the stage it was at."""
     with session_scope() as session:
         job_doc = session.get(Document, document_id)
         if job_doc is None:
@@ -52,7 +52,7 @@ def _mark_document_failed(
 def run_once(
     settings: Settings, worker_id: str, *, fetch_fn=None
 ) -> str | None:
-    """领取并处理最多一个任务；返回终态（completed/failed/retrying）或 None（无任务）。"""
+    """Claim and process at most one job; return its final state (completed/failed/retrying) or None (no job)."""
     with session_scope() as session:
         reclaimed = queue.reclaim_stale(session, lease_seconds=settings.worker_lease_seconds)
         if reclaimed:

@@ -1,58 +1,57 @@
-"""混合检索：四路召回 + 候选集 min-max 归一化 + 配置权重加权融合。
+"""Hybrid retrieval: four-way recall + min-max normalization over the candidate set + weighted fusion with the configured weights.
 
-四路召回（全部强制 user_id 过滤；删除为硬删，行不存在即不可见）与原始分来源：
+Four-way recall (every channel forces a user_id filter; deletes are hard deletes, so a row that no longer exists is invisible) and the source of each raw score:
 
-================= ==========================================================
-通道              原始分（通道内取 max）
-================= ==========================================================
-全文 (fts)        ts_rank_cd(to_tsvector('simple', title||summary||plain_text),
-                  websearch_to_tsquery('simple', terms OR ...)) 原值 r → r/(r+1) ∈ [0,1)
-三元组 (trgm)     similarity(title, clean_q)、similarity(summary, clean_q)、
-                  similarity(plain_text, clean_q) 原值，≥ _TRGM_MIN 才算证据
-                  （中文无分词，3 字以上公共子串靠它兜底；长正文会被长度稀释）
-词面 (ILIKE)      query 去掉「之前看过一篇文章」「帮我找」等叙事外壳后切出的 term
-                  （外加整串 query / clean_q）对 title / summary / plain_text /
-                  keywords / topics / site_name / author / 描述 / URL 做 ILIKE，
-                  证据 = 命中模式数 / 模式总数
-语义 (pgvector)   查询向量化后取 chunk 余弦距离 top-N（search_vector_candidates），
-                  按文档聚合最优 chunk，cos = 1 - distance，
-                  ≥ _SEMANTIC_MIN_COS 才算证据（local 哈希无关噪声实测 ≤0.06）
-================= ==========================================================
+=================== ==========================================================
+Channel             Raw score (max within the channel)
+=================== ==========================================================
+Full-text (fts)     ts_rank_cd(to_tsvector('simple', title||summary||plain_text),
+                    websearch_to_tsquery('simple', terms OR ...)) raw r → r/(r+1) ∈ [0,1)
+Trigram (trgm)      similarity(title, clean_q), similarity(summary, clean_q),
+                    similarity(plain_text, clean_q) raw values; evidence only when
+                    ≥ _TRGM_MIN (Chinese has no word segmentation, so shared
+                    substrings of 3+ characters are caught here; long bodies get
+                    diluted by length)
+Literal (ILIKE)     the terms cut out of the query after stripping narrative
+                    shells such as "I read an article before" / "help me find"
+                    (plus the whole query string / clean_q), ILIKE-matched against
+                    title / summary / plain_text / keywords / topics / site_name /
+                    author / description / URL;
+                    evidence = matched pattern count / total pattern count
+Semantic (pgvector) embed the query, then take top-N chunks by cosine distance
+                    (search_vector_candidates), aggregate the best chunk per
+                    document, cos = 1 - distance, and count it as evidence only
+                    when ≥ _SEMANTIC_MIN_COS (measured noise for unrelated
+                    queries with the local hash embedding ≤0.06)
+=================== ==========================================================
 
-四路分数映射到四个加权维度（权重 = settings.search_weights，默认
-lexical 0.35 / semantic 0.35 / title 0.20 / meta 0.10）：
+The four channel scores map onto four weighted dimensions (weights = settings.search_weights, default lexical 0.35 / semantic 0.35 / title 0.20 / meta 0.10):
 
-- lexical = max(全文 r/(r+1), 正文/摘要三元组, 正文/摘要词面命中率)
-- title   = max(标题全文秩, 标题三元组, 标题词面命中率)
-- meta    = keywords/topics/site_name/author/描述/URL 的词面命中率
-- semantic= 该文档最优 chunk 的余弦相似度
+- lexical = max(full-text r/(r+1), body/summary trigram, body/summary literal hit rate)
+- title   = max(title full-text rank, title trigram, title literal hit rate)
+- meta    = literal hit rate over keywords/topics/site_name/author/description/URL
+- semantic= cosine similarity of that document's best chunk
 
-融合公式（候选集 = 至少一路命中的文档；候选集内某路未命中该文档记 0）：
+Fusion formula (candidate set = documents hit by at least one channel; inside the candidate set a channel that missed a document contributes 0):
 
     score = clip01( Σ_channel weight_channel × minmax_channel(raw) )
 
-minmax 在候选集内做 (x - min)/(max - min)：该通道全 0 → 全 0；
-该通道全为相同正值 → 全 1。低于 settings.search_min_score 的结果剔除，
-按 score 降序（同分按 saved_at 降序）取 limit。搜索期不做任何模型调用，
-只有 _embed_query 这一次查询向量化。
+minmax computes (x - min)/(max - min) inside the candidate set: a channel that is all 0 → all 0; a channel where every value is the same positive number → all 1. Results below settings.search_min_score are dropped, then the top `limit` are taken by descending score (ties by descending saved_at). No model call happens during search apart from the single _embed_query query embedding.
 
-match_reason 模板（每个分句都对应真实证据，列出的命中词必须在对应字段里
-实际存在；禁止编造正文没有的内容）：
+match_reason templates (every clause maps to real evidence; a listed matched term must actually exist in the corresponding field; never invent content the body does not have). The emitted strings wrap the query and the terms in Chinese corner brackets, join clauses with a Chinese comma, and end with a Chinese full stop; they are shown below with ASCII punctuation:
 
-- 正文词面命中：        正文与「{query}」相关：命中关键词「t1」「t2」
-- 正文仅三元组相似：    正文与「{query}」内容相似
-- 摘要词面命中：        摘要命中关键词「t1」「t2」（仅列正文未出现的词）
-- 摘要仅三元组相似：    摘要与「{query}」内容相似
-- 标题词面命中：        标题命中关键词「t1」「t2」
-- 标题仅三元组相似：    标题与「{query}」相似（仅在无正文证据时提及）
-- 元数据命中：          来源信息匹配关键词「t1」「t2」
-- 语义 + 其他证据：     与你描述的内容语义相近
-- 仅语义：              正文语义上接近你描述的内容
-- 分句用「，」连接；存在来源域名时追加「（来源 {host}）」；结尾「。」。
-  命中词按长度降序最多列 2 个（更具体的词优先）。
+- Body literal hit:         body relates to "{query}": matched keywords "t1", "t2"
+- Body trigram-only:        body content is similar to "{query}"
+- Summary literal hit:      summary matched keywords "t1", "t2" (only terms absent from the body are listed)
+- Summary trigram-only:     summary content is similar to "{query}"
+- Title literal hit:        title matched keywords "t1", "t2"
+- Title trigram-only:       title is similar to "{query}" (only mentioned when there is no body evidence)
+- Metadata hit:             source information matched keywords "t1", "t2"
+- Semantic + other:         semantically close to the content you described
+- Semantic only:            body is semantically close to the content you described
+- Up to 2 matched terms are listed per clause, longest first (the more specific term wins).
 
-matched_excerpt：正文命中词的上下文窗口（≤200 字符，截断处加省略号）→
-摘要命中词的上下文窗口 → 语义命中 chunk 的片段 → 摘要首句 → None。绝不虚构。
+matched_excerpt: context window around a body matched term (≤200 characters, ellipsis at the truncation point) → context window around a summary matched term → the snippet of the semantically matched chunk → first sentence of the summary → None. Never fabricated.
 """
 from __future__ import annotations
 
@@ -159,7 +158,7 @@ def _is_noise_term(term: str) -> bool:
 
 
 def _terms(query: str) -> list[str]:
-    """去掉叙事/提问外壳，按标点、空白和中英文边界切出内容词。"""
+    """Strip the narrative/question shell, then cut the content terms out by punctuation, whitespace and Latin/CJK boundaries."""
     cleaned = _FILLER_RE.sub(" ", query or "")
     terms: list[str] = []
     for part in _TERM_SPLIT_RE.split(cleaned):
@@ -197,7 +196,7 @@ def _like_escape(value: str) -> str:
 
 
 def _matched(patterns: list[str], haystack: str) -> list[str]:
-    """haystack 里真实存在的模式（ILIKE 的 Python 侧等价校验，供解释用）。"""
+    """Patterns that really occur in haystack (the Python-side equivalent of the ILIKE check, used for explanations)."""
     low = haystack.lower()
     return [p for p in patterns if p and p.lower() in low]
 
@@ -207,7 +206,7 @@ def _matched(patterns: list[str], haystack: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 def _embed_query(query: str, settings: Settings) -> list[float] | None:
-    """查询向量化：搜索期唯一一次模型调用；失败降级为无语义通道。"""
+    """Embed the query: the only model call during search; on failure degrade to no semantic channel."""
     try:
         vectors = get_embedding_provider(settings).embed([query])
     except Exception as exc:  # A semantic-channel failure must not take lexical search down with it
@@ -221,7 +220,7 @@ def _embed_query(query: str, settings: Settings) -> list[float] | None:
 def _semantic_candidates(
     session: Session, uid: uuid.UUID, query: str, settings: Settings
 ) -> dict[uuid.UUID, tuple[float, str | None]]:
-    """语义召回：top-N chunk 按距离升序，每文档取首个（= 最优）chunk。"""
+    """Semantic recall: top-N chunks ordered by ascending distance, taking the first (= best) chunk of every document."""
     qvec = _embed_query(query, settings)
     if not qvec:
         return {}
@@ -313,7 +312,7 @@ def _lexical_candidates(
     sem_ids: set[uuid.UUID],
     settings: Settings,
 ) -> list:
-    """全文/三元组/词面三路的候选行（含语义入围文档，保证其字段可展示）。"""
+    """Candidate rows of the full-text/trigram/literal channels (including the documents that made the semantic cut, so their fields can be displayed)."""
     sem_clause = "OR d.id = ANY(:sem_ids)" if sem_ids else ""
     params: dict = {
         "qclean": plan.clean,
@@ -334,7 +333,7 @@ def _lexical_candidates(
 # ---------------------------------------------------------------------------
 
 def _minmax(values: dict[uuid.UUID, float]) -> dict[uuid.UUID, float]:
-    """候选集内 min-max 归一化到 [0,1]；全 0 → 全 0；相同正值 → 全 1。"""
+    """Min-max normalize to [0,1] inside the candidate set; all 0 → all 0; identical positive values → all 1."""
     if not values:
         return {}
     lo = min(values.values())
@@ -466,7 +465,7 @@ def _build_reason(
 
 
 def _slice_around(text_: str, pos: int) -> str:
-    """以 pos 为起点取窗口，截断处加省略号，总长 ≤ _EXCERPT_MAX。"""
+    """Take a window starting at pos, add an ellipsis where it is truncated, total length ≤ _EXCERPT_MAX."""
     length = len(text_)
     if length <= _EXCERPT_MAX:
         return text_

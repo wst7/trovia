@@ -1,4 +1,4 @@
-"""搜索接口契约：鉴权、参数校验、空结果。"""
+"""Search endpoint contract: auth, parameter validation, empty results."""
 from __future__ import annotations
 
 

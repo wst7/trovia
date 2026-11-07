@@ -1,4 +1,4 @@
-"""请求/响应 Pydantic 模型，对应 docs/ENGINEERING.md 第 5 节 API 契约。"""
+"""Request/response Pydantic models, matching the API contract in section 5 of docs/ENGINEERING.md."""
 from __future__ import annotations
 
 import uuid
@@ -15,7 +15,7 @@ T = TypeVar("T")
 
 
 class DataEnvelope(BaseModel, Generic[T]):
-    """成功响应统一为 {"data": ...}；错误为 {"error": {...}}。"""
+    """Successful responses are uniformly {"data": ...}; errors are {"error": {...}}."""
 
     data: T
 

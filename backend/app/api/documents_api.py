@@ -1,4 +1,4 @@
-"""收藏接口：创建、列表、详情、删除、重解析、状态、相关收藏。"""
+"""Saved-document API: create, list, detail, delete, re-parse, status, related documents."""
 from __future__ import annotations
 
 import uuid

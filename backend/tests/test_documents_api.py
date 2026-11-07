@@ -1,4 +1,4 @@
-"""收藏 API：保存、去重、列表筛选、详情、删除、重解析、状态、隔离。"""
+"""Saved-document API: save, dedupe, list filtering, detail, delete, re-parse, status, isolation."""
 from __future__ import annotations
 
 import uuid

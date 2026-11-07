@@ -1,4 +1,4 @@
-"""Embedding Provider：OpenAI 兼容接口 + 本地确定性特征哈希向量。"""
+"""Embedding Provider: OpenAI-compatible API + local deterministic feature-hashing vectors."""
 from __future__ import annotations
 
 import hashlib
@@ -23,7 +23,7 @@ EMBEDDING_BATCH_SIZE = 64
 
 
 class EmbeddingProviderError(Exception):
-    """Embedding 调用失败，携带契约错误码（默认 EMBEDDING_ERROR）。"""
+    """The embedding call failed; carries the contract error code (EMBEDDING_ERROR by default)."""
 
     def __init__(self, code: str, message: str):
         super().__init__(message)
@@ -43,7 +43,7 @@ _CJK_RUN_RE = re.compile(r"[一-鿿㐀-䶿]+")
 
 
 def tokenize_text(text: str) -> list[str]:
-    """英文/数字按词（小写），中文按字 + 相邻二元组。确定性、无外部依赖。"""
+    """Latin letters/digits split by word (lowercased), Chinese by character + adjacent bigrams. Deterministic, no external dependencies."""
     if not text:
         return []
     tokens = [word.lower() for word in _WORD_RE.findall(text) if len(word) >= 2]
@@ -55,9 +55,9 @@ def tokenize_text(text: str) -> list[str]:
 
 
 class LocalHashEmbeddingProvider:
-    """特征哈希（feature hashing）向量：同输入同输出，语义近邻靠共享词元。
+    """Feature hashing vector: the same input gives the same output, and semantic neighbours rely on shared tokens.
 
-    分词 → sha1 哈希到 dim 维（带符号消除聚类偏差）→ 词频对数加权 → L2 归一化。
+    tokenize → sha1 hash into dim dimensions (signed, to remove clustering bias) → log-weighted term frequency → L2 normalization.
     """
 
     name = "local"
@@ -85,9 +85,9 @@ class LocalHashEmbeddingProvider:
 
 
 class OpenAIEmbeddingProvider:
-    """任意 OpenAI 兼容 /embeddings 接口，批量调用，维度不匹配抛 RuntimeError。
+    """Any OpenAI-compatible /embeddings endpoint, called in batches; a dimension mismatch raises RuntimeError.
 
-    与摘要共用同一套兼容配置：base URL、路径、鉴权头、额外请求头均可改。
+    Shares the same compatibility settings as summarization: base URL, path, auth header and extra request headers are all configurable.
     """
 
     name = "openai-compatible"
@@ -151,7 +151,7 @@ class OpenAIEmbeddingProvider:
 
 
 def get_embedding_provider(settings) -> EmbeddingProvider:
-    """工厂：openai / openai-compatible | local；provider 维度不一致直接 RuntimeError。"""
+    """Factory: openai / openai-compatible | local; a provider whose dimension disagrees raises RuntimeError."""
     if is_openai_compatible(getattr(settings, "embedding_provider", "")):
         require_openai_settings(
             base_url=getattr(settings, "embedding_base_url", ""),
