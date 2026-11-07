@@ -474,6 +474,8 @@ export const zh: Dictionary = {
   'update.state.installing': '已下载，正在交给系统安装…',
   'update.state.retry': '下载没有完成，点这里重试',
   'update.state.unknown': '暂时查不到新版本',
+  'update.toast.available': '有新版本 v{version} · {size}',
+  'update.state.connecting': '准备下载…',
   'update.state.available': '新版本 v{version} · {size} · 点这里下载',
   'update.state.latest': '已是最新',
   'settings.dev.title': '开发者模式',

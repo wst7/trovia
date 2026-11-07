@@ -472,6 +472,8 @@ export const en: Dictionary = {
   'update.state.installing': 'Downloaded. Handing over to the installer…',
   'update.state.retry': 'Download did not finish. Tap to retry',
   'update.state.unknown': 'Could not reach the release page',
+  'update.toast.available': 'Version {version} is out · {size}',
+  'update.state.connecting': 'Getting ready…',
   'update.state.available': 'v{version} · {size} · tap to download',
   'update.state.latest': 'Up to date',
   'settings.dev.title': 'Developer mode',

@@ -4,7 +4,29 @@
  * It does three things only: tell whether the embedded bundle or an update is running, check whether there is a new one, download and restart.
  * When no EAS project is configured (a locally built bundle) the whole thing turns itself off quietly without bothering the user.
  */
+import { readSetting, writeSetting } from './settings'
+
 let updatesModule: typeof import('expo-updates') | null = null
+
+/** The release version a hot update already delivered. Kept so the update row stops offering the same version again. */
+const OTA_TAKEN_KEY = 'update.otaTakenVersion'
+
+export async function readOtaTakenVersion(): Promise<string | null> {
+  try {
+    return await readSetting(OTA_TAKEN_KEY)
+  } catch {
+    return null
+  }
+}
+
+export async function recordOtaTakenVersion(version: string | null | undefined): Promise<void> {
+  if (!version) return
+  try {
+    await writeSetting(OTA_TAKEN_KEY, version)
+  } catch {
+    // Losing this only means an extra prompt later; never fail the update over it.
+  }
+}
 
 async function updates(): Promise<typeof import('expo-updates') | null> {
   if (updatesModule) return updatesModule

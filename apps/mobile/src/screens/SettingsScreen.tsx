@@ -19,8 +19,8 @@ import { clearAllDocuments } from '../local/db'
 import { relativeTime } from '../local/dates'
 import { lastSyncAt } from '../local/sync-config'
 import { formatBytes, writeExport } from '../local/exporter'
-import { applyOta, checkOta } from '../local/ota'
-import { checkForUpdate, type CheckResult } from '../local/update'
+import { applyOta, checkOta, readOtaTakenVersion, recordOtaTakenVersion } from '../local/ota'
+import { checkForUpdate, effectiveVersion, type CheckResult } from '../local/update'
 import { downloadApk, formatMb, installApk, type DownloadProgress } from '../local/update-install'
 import { listAllForExportFidelity } from '../local/repo'
 import { loadLlmState } from '../local/llm'
@@ -179,7 +179,10 @@ export function SettingsScreen() {
     if (otaReady) return t('update.state.restart')
     if (updatePhase === 'checking') return t('update.state.checking')
     if (updatePhase === 'downloading') {
-      const percent = progress && progress.ratio >= 0 ? Math.round(progress.ratio * 100) : null
+      // A download sitting at zero for ten seconds reads as stuck; say what is
+      // actually happening until the first byte lands.
+      if (!progress || progress.written === 0) return t('update.state.connecting')
+      const percent = progress.ratio >= 0 ? Math.round(progress.ratio * 100) : null
       return percent === null ? t('update.state.downloading.noSize') : t('update.state.downloading', { percent })
     }
     if (updatePhase === 'installing') return t('update.state.installing')
@@ -205,15 +208,27 @@ export function SettingsScreen() {
     setUpdatePhase('checking')
     setCheckedJustNow(false)
     try {
-      const current = version ?? (await appVersion())
+      // A hot update does not change the installed versionName, so comparing the
+      // native version alone would keep offering a release we already run.
+      const native = version ?? (await appVersion())
+      const current = effectiveVersion(native, await readOtaTakenVersion()) ?? native
       const result = await checkForUpdate(current, true)
       setUpdate(result)
       setCheckedJustNow(true)
       if (result.hasUpdate && result.latest) {
-        toast(t('update.state.available', {
-          version: result.latest.version,
-          size: formatMb(result.latest.asset?.size ?? 0),
-        }))
+        // The toast has no action attached, so the copy must not say "tap to
+        // download"; it also must not linger once a download is under way or a
+        // hot update is waiting for a restart.
+        // Note: updatePhase is still 'checking' here, so gating on 'idle'
+        // would suppress this toast entirely. Only a pending restart silences it.
+        if (!otaReady) {
+          toast(
+            t('update.toast.available', {
+              version: result.latest.version,
+              size: formatMb(result.latest.asset?.size ?? 0),
+            }),
+          )
+        }
       } else if (!result.error) {
         toast(t('update.state.latest'))
       }
@@ -254,6 +269,9 @@ export function SettingsScreen() {
     try {
       const outcome = await checkOta()
       if (outcome.kind === 'downloaded') {
+        // Remember which release this bundle corresponds to; otherwise the row
+        // keeps offering the full package for a version we already run.
+        await recordOtaTakenVersion(update?.latest?.version)
         setOtaReady(true)
         setUpdatePhase('idle')
         return

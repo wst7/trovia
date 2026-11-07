@@ -6,7 +6,9 @@
  */
 import assert from 'node:assert/strict'
 
-import { isNewer, parseRelease, parseVersion, pickAsset } from '../update.ts'
+// Version helpers live in their own module: update.ts imports AsyncStorage,
+// which drags react-native in and cannot run under node.
+import { effectiveVersion, isNewer, parseRelease, parseVersion, pickAsset } from '../version.ts'
 
 // Version comparison
 assert.equal(parseVersion('v0.11.2').join('.'), '0.11.2')
@@ -42,4 +44,17 @@ assert.ok(release?.notes.includes('同步 409'))
 assert.equal(parseRelease({ tag_name: 'v0.12.0', assets: [] }), null, '没有安装包时视为不可更新')
 assert.equal(parseRelease({}), null)
 
-console.log('检查更新：版本比较、资产选择、Release 解析全部通过 ✓')
+// Version comparison must account for hot updates: a bundle that arrived by OTA
+// does not change the installed versionName, and comparing the native version
+// alone made the app ask for the full package it was already running.
+assert.equal(effectiveVersion('0.13.9', '0.14.0'), '0.14.0', '热更新拿到的版本更新，以它为准')
+assert.equal(effectiveVersion('0.14.0', '0.13.9'), '0.14.0', '原生版本更新时以原生为准')
+assert.equal(effectiveVersion('0.14.0', null), '0.14.0')
+assert.equal(effectiveVersion(null, '0.14.0'), '0.14.0')
+assert.equal(effectiveVersion(null, null), null)
+// The regression that matters: once 0.14.0 arrived by hot update, 0.14.0 is no longer "new".
+assert.equal(isNewer('0.14.0', effectiveVersion('0.13.9', '0.14.0') ?? ''), false)
+// The next release still prompts.
+assert.equal(isNewer('0.14.1', effectiveVersion('0.13.9', '0.14.0') ?? ''), true)
+
+console.log('检查更新：版本比较、热更新合并、资产选择、Release 解析全部通过 ✓')

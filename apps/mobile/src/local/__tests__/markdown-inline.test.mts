@@ -29,7 +29,8 @@ const BADGE = '[![npm](https://img.shields.io/npm/v/react.svg)](https://www.npmj
     tokens.map((token) => token.type),
     ['text', 'link', 'image'],
   )
-  // 行内图片不贡献文字：徽章在句子里只是噪音，整段图片另有渲染路径。
+  // Inline images contribute no text: as badges they are noise mid-sentence,
+  // and standalone images have their own rendering path.
   assert.equal(inlineToText(tokens), '##React')
 }
 
@@ -82,7 +83,7 @@ const BADGE = '[![npm](https://img.shields.io/npm/v/react.svg)](https://www.npmj
   assert.ok(!/^\]\(/m.test(out), '不能出现以 ]( 开头的行')
   assert.ok(out.includes('[GitHub license](https://github.com/react/react/blob/main/LICENSE)'), '徽章应降级成文字链接')
   assert.ok(!out.includes('![GitHub license]'), '徽章的图片语法应已消失')
-  // 独立图片仍然独占一段
+  // A standalone image still gets a paragraph of its own.
   const standalone = normalizeBlockSource('text ![a](https://img.example/a.png) more')
   assert.ok(standalone.includes('\n\n![a](https://img.example/a.png)\n\n'))
 }

@@ -8,24 +8,14 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
+import type { GitHubRelease, ReleaseInfo } from './version'
+import { isNewer, parseRelease } from './version'
+
 const REPO = 'wst7/trovia'
 const API = `https://api.github.com/repos/${REPO}/releases/latest`
 const CACHE_TTL_MS = 10 * 60 * 1000
 const CACHE_KEY = 'trovia.update.check.v1'
 const TTL_MS = 6 * 60 * 60 * 1000
-
-export interface ReleaseAsset {
-  name: string
-  url: string
-  size: number
-}
-
-export interface ReleaseInfo {
-  version: string
-  notes: string
-  publishedAt: string
-  asset: ReleaseAsset | null
-}
 
 export interface CheckResult {
   current: string
@@ -36,60 +26,10 @@ export interface CheckResult {
   checkedAt: string
 }
 
-/** 1.2.3 → [1,2,3]; tolerates a v prefix and a suffix (-beta). */
-export function parseVersion(input: string): number[] {
-  const clean = input.trim().replace(/^v/i, '').split(/[-+]/)[0]
-  return clean
-    .split('.')
-    .map((part) => Number.parseInt(part, 10))
-    .map((value) => (Number.isFinite(value) ? value : 0))
-}
-
-/** Only a remote version newer than the current one counts as an update; equal or older never prompts. */
-export function isNewer(latest: string, current: string): boolean {
-  const a = parseVersion(latest)
-  const b = parseVersion(current)
-  for (let i = 0; i < Math.max(a.length, b.length); i += 1) {
-    const left = a[i] ?? 0
-    const right = b[i] ?? 0
-    if (left > right) return true
-    if (left < right) return false
-  }
-  return false
-}
-
-interface GitHubRelease {
-  tag_name?: string
-  body?: string
-  published_at?: string
-  assets?: { name?: string; browser_download_url?: string; size?: number }[]
-}
-
-/** Only Android apks count; prefer arm64 (the only kind we publish), otherwise take the first. */
-export function pickAsset(assets: GitHubRelease['assets']): ReleaseAsset | null {
-  const apks = (assets ?? []).filter(
-    (asset): asset is { name: string; browser_download_url: string; size?: number } =>
-      typeof asset.name === 'string' &&
-      asset.name.toLowerCase().endsWith('.apk') &&
-      typeof asset.browser_download_url === 'string',
-  )
-  if (apks.length === 0) return null
-  const best = apks.find((asset) => /arm64|universal/i.test(asset.name)) ?? apks[0]
-  return { name: best.name, url: best.browser_download_url, size: best.size ?? 0 }
-}
-
-export function parseRelease(payload: GitHubRelease): ReleaseInfo | null {
-  const version = typeof payload.tag_name === 'string' ? payload.tag_name.replace(/^v/i, '') : ''
-  if (!version) return null
-  const asset = pickAsset(payload.assets)
-  if (!asset) return null
-  return {
-    version,
-    notes: (payload.body ?? '').trim(),
-    publishedAt: payload.published_at ?? '',
-    asset,
-  }
-}
+// Re-exported so call sites keep importing from update.ts. These live in
+// version.ts because they need no runtime, and update.ts imports AsyncStorage.
+export type { ReleaseAsset, ReleaseInfo } from './version'
+export { effectiveVersion, isNewer, parseRelease, parseVersion, pickAsset } from './version'
 
 async function readCache(): Promise<CheckResult | null> {
   try {

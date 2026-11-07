@@ -11,12 +11,15 @@
  *   path  limit the scan to a subdirectory (relative to the repo root)
  */
 import { readdir, readFile, stat } from 'node:fs/promises'
-import { join, relative, sep } from 'node:path'
+import { join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { dirname } from 'node:path'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const target = process.argv[2] ? join(root, process.argv[2]) : root
+// Resolve the argument against the caller's cwd first: running the checker from
+// apps/mobile with "src" used to fall through to an empty scan and report ok.
+const arg = process.argv[2]
+const target = arg ? resolve(process.cwd(), arg) : root
 
 const CODE = new Set(['.ts', '.tsx', '.js', '.mjs', '.mts', '.cjs', '.py', '.css', '.sh', '.yml', '.yaml'])
 const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', '.expo', 'android', 'ios', '.impeccable', 'build', 'coverage'])
