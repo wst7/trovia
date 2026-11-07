@@ -6,7 +6,7 @@
   <title>Trovia — 存下任何链接，凭记忆找回</title>
   <meta
    name="description"
-   content="Trovia（原寻迹）是个人链接收藏与智能找回工具：粘贴链接自动抓取正文、图片与摘要，截图里的文字也能搜到；之后用一句自然语言描述就能从自己的收藏里找回原文。免费，数据只保存在你自己的手机上。"
+   content="Trovia 是个人链接收藏与智能找回工具：粘贴链接自动抓取正文、图片与摘要，截图里的文字也能搜到；之后用一句自然语言描述就能从自己的收藏里找回原文。免费，数据只保存在你自己的手机上。"
   />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <meta name="theme-color" content="#fbfaf7" />
@@ -28,7 +28,7 @@
  </head>
  <body>
   <header class="bar">
-   <a class="brand" href="./">Trovia · 寻迹</a>
+   <a class="brand" href="./">Trovia</a>
    <div class="bar-actions">
     <div class="lang-switch" role="group" aria-label="语言 / Language">
      <button type="button" data-lang="zh">中文</button>
@@ -39,6 +39,7 @@
   </header>
 
   <main>
+   <!-- 首屏：一个主张、一个动作、一条信任信号、一张真实界面 -->
    <section class="intro">
     <div class="intro-copy">
      <p class="tagline">Save anything. Find it by memory.</p>
@@ -50,9 +51,9 @@
       <a class="btn btn-primary btn-lg" href="__APP_URL__">下载 Android App</a>
      </p>
      <ul class="assurances">
+      <li>永久免费，不设功能墙</li>
       <li>不用注册，打开就能用</li>
       <li>收藏只存在你的手机上</li>
-      <li>截图里的字也能搜到</li>
      </ul>
     </div>
 
@@ -73,41 +74,32 @@
     </figure>
    </section>
 
+   <!-- 三步：先说清它是怎么运转的，再谈细节 -->
    <section>
-    <h2>一个框，两种用法</h2>
-    <p>保存和找回本来就是一回事：你想留住某个东西，和你想找回某个东西。所以不需要两个入口。</p>
-    <table>
-     <tbody>
-      <tr>
-       <th>粘的是链接</th>
-       <td>直接保存。抓正文、存下图片、写摘要与关键词，稍后就能搜到。</td>
-      </tr>
-      <tr>
-       <th>写的是描述</th>
-       <td>当成一次检索。用你记得的任意细节——主题、某句话、作者、来源——去匹配已经存下的内容。</td>
-      </tr>
-      <tr>
-       <th>已经存了一堆</th>
-       <td>浏览器导出的书签、CSV、链接清单都能一次搬进来；重复的自动跳过，先给你看清楚会新增多少条再动手。</td>
-      </tr>
-      <tr>
-       <th>怎么读</th>
-       <td>正文用宋体排版，长文读起来像纸页。</td>
-      </tr>
-      <tr>
-       <th>怎么删</th>
-       <td>收藏列表支持左滑删除，也能长按进多选批量删除。</td>
-      </tr>
-      <tr>
-       <th>怎么更新</th>
-       <td>应用内检查更新，点一下才下载；只改界面的小版本下完提示重启即可。</td>
-      </tr>
-      <tr>
-       <th>想换个地方</th>
-       <td>整库导出成一个 .zip：里面是可以逐字段还原的备份，外加一份能直接读的 Markdown，不留在任何服务器上。</td>
-      </tr>
-     </tbody>
-    </table>
+    <h2>怎么用</h2>
+    <p>三步，没有第四步。</p>
+    <ol class="steps">
+     <li>
+      <div>
+       <strong>保存</strong>
+       <span>粘贴文章、视频或网站链接，或从别的应用直接分享过来。不用填标题，不用分类，不用打标签。</span>
+      </div>
+     </li>
+     <li>
+      <div>
+       <strong>整理</strong>
+       <span
+        >在手机上解析正文、读图里的文字、生成摘要与关键词、建立本地索引。页面上能看到处理状态，失败的条目会说明原因。</span
+       >
+      </div>
+     </li>
+     <li>
+      <div>
+       <strong>找回</strong>
+       <span>用一句自然语言描述你记得的大概内容，得到原文，以及「为什么找到它」。</span>
+      </div>
+     </li>
+    </ol>
     <figure class="shot shot-inline">
      <img
       src="/shots/search.webp"
@@ -125,9 +117,49 @@
     </figure>
    </section>
 
+   <!-- 收益：每条都是「对你意味着什么」，不是功能清单 -->
+   <section>
+    <h2>它替你做的事</h2>
+    <ul class="benefits">
+     <li>
+      <strong>一个框，两种用法</strong>
+      <span>保存和找回本来就是一回事。粘的是链接就存下来，写的是一句话就去检索——不用在脑子里先想清楚这次是哪种。</span>
+     </li>
+     <li>
+      <strong>截图里的字也搜得到</strong>
+      <span>公众号长截图、技术文章里的架构图、小红书的图片笔记，都会读一遍再进索引。很多内容根本不在正文里。</span>
+     </li>
+     <li>
+      <strong>旧收藏搬得进来</strong>
+      <span>浏览器导出的书签、CSV、链接清单一键导入；重复的自动跳过，先告诉你「会新增多少条」再动手。</span>
+     </li>
+     <li>
+      <strong>随时能完整带走</strong>
+      <span>整库导出成一个 .zip：可以逐字段还原的备份，外加一份能直接读的 Markdown。不存在我们服务器上。</span>
+     </li>
+    </ul>
+
+    <h2 class="subhead">还有很多小事不用你操心</h2>
+    <table>
+     <tbody>
+      <tr>
+       <th>怎么读</th>
+       <td>正文用宋体排版，长文读起来像纸页。</td>
+      </tr>
+      <tr>
+       <th>怎么删</th>
+       <td>收藏列表支持左滑删除，也能长按进多选批量删除；正文和图片一起清掉，搜索也不会再出现。</td>
+      </tr>
+      <tr>
+       <th>怎么更新</th>
+       <td>应用内检查更新，点一下才下载；只改界面的小版本下完提示重启即可。</td>
+      </tr>
+     </tbody>
+    </table>
+   </section>
+
    <section>
     <h2>存下来就是这样</h2>
-
 
     <figure class="shot shot-inline">
      <img
@@ -147,9 +179,9 @@
    <section>
     <h2>图片里的字也读得出来</h2>
     <p>
-     很多内容根本不在正文里：公众号的长截图、技术文章里的架构图和思维导图、小红书的图片笔记。Trovia 会把正文里的图片一起存下来，把上面的文字读出来——所以那些字也能被搜到。
+      很多内容根本不在正文里：公众号的长截图、技术文章里的架构图和思维导图、小红书的图片笔记。Trovia 会把正文里的图片一起存下来，用端侧 OCR 把上面的文字读出来，接在原文后面一起索引——所以那些字也能被搜到。
     </p>
-    <p>识别在你的手机上完成，图片不上传。</p>
+    <p>识别在你自己的手机上完成：图片不经过任何服务器，读出来的文字只写进本机数据库。</p>
     <figure class="shot shot-inline">
      <img
       src="/shots/article.webp"
@@ -161,13 +193,13 @@
       loading="lazy"
       decoding="async"
      />
-     <figcaption>正文里的图片会一起存下来，图上的字也能搜到。</figcaption>
+     <figcaption>正文里的图片会一起存下来，图上的文字进索引。</figcaption>
     </figure>
    </section>
 
    <section>
     <h2>能读哪些页面</h2>
-    <p>哪些能读、哪些只能留链接，如实写在下面。</p>
+    <p>哪些能读、哪些只能留链接，如实写在下面——不假装全都成功。</p>
     <table>
      <tbody>
       <tr>
@@ -176,11 +208,17 @@
       </tr>
       <tr>
        <th>只能拿到链接</th>
-       <td>知乎、Medium、豆瓣、36 氪这类有登录墙或人机验证的站点，正文读不到；Trovia 会明确告诉你「需要验证或登录」，而不是假装保存成功。</td>
+       <td
+        >知乎、Medium、豆瓣、36 氪这类有登录墙或人机验证的站点，端侧抓不到正文；Trovia 会明确告诉你「需要验证或登录」，而不是假装保存成功。</td
+       >
       </tr>
       <tr>
        <th>图片内容</th>
        <td>正文里的图片都会尝试识别，认不出的跳过，不影响正文。</td>
+      </tr>
+      <tr>
+       <th>解析失败</th>
+       <td>原始链接始终保留，可以随时打开原文，也可以稍后重新解析。</td>
       </tr>
      </tbody>
     </table>
@@ -189,8 +227,8 @@
    <section>
     <h2>同步写进你自己的云盘</h2>
     <p>
-     没有账号，也没有中间服务器。填一个 WebDAV 地址，内容就在你的手机和你的网盘之间直接走——
-     坚果云、群晖、Nextcloud 都属于这一类，我们只是读写你给的那个目录。
+      没有账号，也没有中间服务器。填一个 WebDAV 地址，内容就在你的手机和你的网盘之间直接走——
+      坚果云、群晖、Nextcloud 都属于这一类，我们只是读写你给的那个目录。
     </p>
     <table>
      <tbody>
@@ -200,21 +238,15 @@
       </tr>
       <tr>
        <th>什么时候同步</th>
-       <td>回到应用时会自动同步一次，也可以手动点「立即同步」。</td>
+       <td>打开应用时自动跑一轮（最快五分钟一次），也可以手动点「立即同步」；失败不会弹窗打断你。</td>
       </tr>
       <tr>
        <th>两台都改过</th>
        <td>新的那份占主位，另一份留成「（冲突副本）」，两份内容都在，不会被悄悄覆盖。</td>
       </tr>
-      <tr>
-       <th>换应用、换设备</th>
-       <td>浏览器书签（HTML）、Chrome / Edge 书签（JSON）、CSV、链接清单一键导入；先告诉你「识别到多少条、已有多少条、会新增多少条」，确认后才动手。</td>
-      </tr>
      </tbody>
     </table>
-    <p class="closing-note">
-     删除会一起同步：删掉的那条在其它设备上也会消失，不会下次同步又冒回来。
-    </p>
+    <p class="closing-note">删除会一起同步：删掉的那条在其它设备上也会消失，不会下次同步又冒回来。</p>
     <figure class="shot shot-inline">
      <img
       src="/shots/sync.webp"
@@ -229,8 +261,48 @@
     </figure>
    </section>
 
+   <!-- 异议处理：把最大的犹豫直接回答掉，而不是藏在页脚 -->
    <section>
-    <h2>边界</h2>
+    <h2>你可能想问的</h2>
+    <div class="faq">
+     <details>
+      <summary>收费吗？</summary>
+      <p>解析、读图里的字、按时间与意思找回，这些能力永久免费，不设功能墙。付费只会出现在一件事上：你不想自己准备模型时，由我们代付。</p>
+     </details>
+     <details>
+      <summary>要注册账号吗？</summary>
+      <p>不需要。打开就能用，没有登录、没有手机号、没有邮箱。</p>
+     </details>
+     <details>
+      <summary>我的收藏会被上传吗？</summary>
+      <p>不会。收藏、正文与图片都保存在这台设备上，默认不上传任何服务器。需要多端时，写入的是你自己的 WebDAV 云盘。</p>
+     </details>
+     <details>
+      <summary>支持 iPhone 吗？</summary>
+      <p>目前只有 Android 安装包。iPhone 暂时没有可直接下载的构建，需要自己用 Xcode 或 EAS 编译。</p>
+     </details>
+     <details>
+      <summary>知乎、Medium 为什么存不全？</summary>
+      <p>这些站点有登录墙或人机验证，端侧拿不到正文，Trovia 只留下链接和标题，并明确告诉你原因。它不绕过登录、付费墙或任何访问限制。</p>
+     </details>
+     <details>
+      <summary>不接大模型能用吗？</summary>
+      <p>能。摘要与关键词可以离线抽取，功能一样完整。接一个 OpenAI 兼容的服务只是让摘要更顺，并且能用一句话描述去理解你的意图。</p>
+     </details>
+     <details>
+      <summary>换手机了怎么办？</summary>
+      <p>导出那个 .zip 拷过去再导入，或者事先用 WebDAV 同步。两条路都能逐字段还原，不是只导出一堆链接。</p>
+     </details>
+     <details>
+      <summary>两台设备都改过同一条，会丢吗？</summary>
+      <p>不会。新的那份占主位，另一份留成「（冲突副本）」，两份内容都在。</p>
+     </details>
+    </div>
+   </section>
+
+   <section>
+    <h2>我们的四条承诺</h2>
+    <p>这个产品很小，所以不想把话说满。只有四件事，写在这里当承诺看。</p>
     <ol class="steps">
      <li>
       <div>
@@ -243,20 +315,22 @@
      <li>
       <div>
        <strong>不设功能墙</strong>
-       <span
-        >解析、读图里的字、按时间与意思找回——这些能力永远免费。付费只会出现在一件事上：你不想自己准备模型时，由我们代付。</span
-       >
+       <span>解析、读图里的字、按时间与意思找回——这些能力永远免费。</span>
+      </div>
+     </li>
+     <li>
+      <div>
+       <strong>不绕过任何限制</strong>
+       <span>不绕过登录、付费墙或访问限制；读不到就直说，不假装保存成功。</span>
+      </div>
+     </li>
+     <li>
+      <div>
+       <strong>删除就是删除</strong>
+       <span>删除后正文和图片一起清掉，搜索也不会再出现，同步到其它设备同样消失。</span>
       </div>
      </li>
     </ol>
-
-    <ul>
-     <li>所有收藏保存在你的手机本地，默认不上传任何服务器。</li>
-     <li>图片文字识别在设备上完成，图片本身不会被上传。</li>
-     <li>解析失败也保留原始链接，可随时打开原文或重新解析。</li>
-     <li>不绕过登录、付费墙或任何访问限制。</li>
-     <li>删除后正文和图片一起清掉，搜索也不会再出现。</li>
-    </ul>
     <figure class="shot shot-inline">
      <img
       src="/shots/settings.webp"
@@ -272,6 +346,7 @@
     </figure>
    </section>
 
+   <!-- 结尾：和首屏完全相同的动作，不做第二个选择 -->
    <section class="closing">
     <h2>存下第一个链接</h2>
     <p>粘贴任意文章链接，几秒后它就会被整理好。之后想找它，只需要一句描述。</p>
