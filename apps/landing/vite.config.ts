@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite'
+import { resolve } from 'node:path'
 
 /**
  * 静态说明页，不依赖前端框架。
@@ -18,6 +19,16 @@ const runtimeUrls = process.env.XUNJI_RUNTIME_URLS === '1'
 export default defineConfig({
   // 相对基址：GitHub Pages 的项目站点挂在 /<repo>/ 下，写死 '/' 会让样式和截图 404。
   base: './',
+  build: {
+    // 隐私说明与 404 也要走同一套构建，好让样式表路径跟着 base 一起改写。
+    rollupOptions: {
+      input: {
+        main: resolve(import.meta.dirname, 'index.html'),
+        privacy: resolve(import.meta.dirname, 'privacy.html'),
+        notFound: resolve(import.meta.dirname, '404.html'),
+      },
+    },
+  },
   server: { port: 5174 },
   preview: { port: 5174 },
   plugins: [

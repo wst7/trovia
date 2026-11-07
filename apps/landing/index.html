@@ -3,364 +3,400 @@
  <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Trovia — 存下任何链接，凭记忆找回</title>
+  <title>Trovia — 存下来的东西，三个月后还找得回来</title>
   <meta
    name="description"
-   content="Trovia 是个人链接收藏与智能找回工具：粘贴链接自动抓取正文、图片与摘要，截图里的文字也能搜到；之后用一句自然语言描述就能从自己的收藏里找回原文。免费，数据只保存在你自己的手机上。"
+   content="Trovia 在手机上读正文、读截图里的字、写摘要。以后用一句你记得的描述，就能把存过的内容找回来。免费，数据只留在本机。"
   />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-  <meta name="theme-color" content="#fbfaf7" />
+  <meta name="theme-color" content="#ffffff" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Trovia" />
-  <meta property="og:title" content="Trovia — 存下任何链接，凭记忆找回" />
+  <meta property="og:title" content="Trovia — 存下来的东西，三个月后还找得回来" />
   <meta
    property="og:description"
-   content="看到有价值的内容，把链接交给 Trovia；未来用一句描述，从你自己的收藏里把原文找回来。截图里的文字也能被搜到。"
+   content="用一句你记得的描述，找回存过的任何内容。读正文、读截图里的字，数据只留在本机。"
   />
   <meta property="og:image" content="__SITE_URL__/shots/og.png" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Trovia — 存下任何链接，凭记忆找回" />
+  <meta name="twitter:title" content="Trovia — 存下来的东西，三个月后还找得回来" />
   <meta
    name="twitter:description"
-   content="看到有价值的内容，把链接交给 Trovia；未来用一句描述，从你自己的收藏里把原文找回来。截图里的文字也能被搜到。"
+   content="用一句你记得的描述，找回存过的任何内容。读正文、读截图里的字，数据只留在本机。"
   />
+  <link rel="preload" href="/fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="/styles.css" />
+  <script type="application/ld+json">
+   {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+     {
+      "@type": "Question",
+      "name": "要付费吗？",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "解析、读图里的字、按时间与意思找回都免费，不设功能墙。付费只出现在一种情况：你不想自己准备模型，由我们代付。"
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "需要注册账号吗？",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "不需要。没有登录、没有手机号、没有邮箱，打开就能用。"
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "我的收藏会被上传吗？",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "不会。收藏、正文和图片都留在这台设备上。需要多端时，写入的是你自己的 WebDAV 云盘。"
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "支持 iPhone 吗？",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "目前只有 Android 安装包。iOS 没有可直接下载的构建，需要自己用 Xcode 或 EAS 编译。"
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "知乎、Medium 为什么存不全？",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "这些站点有登录墙或人机验证，端侧拿不到正文。Trovia 只留链接和标题，并明确告诉你原因，不绕过任何访问限制。"
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "不接大模型能用吗？",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "能。摘要和关键词可以离线抽取。接一个 OpenAI 兼容的服务只是让摘要更顺，并能从一句话里读出你的意图。"
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "换手机怎么迁移？",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "导出备份压缩包拷过去再导入，或者事先用 WebDAV 同步。两条路都能逐字段还原。"
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "两台设备同时改会丢吗？",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "不会。新的那份占主位，另一份留成冲突副本，两份内容都在。"
+      }
+     }
+    ]
+   }
+  </script>
  </head>
  <body>
-  <header class="bar">
-   <a class="brand" href="./">Trovia</a>
-   <div class="bar-actions">
-    <div class="lang-switch" role="group" aria-label="语言 / Language">
-     <button type="button" data-lang="zh">中文</button>
-     <button type="button" data-lang="en">EN</button>
+  <a class="skip" href="#main">跳到正文</a>
+
+  <svg class="sprite" aria-hidden="true" focusable="false">
+   <symbol id="i-link" viewBox="0 0 256 256"><path d="M165.66,90.34a8,8,0,0,1,0,11.32l-64,64a8,8,0,0,1-11.32-11.32l64-64A8,8,0,0,1,165.66,90.34ZM215.6,40.4a56,56,0,0,0-79.2,0L106.34,70.45a8,8,0,0,0,11.32,11.32l30.06-30a40,40,0,0,1,56.57,56.56l-30.07,30.06a8,8,0,0,0,11.31,11.32L215.6,119.6a56,56,0,0,0,0-79.2ZM138.34,174.22l-30.06,30.06a40,40,0,1,1-56.56-56.57l30.06-30.06a8,8,0,0,0-11.31-11.32L40.4,136.4a56,56,0,0,0,79.2,79.2l30.06-30.06a8,8,0,0,0-11.32-11.32Z"/></symbol>
+   <symbol id="i-scan" viewBox="0 0 256 256"><path d="M224,40V80a8,8,0,0,1-16,0V48H176a8,8,0,0,1,0-16h40A8,8,0,0,1,224,40ZM80,208H48V176a8,8,0,0,0-16,0v40a8,8,0,0,0,8,8H80a8,8,0,0,0,0-16Zm136-40a8,8,0,0,0-8,8v32H176a8,8,0,0,0,0,16h40a8,8,0,0,0,8-8V176A8,8,0,0,0,216,168ZM40,88a8,8,0,0,0,8-8V48H80a8,8,0,0,0,0-16H40a8,8,0,0,0-8,8V80A8,8,0,0,0,40,88Zm176,0a8,8,0,0,0,8-8V80a8,8,0,0,0-8-8H176a8,8,0,0,0,0,16h32V80A8,8,0,0,0,216,88Z"/></symbol>
+   <symbol id="i-download" viewBox="0 0 256 256"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z"/></symbol>
+   <symbol id="i-cloud" viewBox="0 0 256 256"><path d="M178.34,165.66,160,147.31V208a8,8,0,0,1-16,0V147.31l-18.34,18.35a8,8,0,0,1-11.32-11.32l32-32a8,8,0,0,1,11.32,0l32,32a8,8,0,0,1-11.32,11.32ZM160,40A88.08,88.08,0,0,0,81.29,88.68,64,64,0,1,0,72,216h40a8,8,0,0,0,0-16H72a48,48,0,0,1,0-96c1.1,0,2.2,0,3.29.12A88,88,0,0,0,72,128a8,8,0,0,0,16,0,72,72,0,1,1,100.8,66,8,8,0,0,0,7.2,14.34A88,88,0,0,0,160,40Z"/></symbol>
+   <symbol id="i-shield" viewBox="0 0 256 256"><path d="M208,40H48A16,16,0,0,0,32,56v56c0,52.72,25.52,84.67,46.93,102.19,23.06,18.86,46,25.26,47,25.53a8,8,0,0,0,4.2,0c1-.27,23.91-6.67,47-25.53C198.48,196.67,224,164.72,224,112V56A16,16,0,0,0,208,40Zm0,72c0,37.07-13.66,67.16-40.6,89.42A129.3,129.3,0,0,1,128,223.62a128.25,128.25,0,0,1-38.92-21.81C61.82,179.51,48,149.44,48,112V56H208ZM82.34,141.66a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32l-56,56a8,8,0,0,1-11.32,0Z"/></symbol>
+   <symbol id="i-lock" viewBox="0 0 256 256"><path d="M208,80H176V56a48,48,0,0,0-96,0V80H48A16,16,0,0,0,32,96V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V96A16,16,0,0,0,208,80ZM96,56a32,32,0,0,1,64,0V80H96ZM208,208H48V96H208V208Z"/></symbol>
+  </svg>
+
+  <header class="nav-wrap">
+   <nav class="nav" aria-label="主导航">
+    <a class="brand" href="./" aria-current="page">Trovia</a>
+    <ul class="nav-links">
+     <li><a class="title-4" href="#features">功能</a></li>
+     <li><a class="title-4" href="#how">怎么用</a></li>
+     <li><a class="title-4" href="#faq">常见问题</a></li>
+    </ul>
+    <div class="nav-actions">
+     <div class="lang" role="group" aria-label="语言">
+      <button type="button" data-lang="zh">中</button>
+      <button type="button" data-lang="en">EN</button>
+     </div>
+     <a class="btn btn-primary btn-sm nav-download" href="__APP_URL__">下载</a>
+     <button
+      class="nav-toggle"
+      type="button"
+      aria-expanded="false"
+      aria-controls="menu"
+      aria-label="打开菜单"
+     >
+      <span></span><span></span>
+     </button>
     </div>
-    <a class="btn" href="__APP_URL__">下载 App</a>
+   </nav>
+
+   <div class="menu" id="menu" hidden>
+    <ul class="menu-links">
+     <li><a class="heading-5" href="#features">功能</a></li>
+     <li><a class="heading-5" href="#how">怎么用</a></li>
+     <li><a class="heading-5" href="#readable">能读什么</a></li>
+     <li><a class="heading-5" href="#faq">常见问题</a></li>
+    </ul>
+    <a class="btn btn-primary btn-lg menu-cta" href="__APP_URL__">下载 Android 版</a>
    </div>
   </header>
 
-  <main>
-   <!-- 首屏：一个主张、一个动作、一条信任信号、一张真实界面 -->
-   <section class="intro">
-    <div class="intro-copy">
-     <p class="tagline">Save anything. Find it by memory.</p>
-     <h1>你不需要记住收藏了什么，<br />只需要记住你想找什么。</h1>
-     <p class="lede">
-      看到有价值的内容，把链接交给 Trovia。它在手机上读正文、读图里的字、写摘要；几个月后你只要描述还记得的内容，就能把它找回来——不用分类，不用打标签。
+  <main id="main">
+   <section class="hero">
+    <div class="hero-copy">
+     <h1 class="heading-1 hero-h1">
+      存下来的东西，<br />三个月后还找得回来。
+     </h1>
+     <p class="body-2 hero-sub">
+      Trovia 在你手机上读正文、读截图里的字、写摘要。以后用一句你记得的描述，就能把原文找回来。
      </p>
-     <p class="cta">
-      <a class="btn btn-primary btn-lg" href="__APP_URL__">下载 Android App</a>
+     <div class="hero-actions">
+      <a class="btn btn-primary btn-lg" href="__APP_URL__">下载 Android 版</a>
+     </div>
+     <p class="caption-1 hero-proof">
+      源码公开在 GitHub，可以自己核对它做了什么。
      </p>
-     <ul class="assurances">
-      <li>永久免费，不设功能墙</li>
-      <li>不用注册，打开就能用</li>
-      <li>收藏只存在你的手机上</li>
-     </ul>
     </div>
 
-    <figure class="shot">
+    <figure class="hero-shot" data-reveal>
      <img
       src="/shots/home.webp"
       data-src-en="./shots/home-en.webp"
-      data-alt-en="Trovia home screen: one question at the top, one input below it, then the four most recent saves with a title, a source and a time."
+      data-alt-en="Trovia home screen: a single input, the four most recent saves below it, each with a title, source and time."
       width="1080"
       height="2400"
-      alt="Trovia 首页：顶部一句话「想找点什么？」，下方一个输入框，再下面是最近收藏的四条内容，每条只有标题、来源与时间。"
+      alt="Trovia 首页：一个输入框，下面是最近存下的四条内容，每条只有标题、来源与时间。"
       decoding="async"
       fetchpriority="high"
      />
-     <figcaption>
-      首页只有一个输入框：看得出是<strong>链接</strong>就保存，看不出就<strong>当成一句话去找</strong>。
-     </figcaption>
     </figure>
    </section>
 
-   <!-- 三步：先说清它是怎么运转的，再谈细节 -->
-   <section>
-    <h2>怎么用</h2>
-    <p>三步，没有第四步。</p>
+   <section class="tagline" aria-label="一句话说明" data-i18n-skip>
+    <p class="heading-2 tagline-text" data-tagline></p>
+   </section>
+
+   <section class="section" id="features">
+    <h2 class="heading-3 section-title">它替你做的事</h2>
+    <ul class="cards">
+     <li class="card" data-reveal>
+      <svg class="card-icon" aria-hidden="true"><use href="#i-link" /></svg>
+      <h3 class="title-2">存的时候不用做决定</h3>
+      <p class="body-3">
+       粘链接就是保存，写一句话就是搜索。只有一个输入框，不用先想清楚这算哪一类。
+      </p>
+     </li>
+     <li class="card" data-reveal>
+      <svg class="card-icon" aria-hidden="true"><use href="#i-scan" /></svg>
+      <h3 class="title-2">截图里的字也在索引里</h3>
+      <p class="body-3">
+       公众号长图、架构图、图片笔记都会被读一遍。很多关键信息从来不在正文里。
+      </p>
+     </li>
+     <li class="card" data-reveal>
+      <svg class="card-icon" aria-hidden="true"><use href="#i-download" /></svg>
+      <h3 class="title-2">旧收藏能整批搬进来</h3>
+      <p class="body-3">
+       浏览器书签、CSV、链接清单一次导入。动手前先告诉你新增多少条、跳过多少条。
+      </p>
+     </li>
+     <li class="card" data-reveal>
+      <svg class="card-icon" aria-hidden="true"><use href="#i-cloud" /></svg>
+      <h3 class="title-2">想走随时能走</h3>
+      <p class="body-3">
+       整库导出成一个压缩包，另有可直接阅读的 Markdown。同步写进你自己的 WebDAV。
+      </p>
+     </li>
+    </ul>
+   </section>
+
+   <section class="section" id="how">
+    <h2 class="heading-3 section-title">三步，没有第四步</h2>
     <ol class="steps">
-     <li>
+     <li data-reveal>
+      <span class="caption-3 step-num">01</span>
       <div>
-       <strong>保存</strong>
-       <span>粘贴文章、视频或网站链接，或从别的应用直接分享过来。不用填标题，不用分类，不用打标签。</span>
+       <h3 class="title-2">交给它</h3>
+       <p class="body-3">粘贴链接，或者从别的应用直接分享过来。标题、分类、标签都不用填。</p>
       </div>
      </li>
-     <li>
+     <li data-reveal>
+      <span class="caption-3 step-num">02</span>
       <div>
-       <strong>整理</strong>
-       <span
-        >在手机上解析正文、读图里的文字、生成摘要与关键词、建立本地索引。页面上能看到处理状态，失败的条目会说明原因。</span
-       >
+       <h3 class="title-2">它在手机上读完</h3>
+       <p class="body-3">
+        抓正文、读图里的字、写摘要和关键词，建一份本地索引。失败的条目会说明原因。
+       </p>
       </div>
      </li>
-     <li>
+     <li data-reveal>
+      <span class="caption-3 step-num">03</span>
       <div>
-       <strong>找回</strong>
-       <span>用一句自然语言描述你记得的大概内容，得到原文，以及「为什么找到它」。</span>
+       <h3 class="title-2">用一句话找回来</h3>
+       <p class="body-3">描述你还记得的部分，它给你原文，并说明是在哪儿匹配上的。</p>
       </div>
      </li>
     </ol>
-    <figure class="shot shot-inline">
-     <img
-      src="/shots/search.webp"
-      data-src-en="./shots/search-en.webp"
-      data-alt-en="Searching AMD inside Trovia finds one SSPAI digest; the word only appears in the body list and the result says where it matched."
-      width="1080"
-      height="2400"
-      alt="在 Trovia 里搜索 AMD，命中一篇少数派早报；这个词只出现在正文列表里，结果行标注了「正文命中」。"
-      loading="lazy"
-      decoding="async"
-     />
-     <figcaption>
-      搜「AMD」命中一篇早报——这个词只出现在<strong>正文的速览列表</strong>里，标题里没有；结果会说明它命中了哪儿。
-     </figcaption>
-    </figure>
    </section>
 
-   <!-- 收益：每条都是「对你意味着什么」，不是功能清单 -->
-   <section>
-    <h2>它替你做的事</h2>
-    <ul class="benefits">
-     <li>
-      <strong>一个框，两种用法</strong>
-      <span>保存和找回本来就是一回事。粘的是链接就存下来，写的是一句话就去检索——不用在脑子里先想清楚这次是哪种。</span>
+   <section class="section" id="look">
+    <h2 class="heading-3 section-title">界面长什么样</h2>
+    <div class="shots">
+     <figure data-reveal>
+      <img
+       src="/shots/library.webp"
+       data-src-en="./shots/library-en.webp"
+       data-alt-en="The saved list: a count and a filter at the top, then rows with title, source, time and reading status."
+       width="1080"
+       height="2400"
+       loading="lazy"
+       decoding="async"
+       alt="收藏页：顶部是内容总数与筛选，下面是一行行细线分隔的记录，每条有标题、来源、时间和处理状态。"
+      />
+      <figcaption class="caption-2">保存完就不用管了。标题、摘要和状态会自己长出来。</figcaption>
+     </figure>
+     <figure data-reveal>
+      <img
+       src="/shots/article.webp"
+       data-src-en="./shots/article-en.webp"
+       data-alt-en="An article page: domain, title, save time and summary, with the text and its images below."
+       width="1080"
+       height="2400"
+       loading="lazy"
+       decoding="async"
+       alt="详情页：域名、标题、收藏时间和摘要，下面是正文与正文里的图片。"
+      />
+      <figcaption class="caption-2">正文和它自己的图片一起存下来，图片上的字也进索引。</figcaption>
+     </figure>
+    </div>
+   </section>
+
+   <section class="section" id="readable">
+    <h2 class="heading-3 section-title">能读哪些页面</h2>
+    <p class="body-3 section-lede">哪些读得全、哪些只能留链接，如实写在这里。</p>
+    <table>
+     <tbody>
+      <tr>
+       <th class="title-4">读得全</th>
+       <td class="body-3">
+        微信公众号、掘金、少数派、CSDN、V2EX、GitHub、维基百科、简书，以及大多数个人博客和文档站。
+       </td>
+      </tr>
+      <tr>
+       <th class="title-4">只留链接</th>
+       <td class="body-3">
+        知乎、Medium、豆瓣、36 氪这类有登录墙或人机验证的站点。它会直接说需要验证或登录，不假装存成功。
+       </td>
+      </tr>
+      <tr>
+       <th class="title-4">图片里的字</th>
+       <td class="body-3">正文图片都会试一遍，认不出的跳过，不影响正文。</td>
+      </tr>
+      <tr>
+       <th class="title-4">解析失败</th>
+       <td class="body-3">原始链接一直保留，随时能打开原文，也能稍后重试。</td>
+      </tr>
+     </tbody>
+    </table>
+   </section>
+
+   <section class="section" id="promise">
+    <h2 class="heading-3 section-title">先装，用不惯就走</h2>
+    <ul class="promises">
+     <li data-reveal>
+      <svg class="promise-icon" aria-hidden="true"><use href="#i-shield" /></svg>
+      <h3 class="title-3">免费，不设功能墙</h3>
+      <p class="body-5">解析、读图、按意思找回都免费。付费只覆盖你不想自己准备模型的那一种情况。</p>
      </li>
-     <li>
-      <strong>截图里的字也搜得到</strong>
-      <span>公众号长截图、技术文章里的架构图、小红书的图片笔记，都会读一遍再进索引。很多内容根本不在正文里。</span>
+     <li data-reveal>
+      <svg class="promise-icon" aria-hidden="true"><use href="#i-lock" /></svg>
+      <h3 class="title-3">不用注册</h3>
+      <p class="body-5">没有登录、没有手机号。数据在这台设备上，不在我们的服务器上。</p>
      </li>
-     <li>
-      <strong>旧收藏搬得进来</strong>
-      <span>浏览器导出的书签、CSV、链接清单一键导入；重复的自动跳过，先告诉你「会新增多少条」再动手。</span>
+     <li data-reveal>
+      <svg class="promise-icon" aria-hidden="true"><use href="#i-cloud" /></svg>
+      <h3 class="title-3">随时整库导出</h3>
+      <p class="body-5">一个压缩包带走全部内容，另附一份能直接读的 Markdown。</p>
      </li>
-     <li>
-      <strong>随时能完整带走</strong>
-      <span>整库导出成一个 .zip：可以逐字段还原的备份，外加一份能直接读的 Markdown。不存在我们服务器上。</span>
+     <li data-reveal>
+      <svg class="promise-icon" aria-hidden="true"><use href="#i-download" /></svg>
+      <h3 class="title-3">删除就是删除</h3>
+      <p class="body-5">删掉后正文和图片一起清掉，搜索不会再有，其它设备同样消失。</p>
      </li>
     </ul>
-
-    <h2 class="subhead">还有很多小事不用你操心</h2>
-    <table>
-     <tbody>
-      <tr>
-       <th>怎么读</th>
-       <td>正文用宋体排版，长文读起来像纸页。</td>
-      </tr>
-      <tr>
-       <th>怎么删</th>
-       <td>收藏列表支持左滑删除，也能长按进多选批量删除；正文和图片一起清掉，搜索也不会再出现。</td>
-      </tr>
-      <tr>
-       <th>怎么更新</th>
-       <td>应用内检查更新，点一下才下载；只改界面的小版本下完提示重启即可。</td>
-      </tr>
-     </tbody>
-    </table>
    </section>
 
-   <section>
-    <h2>存下来就是这样</h2>
-
-    <figure class="shot shot-inline">
-     <img
-      src="/shots/library.webp"
-      data-src-en="./shots/library-en.webp"
-      data-alt-en="The Saved tab: a count and a filter at the top, then thin-ruled rows with title, source, time and reading status."
-      width="1080"
-      height="2400"
-      alt="Trovia 的收藏页：顶部是内容总数与筛选框，下面是一条条细线分隔的记录，每条有标题、来源、时间和处理状态。"
-      loading="lazy"
-      decoding="async"
-     />
-     <figcaption>保存就结束了。列表会自己长出标题、摘要和状态，不需要你维护。</figcaption>
-    </figure>
-   </section>
-
-   <section>
-    <h2>图片里的字也读得出来</h2>
-    <p>
-      很多内容根本不在正文里：公众号的长截图、技术文章里的架构图和思维导图、小红书的图片笔记。Trovia 会把正文里的图片一起存下来，用端侧 OCR 把上面的文字读出来，接在原文后面一起索引——所以那些字也能被搜到。
-    </p>
-    <p>识别在你自己的手机上完成：图片不经过任何服务器，读出来的文字只写进本机数据库。</p>
-    <figure class="shot shot-inline">
-     <img
-      src="/shots/article.webp"
-      data-src-en="./shots/article-en.webp"
-      data-alt-en="An item page: domain, title, save time and summary, with the article text and its images below."
-      width="1080"
-      height="2400"
-      alt="Trovia 的详情页：域名、标题、收藏时间、摘要，下面是原文与正文图片。"
-      loading="lazy"
-      decoding="async"
-     />
-     <figcaption>正文里的图片会一起存下来，图上的文字进索引。</figcaption>
-    </figure>
-   </section>
-
-   <section>
-    <h2>能读哪些页面</h2>
-    <p>哪些能读、哪些只能留链接，如实写在下面——不假装全都成功。</p>
-    <table>
-     <tbody>
-      <tr>
-       <th>正常解析</th>
-       <td>微信公众号、掘金、少数派、CSDN、V2EX、GitHub、维基百科、简书，以及大多数个人博客和文档站。</td>
-      </tr>
-      <tr>
-       <th>只能拿到链接</th>
-       <td
-        >知乎、Medium、豆瓣、36 氪这类有登录墙或人机验证的站点，端侧抓不到正文；Trovia 会明确告诉你「需要验证或登录」，而不是假装保存成功。</td
-       >
-      </tr>
-      <tr>
-       <th>图片内容</th>
-       <td>正文里的图片都会尝试识别，认不出的跳过，不影响正文。</td>
-      </tr>
-      <tr>
-       <th>解析失败</th>
-       <td>原始链接始终保留，可以随时打开原文，也可以稍后重新解析。</td>
-      </tr>
-     </tbody>
-    </table>
-   </section>
-
-   <section>
-    <h2>同步写进你自己的云盘</h2>
-    <p>
-      没有账号，也没有中间服务器。填一个 WebDAV 地址，内容就在你的手机和你的网盘之间直接走——
-      坚果云、群晖、Nextcloud 都属于这一类，我们只是读写你给的那个目录。
-    </p>
-    <table>
-     <tbody>
-      <tr>
-       <th>要准备什么</th>
-       <td>服务器地址、用户名、应用密码。坚果云在「账户信息 → 安全选项 → 添加应用」里生成应用密码，而不是用登录密码。</td>
-      </tr>
-      <tr>
-       <th>什么时候同步</th>
-       <td>打开应用时自动跑一轮（最快五分钟一次），也可以手动点「立即同步」；失败不会弹窗打断你。</td>
-      </tr>
-      <tr>
-       <th>两台都改过</th>
-       <td>新的那份占主位，另一份留成「（冲突副本）」，两份内容都在，不会被悄悄覆盖。</td>
-      </tr>
-     </tbody>
-    </table>
-    <p class="closing-note">删除会一起同步：删掉的那条在其它设备上也会消失，不会下次同步又冒回来。</p>
-    <figure class="shot shot-inline">
-     <img
-      src="/shots/sync.webp"
-      data-src-en="./shots/sync-en.webp"
-      data-alt-en="Sync settings: server address, username, app password and remote folder, then Test connection, Sync now and the last sync time."
-      width="1080"
-      height="2400"
-      loading="lazy"
-      alt="Trovia 的同步设置页：服务器地址、用户名、应用密码、远端目录四个输入项，下面是测试连接与立即同步两个按钮，以及上次同步时间。"
-     />
-     <figcaption>填一次地址和应用密码就够了：地址、账号都留在本机，密码只进系统钥匙串。</figcaption>
-    </figure>
-   </section>
-
-   <!-- 异议处理：把最大的犹豫直接回答掉，而不是藏在页脚 -->
-   <section>
-    <h2>你可能想问的</h2>
+   <section class="section" id="faq">
+    <h2 class="heading-3 section-title">常见问题</h2>
     <div class="faq">
      <details>
-      <summary>收费吗？</summary>
-      <p>解析、读图里的字、按时间与意思找回，这些能力永久免费，不设功能墙。付费只会出现在一件事上：你不想自己准备模型时，由我们代付。</p>
+      <summary class="heading-6">要付费吗？</summary>
+      <p class="body-3">
+       解析、读图里的字、按时间与意思找回都免费，不设功能墙。付费只出现在一种情况：你不想自己准备模型，由我们代付。
+      </p>
      </details>
      <details>
-      <summary>要注册账号吗？</summary>
-      <p>不需要。打开就能用，没有登录、没有手机号、没有邮箱。</p>
+      <summary class="heading-6">需要注册账号吗？</summary>
+      <p class="body-3">不需要。没有登录、没有手机号、没有邮箱，打开就能用。</p>
      </details>
      <details>
-      <summary>我的收藏会被上传吗？</summary>
-      <p>不会。收藏、正文与图片都保存在这台设备上，默认不上传任何服务器。需要多端时，写入的是你自己的 WebDAV 云盘。</p>
+      <summary class="heading-6">我的收藏会被上传吗？</summary>
+      <p class="body-3">
+       不会。收藏、正文和图片都留在这台设备上。需要多端时，写入的是你自己的 WebDAV 云盘，密码只进系统钥匙串。
+      </p>
      </details>
      <details>
-      <summary>支持 iPhone 吗？</summary>
-      <p>目前只有 Android 安装包。iPhone 暂时没有可直接下载的构建，需要自己用 Xcode 或 EAS 编译。</p>
+      <summary class="heading-6">支持 iPhone 吗？</summary>
+      <p class="body-3">目前只有 Android 安装包。iOS 没有可直接下载的构建，需要自己用 Xcode 或 EAS 编译。</p>
      </details>
      <details>
-      <summary>知乎、Medium 为什么存不全？</summary>
-      <p>这些站点有登录墙或人机验证，端侧拿不到正文，Trovia 只留下链接和标题，并明确告诉你原因。它不绕过登录、付费墙或任何访问限制。</p>
+      <summary class="heading-6">知乎、Medium 为什么存不全？</summary>
+      <p class="body-3">
+       这些站点有登录墙或人机验证，端侧拿不到正文。Trovia 只留链接和标题，并明确告诉你原因。它不绕过登录、付费墙或任何访问限制。
+      </p>
      </details>
      <details>
-      <summary>不接大模型能用吗？</summary>
-      <p>能。摘要与关键词可以离线抽取，功能一样完整。接一个 OpenAI 兼容的服务只是让摘要更顺，并且能用一句话描述去理解你的意图。</p>
+      <summary class="heading-6">不接大模型能用吗？</summary>
+      <p class="body-3">
+       能。摘要和关键词可以离线抽取，功能一样完整。接一个 OpenAI 兼容的服务只是让摘要更顺，并能从一句话里读出你的意图。
+      </p>
      </details>
      <details>
-      <summary>换手机了怎么办？</summary>
-      <p>导出那个 .zip 拷过去再导入，或者事先用 WebDAV 同步。两条路都能逐字段还原，不是只导出一堆链接。</p>
+      <summary class="heading-6">换手机怎么迁移？</summary>
+      <p class="body-3">导出备份压缩包拷过去再导入，或者事先用 WebDAV 同步。两条路都能逐字段还原。</p>
      </details>
      <details>
-      <summary>两台设备都改过同一条，会丢吗？</summary>
-      <p>不会。新的那份占主位，另一份留成「（冲突副本）」，两份内容都在。</p>
+      <summary class="heading-6">两台设备同时改会丢吗？</summary>
+      <p class="body-3">不会。新的那份占主位，另一份留成冲突副本，两份内容都在。</p>
      </details>
     </div>
    </section>
 
-   <section>
-    <h2>我们的四条承诺</h2>
-    <p>这个产品很小，所以不想把话说满。只有四件事，写在这里当承诺看。</p>
-    <ol class="steps">
-     <li>
-      <div>
-       <strong>数据始终在你自己手里</strong>
-       <span
-        >收藏、正文与图片都保存在这台设备上；要同步，就写进你自己的云盘。任何时候都能完整导出，随时带走。</span
-       >
-      </div>
-     </li>
-     <li>
-      <div>
-       <strong>不设功能墙</strong>
-       <span>解析、读图里的字、按时间与意思找回——这些能力永远免费。</span>
-      </div>
-     </li>
-     <li>
-      <div>
-       <strong>不绕过任何限制</strong>
-       <span>不绕过登录、付费墙或访问限制；读不到就直说，不假装保存成功。</span>
-      </div>
-     </li>
-     <li>
-      <div>
-       <strong>删除就是删除</strong>
-       <span>删除后正文和图片一起清掉，搜索也不会再出现，同步到其它设备同样消失。</span>
-      </div>
-     </li>
-    </ol>
-    <figure class="shot shot-inline">
-     <img
-      src="/shots/settings.webp"
-      data-src-en="./shots/settings-en.webp"
-      data-alt-en="The You tab: grouped settings for sync, local storage, model summaries, deleting everything and the version."
-      width="1080"
-      height="2400"
-      alt="Trovia 的「我的」页：分组设置，包含多端同步（未开启）、本机存储、大模型摘要、清空收藏与版本信息。"
-      loading="lazy"
-      decoding="async"
-     />
-     <figcaption>设置里能看清数据存在哪、还剩多少空间。</figcaption>
-    </figure>
-   </section>
-
-   <!-- 结尾：和首屏完全相同的动作，不做第二个选择 -->
-   <section class="closing">
-    <h2>存下第一个链接</h2>
-    <p>粘贴任意文章链接，几秒后它就会被整理好。之后想找它，只需要一句描述。</p>
-    <p class="cta">
-     <a class="btn btn-primary btn-lg" href="__APP_URL__">下载 Android App</a>
-    </p>
-    <p class="closing-note">数据保存在本机，不需要注册；多端同步走你自己的 WebDAV。</p>
+   <section class="final" data-reveal>
+    <h2 class="heading-2">存下第一个链接</h2>
+    <p class="body-2 final-sub">粘贴任意链接，几秒后它就被整理好了。之后想找它，只需要一句描述。</p>
+    <a class="btn btn-primary btn-lg" href="__APP_URL__">下载 Android 版</a>
+    <p class="caption-1 final-note">免费，不用注册，数据留在本机。</p>
    </section>
   </main>
 
-  <footer class="site-footer">
-   <span>Trovia · Save anything. Find it by memory.</span>
-   <a class="btn" href="__APP_URL__">下载 App</a>
+  <footer class="footer">
+   <span class="caption-2">Trovia</span>
+   <ul class="footer-links">
+    <li><a class="caption-2" href="https://github.com/wst7/trovia">源码</a></li>
+    <li><a class="caption-2" href="./privacy.html">隐私</a></li>
+    <li><a class="caption-2" href="https://github.com/wst7/trovia/blob/main/LICENSE">许可</a></li>
+   </ul>
   </footer>
+
   <script src="/i18n.js" defer></script>
+  <script src="/app.js" defer></script>
  </body>
 </html>

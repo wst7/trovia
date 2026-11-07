@@ -59,10 +59,11 @@ function dictKeys(source) {
 /** 这些是本来就不该翻译的：品牌名、语言开关、英文标语、纯标点。 */
 const IGNORE = new Set([
   'Trovia',
-  '中文',
+  '中',
   'EN',
-  'Save anything. Find it by memory.',
-  'Trovia · Save anything. Find it by memory.',
+  '01',
+  '02',
+  '03',
 ])
 
 const keys = dictKeys(i18n)

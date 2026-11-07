@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+ <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>隐私 — Trovia</title>
+  <meta name="description" content="Trovia 的隐私说明：收藏、正文与图片保存在你自己的设备上，不上传服务器。" />
+  <meta name="robots" content="index" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <meta name="theme-color" content="#ffffff" />
+  <link rel="stylesheet" href="/styles.css" />
+ </head>
+ <body>
+  <a class="skip" href="#main">跳到正文</a>
+
+  <header class="nav-wrap">
+   <nav class="nav" aria-label="主导航">
+    <a class="brand" href="./">Trovia</a>
+    <div class="nav-actions">
+     <a class="btn btn-primary btn-sm nav-download" href="./">返回首页</a>
+    </div>
+   </nav>
+  </header>
+
+  <main class="doc" id="main">
+   <h1 class="heading-3">隐私</h1>
+
+   <p class="body-3">
+    Trovia 是一个装在你自己手机上的应用。它没有账号系统，也没有中转服务器。这份说明写清楚它在数据上做了什么、没做什么。
+   </p>
+
+   <h2 class="heading-6">收藏保存在哪里</h2>
+   <p class="body-3">
+    你保存的链接、抓取到的正文、正文里的图片，以及生成的摘要和索引，都保存在这台设备的应用数据目录里。默认情况下不会上传到任何服务器。
+   </p>
+
+   <h2 class="heading-6">什么时候会联网</h2>
+   <ul class="body-3">
+    <li>抓取你主动保存的网页正文时，应用会访问那个网页本身。</li>
+    <li>检查应用更新时，会访问 GitHub Releases。</li>
+    <li>如果你配置了 WebDAV，同步会直接连到你填的地址，不经过我们。</li>
+    <li>如果你接入了一个 OpenAI 兼容的模型服务，被发送的是用于生成摘要的内容片段，接收方是你自己配置的服务商。</li>
+   </ul>
+
+   <h2 class="heading-6">图片里的文字</h2>
+   <p class="body-3">
+    图片中的文字识别在设备上完成，图片本身不会被上传。识别结果写进本机数据库，和正文一起参与检索。
+   </p>
+
+   <h2 class="heading-6">我们不收集什么</h2>
+   <p class="body-3">
+    没有账号、手机号、邮箱，没有行为埋点，也没有广告标识符。应用不向第三方统计服务上报使用数据。
+   </p>
+
+   <h2 class="heading-6">你的控制权</h2>
+   <p class="body-3">
+    你可以随时把整库导出成一个压缩包，里面包含可逐字段还原的备份和一份可读的 Markdown。删除某条收藏时，它的正文、图片和索引会一起清掉；如果开启了同步，删除也会同步到其它设备。
+   </p>
+
+   <h2 class="heading-6">第三方服务</h2>
+   <p class="body-3">
+    应用内可选的模型服务与 WebDAV 都由你自己提供账号与凭据，它们各自的行为适用各自的服务条款。我们不代管这些凭据，密码只写入系统的钥匙串。
+   </p>
+
+   <p class="body-5 doc-note">
+    这份说明描述的是产品在数据上的实际行为，不构成法律意见。如果你要把它用于合规场景，建议请专业人士按你所在司法辖区的要求复核一遍。
+   </p>
+  </main>
+
+  <footer class="footer">
+   <span class="caption-2">Trovia</span>
+   <ul class="footer-links">
+    <li><a class="caption-2" href="./">首页</a></li>
+    <li><a class="caption-2" href="https://github.com/wst7/trovia">源码</a></li>
+    <li><a class="caption-2" href="https://github.com/wst7/trovia/blob/main/LICENSE">许可</a></li>
+   </ul>
+  </footer>
+ </body>
+</html>
