@@ -4,6 +4,7 @@ import { ActivityIndicator, KeyboardAvoidingView, ScrollView, Text, View } from 
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { DocumentSummary, ParseStatus, SearchResult } from '@trovia/shared'
 import { queryTerms } from '../local/terms'
+import { hasCrashLog } from '../local/crash-log'
 import { useT } from '../i18n'
 import { errorText } from '../i18n/errors'
 
@@ -41,6 +42,12 @@ export function HomeScreen() {
   const bodylessCount = (results ?? []).filter((item) => item.parse_status === 'failed').length
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
+  // 上次是不是异常退出：只在有崩溃记录时提一句，正常启动什么都不多说。
+  const [crashSeen, setCrashSeen] = useState(false)
+
+  useEffect(() => {
+    void hasCrashLog().then(setCrashSeen)
+  }, [])
   const [lastQuery, setLastQuery] = useState('')
   // 结果里要标出「为什么这条算命中」，词来自用户输入本身，不用模型的解释。
   const highlightTerms = useMemo(() => queryTerms(lastQuery), [lastQuery])
@@ -335,6 +342,16 @@ export function HomeScreen() {
               </View>
 
               <View className="mt-7">{composer}</View>
+
+              {/* 上回是异常退出的：这一句是唯一能被看见的入口——设置页可能正是崩的那一页。 */}
+              {crashSeen ? (
+                <Text
+                  className="mt-4 text-body-sm text-danger"
+                  onPress={() => router.push('/diagnostics')}
+                >
+                  {t('home.crash.banner')}
+                </Text>
+              ) : null}
 
               {stats && stats.total > 0 ? (
                 <View className="mt-8 flex-row items-baseline gap-2">

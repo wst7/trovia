@@ -446,4 +446,12 @@ export const en: Dictionary = {
   'save.err.duplicate': 'This link is already in your library.',
   'save.err.unknown': 'The save did not finish. Try again.',
   'share.retry': 'Retry',
+  'settings.diagnostics.title': 'Export diagnostics',
+  'settings.diagnostics.subtitle': 'Version, device and recent crashes',
+  'settings.diagnostics.failed': 'Could not write the diagnostics file.',
+  'home.crash.banner': 'The app quit unexpectedly last time · see the log',
+  'diagnostics.title': 'Crash log',
+  'diagnostics.hint': 'The stack of the last uncaught error. Send it over and it tells me why the app closed.',
+  'diagnostics.empty': 'Nothing recorded yet.',
+  'diagnostics.back': 'Back to home',
 }

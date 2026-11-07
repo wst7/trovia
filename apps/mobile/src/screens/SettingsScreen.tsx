@@ -1,7 +1,9 @@
 import { appVersion } from '../local/app-version'
+import Constants from 'expo-constants'
 import { Ionicons } from '@expo/vector-icons'
 import type { ComponentProps, ReactNode } from 'react'
 import { useCallback, useRef, useState } from 'react'
+import { Platform } from 'react-native'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -22,6 +24,7 @@ import { listAllForExportFidelity } from '../local/repo'
 import { loadLlmState } from '../local/llm'
 import * as repo from '../local/repo'
 import type { DocumentStats } from '../local/repo'
+import { readCrashLog } from '../local/crash-log'
 import { useLocalRevision } from '../local/useLocalRevision'
 import { useToast } from '../providers/ToastProvider'
 import { useT } from '../i18n'
@@ -150,6 +153,41 @@ export function SettingsScreen() {
   // 整库重抓：可中断的批处理，进度写在行副标题上。
   const [rebulk, setRebulk] = useState<{ done: number; total: number; current: string | null } | null>(null)
   const stopRebulk = useRef(false)
+
+  /**
+   * 导出诊断：版本、运行环境、库的规模，加上崩溃日志。
+   * 用户只会在「出问题想告诉我」的时候点它，所以内容宁全勿缺。
+   */
+  const shareDiagnostics = async () => {
+    try {
+      const [crashLog, stats] = await Promise.all([readCrashLog(), repo.documentStats()])
+      const sdk = (Constants.expoConfig?.runtimeVersion ?? '—') as string
+      const device = `${Platform.OS} ${Platform.Version}`
+      const body = [
+        `Trovia ${version ?? '?'} (runtime ${sdk})`,
+        `device: ${device}`,
+        `documents: ${stats.total} · processing ${stats.processing} · failed ${stats.failed}`,
+        `theme: ${themePref} · locale: ${localePref}`,
+        '',
+        '--- crash log ---',
+        crashLog ?? '(none)',
+        '',
+      ].join('\n')
+
+      const FS = await import('expo-file-system/legacy')
+      const path = `${FS.documentDirectory}diagnostics.txt`
+      await FS.writeAsStringAsync(path, body)
+
+      const Sharing = await import('expo-sharing')
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(path, { mimeType: 'text/plain', dialogTitle: t('settings.diagnostics.title') })
+      } else {
+        toast(t('settings.export.noWrite'))
+      }
+    } catch {
+      toast(t('settings.diagnostics.failed'))
+    }
+  }
 
   const handleReprocessAll = () => {
     if (rebulk) {
@@ -400,6 +438,12 @@ export function SettingsScreen() {
               title={t('update.title')}
               subtitle={t('update.rowHint')}
               onPress={() => router.push('/settings/update')}
+            />
+            <Row
+              icon="document-text-outline"
+              title={t('settings.diagnostics.title')}
+              subtitle={t('settings.diagnostics.subtitle')}
+              onPress={() => void shareDiagnostics()}
             />
           </Group>
         </View>
