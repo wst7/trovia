@@ -472,4 +472,10 @@ export const en: Dictionary = {
   'update.state.unknown': 'Could not reach the release page',
   'update.state.available': 'v{version} · {size} · tap to download',
   'update.state.latest': 'Up to date',
+  'settings.dev.title': 'Developer mode',
+  'settings.dev.subtitle': 'Log saves so a failure can be sent to me',
+  'settings.dev.on': 'On',
+  'settings.dev.off': 'Off',
+  'settings.dev.logTitle': 'View log',
+  'settings.dev.logSubtitle': 'Environment, crashes and save log',
 }

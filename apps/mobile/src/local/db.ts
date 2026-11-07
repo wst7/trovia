@@ -1,6 +1,7 @@
 import * as FileSystem from 'expo-file-system/legacy'
 import * as SQLite from 'expo-sqlite'
 
+import { DOCUMENT_COLUMNS } from './db-columns'
 import { DB_NAME, moveLegacyDatabase } from './db-migrate'
 
 /**
@@ -97,11 +98,20 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 `)
 
-  // 轻量迁移：老库没有 images 列时补上（SQLite 没有 ADD COLUMN IF NOT EXISTS）。
+  /*
+   * 轻量迁移：把「建表语句里有、老库里没有」的列补齐。
+   *
+   * 这条曾经漏过——`imported_at` 只写在 CREATE TABLE 里，升级上来的库没有它，
+   * 于是每一次保存都报 "table documents has no column named imported_at"。
+   * 现在列成清单，漏一个就是一眼能看见的疏忽。
+   */
   const columns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(documents)')
-  if (!columns.some((column) => column.name === 'images')) {
-    await db.runAsync("ALTER TABLE documents ADD COLUMN images TEXT NOT NULL DEFAULT '[]'")
+  const has = (name: string) => columns.some((column) => column.name === name)
+  const ADDED_COLUMNS = DOCUMENT_COLUMNS
+  for (const [name, definition] of ADDED_COLUMNS) {
+    if (!has(name)) await db.runAsync(`ALTER TABLE documents ADD COLUMN ${name} ${definition}`)
   }
+
   // 同步基准带上远端文件的 etag：没变过的文件就不必再 GET 一遍。
   const baseColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(sync_base)')
   if (!baseColumns.some((column) => column.name === 'remote_etag')) {
@@ -109,9 +119,6 @@ CREATE TABLE IF NOT EXISTS settings (
   }
   // 同步用的 rev：老库补列，并用触发器在每次 UPDATE 时自增，
   // 这样所有写路径（解析、状态、删除）都不用各自记得改 rev。
-  if (!columns.some((column) => column.name === 'rev')) {
-    await db.runAsync('ALTER TABLE documents ADD COLUMN rev INTEGER NOT NULL DEFAULT 1')
-  }
   await db.runAsync(`
     CREATE TRIGGER IF NOT EXISTS documents_rev_bump
     AFTER UPDATE ON documents
@@ -121,11 +128,6 @@ CREATE TABLE IF NOT EXISTS settings (
       UPDATE documents SET rev = OLD.rev + 1 WHERE id = OLD.id;
     END;
   `)
-
-  // 图片落盘后的本地路径，与 images 按下标对齐；空字符串表示这张没存下来。
-  if (!columns.some((column) => column.name === 'image_files')) {
-    await db.runAsync("ALTER TABLE documents ADD COLUMN image_files TEXT NOT NULL DEFAULT '[]'")
-  }
 
   // 上次进程在抓取/解析中途被杀掉时，这些行会一直停在非终态。
   // 本进程还没有开始处理任何条目，启动时把它们放回队列最安全。

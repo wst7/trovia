@@ -474,4 +474,10 @@ export const zh: Dictionary = {
   'update.state.unknown': '暂时查不到新版本',
   'update.state.available': '新版本 v{version} · {size} · 点这里下载',
   'update.state.latest': '已是最新',
+  'settings.dev.title': '开发者模式',
+  'settings.dev.subtitle': '把保存过程记进日志，出问题时发给我',
+  'settings.dev.on': '已开启',
+  'settings.dev.off': '关闭',
+  'settings.dev.logTitle': '查看日志',
+  'settings.dev.logSubtitle': '环境、崩溃记录与保存日志',
 }

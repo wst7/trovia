@@ -1,9 +1,7 @@
 import { appVersion } from '../local/app-version'
-import Constants from 'expo-constants'
 import { Ionicons } from '@expo/vector-icons'
 import type { ComponentProps, ReactNode } from 'react'
 import { useCallback, useRef, useState } from 'react'
-import { Platform } from 'react-native'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -26,7 +24,7 @@ import { listAllForExportFidelity } from '../local/repo'
 import { loadLlmState } from '../local/llm'
 import * as repo from '../local/repo'
 import type { DocumentStats } from '../local/repo'
-import { readCrashLog } from '../local/crash-log'
+import { isDevMode, setDevMode } from '../local/dev-log'
 import { useLocalRevision } from '../local/useLocalRevision'
 import { useToast } from '../providers/ToastProvider'
 import { useT } from '../i18n'
@@ -152,6 +150,8 @@ export function SettingsScreen() {
   const [update, setUpdate] = useState<CheckResult | null>(null)
   const [updatePhase, setUpdatePhase] = useState<'idle' | 'checking' | 'downloading' | 'installing' | 'error'>('idle')
   const [progress, setProgress] = useState<DownloadProgress | null>(null)
+  // 开发者模式：默认关；开着才在这一页出现「查看日志」。
+  const [devOn, setDevOn] = useState(false)
   const [sync, setSync] = useState<{ configured: boolean; at: string | null } | null>(null)
   const [localePref, setLocalePref] = useState<LocalePreference>('system')
 
@@ -160,10 +160,6 @@ export function SettingsScreen() {
   const [rebulk, setRebulk] = useState<{ done: number; total: number; current: string | null } | null>(null)
   const stopRebulk = useRef(false)
 
-  /**
-   * 导出诊断：版本、运行环境、库的规模，加上崩溃日志。
-   * 用户只会在「出问题想告诉我」的时候点它，所以内容宁全勿缺。
-   */
   /** 版本行的副标题就是更新状态，一句话说完。 */
   const updateSubtitle = (): string => {
     if (updatePhase === 'checking') return t('update.state.checking')
@@ -174,7 +170,10 @@ export function SettingsScreen() {
     if (updatePhase === 'installing') return t('update.state.installing')
     if (updatePhase === 'error') return t('update.state.retry')
     if (update?.hasUpdate && update.latest) {
-      return t('update.state.available', { version: update.latest.version, size: formatMb(update.latest.asset?.size ?? 0) })
+      return t('update.state.available', {
+        version: update.latest.version,
+        size: formatMb(update.latest.asset?.size ?? 0),
+      })
     }
     // 没更新、也没出错的时候不多话：这一行本来是「只保存在这台手机上」。
     return t('settings.about.local')
@@ -193,37 +192,6 @@ export function SettingsScreen() {
       setUpdatePhase('idle')
     } catch {
       setUpdatePhase('error')
-    }
-  }
-
-  const shareDiagnostics = async () => {
-    try {
-      const [crashLog, stats] = await Promise.all([readCrashLog(), repo.documentStats()])
-      const sdk = (Constants.expoConfig?.runtimeVersion ?? '—') as string
-      const device = `${Platform.OS} ${Platform.Version}`
-      const body = [
-        `Trovia ${version ?? '?'} (runtime ${sdk})`,
-        `device: ${device}`,
-        `documents: ${stats.total} · processing ${stats.processing} · failed ${stats.failed}`,
-        `theme: ${themePref} · locale: ${localePref}`,
-        '',
-        '--- crash log ---',
-        crashLog ?? '(none)',
-        '',
-      ].join('\n')
-
-      const FS = await import('expo-file-system/legacy')
-      const path = `${FS.documentDirectory}diagnostics.txt`
-      await FS.writeAsStringAsync(path, body)
-
-      const Sharing = await import('expo-sharing')
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(path, { mimeType: 'text/plain', dialogTitle: t('settings.diagnostics.title') })
-      } else {
-        toast(t('settings.export.noWrite'))
-      }
-    } catch {
-      toast(t('settings.diagnostics.failed'))
     }
   }
 
@@ -255,6 +223,7 @@ export function SettingsScreen() {
   const bottomPad = insets.bottom + TAB_BAR_HEIGHT + 24
 
   const reload = useCallback(async () => {
+    setDevOn(isDevMode())
     void appVersion().then((next) => {
       setVersion(next)
       void checkForUpdate(next, false)
@@ -478,11 +447,27 @@ export function SettingsScreen() {
               onPress={update?.hasUpdate ? () => void startUpdate() : undefined}
             />
             <Row
-              icon="document-text-outline"
-              title={t('settings.diagnostics.title')}
-              subtitle={t('settings.diagnostics.subtitle')}
-              onPress={() => void shareDiagnostics()}
+              icon="code-slash-outline"
+              title={t('settings.dev.title')}
+              subtitle={t('settings.dev.subtitle')}
+              onPress={() => {
+                void (async () => {
+                  const next = !devOn
+                  await setDevMode(next)
+                  setDevOn(next)
+                  toast(next ? t('dev.on') : t('dev.off'))
+                })()
+              }}
+              value={devOn ? t('settings.dev.on') : t('settings.dev.off')}
             />
+            {devOn ? (
+              <Row
+                icon="list-outline"
+                title={t('settings.dev.logTitle')}
+                subtitle={t('settings.dev.logSubtitle')}
+                onPress={() => router.push('/diagnostics')}
+              />
+            ) : null}
           </Group>
         </View>
       </ScrollView>
