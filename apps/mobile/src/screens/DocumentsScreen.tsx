@@ -377,60 +377,71 @@ export function DocumentsScreen() {
             groupBy === 'day' ? dayLabel(doc.saved_at) : (doc.site_name || domainOf(doc.url))
           const label = groupOf(item)
           const previous = index > 0 ? groupOf(displayItems[index - 1]) : null
-          // 组里有多少条，写在组标题后面：按站点分组时这个数字比标题本身有用。
+          const firstOfGroup = !label || label !== previous
+          // 组里有多少条：按站点分组时这个数字比站名本身有用。
           const groupSize = displayItems.filter((doc) => groupOf(doc) === label).length
-          // 组内每一行下面拉一条发丝线，最后一行不画——列表是表格，不是一张张卡片。
           const nextLabel = index + 1 < displayItems.length ? groupOf(displayItems[index + 1]) : null
           const lastOfGroup = nextLabel !== label
+          const failed = item.parse_status === 'failed'
           return (
-          <View>
-            {label && label !== previous ? (
-              <View className={index === 0 ? 'mb-1' : 'mb-1 mt-7'}>
-                <Text className="text-caption font-medium text-faint">
-                  {label}
-                  {groupBy === 'site' && groupSize > 0 ? `  ${groupSize}` : ''}
-                </Text>
+            // 左轨放日期，竖线由右列的左边框连成——时间不再当分组标题重复出现，
+            // 扫读时眼睛只走一条竖线。失败的行把这条线换成 2px 红色：
+            // 「这一条要你处理」写在结构里，而不是角落的一个点。
+            <View className="flex-row">
+              <View className={`w-14 ${firstOfGroup && index > 0 ? 'pt-5' : ''}`}>
+                {firstOfGroup ? (
+                  <Text
+                    className="text-[10px] font-semibold tracking-[0.5px] text-faint"
+                    numberOfLines={1}
+                  >
+                    {groupBy === 'site' && groupSize > 0 ? `${label} ${groupSize}` : label}
+                  </Text>
+                ) : null}
               </View>
-            ) : null}
-            <View className={lastOfGroup ? '' : 'border-b border-line'}>
-            <SwipeRow
-              open={swipeId === item.id}
-              onOpen={() => setSwipeId(item.id)}
-              onClose={() => setSwipeId((current) => (current === item.id ? null : current))}
-              onDelete={() => {
-                setSwipeId(null)
-                setPendingDelete({ id: item.id, title: item.title ?? item.url })
-              }}
-              disabled={selecting}
-            >
-            <RecentRow
-              item={item}
-              onPress={() => {
-                if (selecting) toggleSelected(item.id)
-                else router.push(`/documents/${item.id}`)
-              }}
-              onLongPress={() => (selecting ? toggleSelected(item.id) : enterSelection(item.id))}
-              onTerminal={handleTerminal}
-              // 按天分组时日期在组标题上；按站点分组时行内必须补回日期。
-              showDate={groupBy === 'site'}
-              selecting={selecting}
-              selected={selected.has(item.id)}
-              onRetry={
-                failedOnly && repo.isRetryableError(item.parse_error_code)
-                  ? () => {
-                      void (async () => {
-                        await repo.markForRetry(item.id)
-                        void processPendingQueue()
-                        toast(t('list.requeuedOne'), { type: 'success' })
-                        reload()
-                      })()
+              <View
+                className={`flex-1 pl-3 ${firstOfGroup && index > 0 ? 'pt-5' : ''} ${
+                  failed ? 'border-l-2 border-danger' : 'border-l border-line'
+                }`}
+              >
+                <SwipeRow
+                  open={swipeId === item.id}
+                  onOpen={() => setSwipeId(item.id)}
+                  onClose={() => setSwipeId((current) => (current === item.id ? null : current))}
+                  onDelete={() => {
+                    setSwipeId(null)
+                    setPendingDelete({ id: item.id, title: item.title ?? item.url })
+                  }}
+                  disabled={selecting}
+                >
+                  <RecentRow
+                    item={item}
+                    onPress={() => {
+                      if (selecting) toggleSelected(item.id)
+                      else router.push(`/documents/${item.id}`)
+                    }}
+                    onLongPress={() => (selecting ? toggleSelected(item.id) : enterSelection(item.id))}
+                    onTerminal={handleTerminal}
+                    // 按天分组时日期在左轨上；按站点分组时行内必须补回日期。
+                    showDate={groupBy === 'site'}
+                    selecting={selecting}
+                    selected={selected.has(item.id)}
+                    onRetry={
+                      failedOnly && repo.isRetryableError(item.parse_error_code)
+                        ? () => {
+                            void (async () => {
+                              await repo.markForRetry(item.id)
+                              void processPendingQueue()
+                              toast(t('list.requeuedOne'), { type: 'success' })
+                              reload()
+                            })()
+                          }
+                        : undefined
                     }
-                  : undefined
-              }
-            />
-            </SwipeRow>
+                  />
+                </SwipeRow>
+                {lastOfGroup ? null : <View className="h-px bg-line" />}
+              </View>
             </View>
-          </View>
           )
         }}
         ListEmptyComponent={

@@ -204,6 +204,10 @@ export function ResultRow({
   /** 当前查询的词，用来在结果里标出命中位置。 */
   terms?: string[]
 }) {
+  const t = useT()
+  // 命中类型先说，标题后说：这一屏要回答的是「是不是这一篇」，
+  // 而判断依据是命中的那句话，不是标题像不像。
+  const kind = item.match_kind === 'semantic' ? t('result.kind.semantic') : t('result.kind.literal')
   return (
     <Pressable
       onPress={onPress}
@@ -212,8 +216,15 @@ export function ResultRow({
       className="py-4"
     >
       {({ pressed }) => (
-        <View style={{ opacity: pressed ? 0.55 : 1 }}>
-          <Text className="text-[15px] font-medium leading-[21px] text-ink" numberOfLines={2}>
+        <View style={{ opacity: pressed ? 0.6 : 1 }}>
+          <View className="flex-row items-baseline justify-between gap-3">
+            <Text className="text-[11px] font-semibold tracking-[1px] text-faint">{kind}</Text>
+            {showDate ? (
+              <Text className="text-caption text-faint">{formatRelativeDate(item.saved_at)}</Text>
+            ) : null}
+          </View>
+
+          <Text className="mt-2 text-body font-medium text-ink" numberOfLines={2}>
             {highlight(item.title || item.url, terms).map((part, i) =>
               typeof part === 'string' ? (
                 <Text key={i}>{part}</Text>
@@ -224,9 +235,26 @@ export function ResultRow({
               ),
             )}
           </Text>
-          <View className="mt-1 flex-row items-center gap-2">
+
+          {item.matched_excerpt ? (
+            <View className="mt-2 border-l-2 border-line-strong pl-3">
+              <Text className="text-body-sm text-muted" numberOfLines={2}>
+                {highlight(item.matched_excerpt, terms).map((part, i) =>
+                  typeof part === 'string' ? (
+                    <Text key={i}>{part}</Text>
+                  ) : (
+                    <Text key={i} className="text-ink">
+                      {part.hit}
+                    </Text>
+                  ),
+                )}
+              </Text>
+            </View>
+          ) : null}
+
+          <View className="mt-2 flex-row items-center gap-2">
             <Text className="flex-shrink text-caption text-muted" numberOfLines={1}>
-              {metaOf(item, showDate)}
+              {item.match_reason}
             </Text>
             <LiveStatusMark
               docId={item.document_id}
@@ -235,29 +263,6 @@ export function ResultRow({
               onTerminal={onTerminal}
             />
           </View>
-
-          {item.summary ? (
-            <Text className="mt-2 text-body-sm text-muted" numberOfLines={2}>
-              {item.summary}
-            </Text>
-          ) : null}
-
-          <Text className="mt-2 text-body-sm text-ink" numberOfLines={2}>
-            {item.match_reason}
-          </Text>
-          {item.matched_excerpt ? (
-            <Text className="mt-1 text-caption text-muted" numberOfLines={2}>
-              {highlight(item.matched_excerpt, terms).map((part, i) =>
-                typeof part === 'string' ? (
-                  <Text key={i}>{part}</Text>
-                ) : (
-                  <Text key={i} className="text-ink">
-                    {part.hit}
-                  </Text>
-                ),
-              )}
-            </Text>
-          ) : null}
         </View>
       )}
     </Pressable>

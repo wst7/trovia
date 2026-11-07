@@ -488,4 +488,10 @@ export const zh: Dictionary = {
   'list.delete': '删除',
   'list.deleteTitle': '删除这一条？',
   'list.unitItemOne': '条内容',
+  'result.kind.literal': '字面命中',
+  'result.kind.semantic': '意思相近',
+  'detail.expandBody': '展开原文',
+  'detail.collapseBody': '收起原文',
+  'detail.bodyHidden': '原文默认收起，先看摘要判断是不是这一篇。',
+  'detail.bodyChars': '约 {count} 字',
 }

@@ -486,4 +486,10 @@ export const en: Dictionary = {
   'list.delete': 'Delete',
   'list.deleteTitle': 'Delete this one?',
   'list.unitItemOne': 'item',
+  'result.kind.literal': 'Word match',
+  'result.kind.semantic': 'Related meaning',
+  'detail.expandBody': 'Show the text',
+  'detail.collapseBody': 'Collapse',
+  'detail.bodyHidden': 'The text starts collapsed; the summary is enough to recognise it.',
+  'detail.bodyChars': '{count} characters',
 }

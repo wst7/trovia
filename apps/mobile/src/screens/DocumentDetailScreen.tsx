@@ -46,6 +46,8 @@ export function DocumentDetailScreen() {
   const [reprocessing, setReprocessing] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  // 原文是否展开：长文默认收起。hook 必须放在所有早返回之前。
+  const [showBody, setShowBody] = useState(false)
   // 看图：整篇图片一起传，左右能翻。
   // 底部悬浮按钮挡不挡正文，取决于它的真实高度，所以量一次再决定留白。
   const [barHeight, setBarHeight] = useState(0)
@@ -222,6 +224,26 @@ export function DocumentDetailScreen() {
   const showLong = Boolean(summaryLongText)
   // 没有可显示的文字就别画那个红色竖线和「摘要」标题——空块比没有更难看。
   const hasSummaryText = Boolean(summaryShortText || summaryLongText)
+  /**
+   * 折叠态的三行预览：正文是 Markdown，直接截取会露出 ##、![](...) 这些标记。
+   * 这里只做「读起来像话」的最小清洗，不追求还原渲染效果。
+   */
+  const plainPreview = (md: string) =>
+    md
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, '')        // 图片整段丢掉
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')      // 链接只留文字
+      .replace(/^#{1,6}\s*/gm, '')                    // 标题井号
+      .replace(/```[\s\S]*?```/g, '')                 // 代码块
+      .replace(/[`*_>~]/g, '')                        // 行内标记
+      .replace(/\n{2,}/g, '\n')                       // 多余空行
+      .replace(/\s+/g, ' ')
+      .trim()
+
+  // 原文默认收起：这一页先回答「是不是这一篇」，摘要够用；要读再展开。
+  // 短文本不收起，多一次点击没有收益。
+  const bodyText = plainPreview(bodySource ?? '')
+  const bodyLength = bodyText.length
+  const bodyCollapsible = bodyLength > 1200
 
   return (
     <Screen>
@@ -313,7 +335,7 @@ export function DocumentDetailScreen() {
         ) : null}
 
         {hasSummaryText && !summaryRepeatsBody ? (
-          <View className="mt-6 border-l-2 border-accent pl-4">
+          <View className="mt-6 rounded-md bg-sunken px-4 py-4">
             <Text className="text-[11px] font-semibold tracking-[1px] text-faint">
               {t('detail.summary')}
             </Text>
@@ -335,22 +357,59 @@ export function DocumentDetailScreen() {
         ) : null}
 
         <View className="mt-8">
-          <Text className="text-[11px] font-semibold tracking-[1px] text-faint">
-            {t('detail.original')}
-          </Text>
+          <View className="flex-row items-baseline justify-between">
+            <Text className="text-[11px] font-semibold tracking-[1px] text-faint">
+              {t('detail.original')}
+            </Text>
+            {bodySource && bodyCollapsible ? (
+              <Text className="text-caption text-faint">
+                {t('detail.bodyChars', { count: bodyLength })}
+              </Text>
+            ) : null}
+          </View>
+
           <View className="mt-3">
-            {bodySource ? (
-              <Markdown
-                source={bodySource}
-                resolveImage={resolveImage}
-                onImagePress={(url, images) =>
-                  setViewer({ open: true, index: Math.max(0, images.indexOf(url)), images })
-                }
-              />
-            ) : (
+            {!bodySource ? (
               <Text className="text-body-sm text-muted">
                 {bodyFallback(doc.parse_error_code, t)}
               </Text>
+            ) : bodyCollapsible && !showBody ? (
+              <>
+                {/* 预览三行：让人确认「是这篇」，又不至于把整篇文章摊在判断之前。 */}
+                <Text className="text-body-sm text-muted" numberOfLines={3}>
+                  {bodyText}
+                </Text>
+                <Pressable
+                  onPress={() => setShowBody(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('detail.expandBody')}
+                  className="mt-3 flex-row items-center justify-between border-y border-line py-3"
+                >
+                  <Text className="text-body-sm font-medium text-ink">{t('detail.expandBody')}</Text>
+                  <Text className="text-caption text-faint">›</Text>
+                </Pressable>
+                <Text className="mt-2 text-caption text-faint">{t('detail.bodyHidden')}</Text>
+              </>
+            ) : (
+              <>
+                <Markdown
+                  source={bodySource}
+                  resolveImage={resolveImage}
+                  onImagePress={(url, images) =>
+                    setViewer({ open: true, index: Math.max(0, images.indexOf(url)), images })
+                  }
+                />
+                {bodyCollapsible ? (
+                  <Pressable
+                    onPress={() => setShowBody(false)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('detail.collapseBody')}
+                    className="mt-4 border-t border-line pt-3"
+                  >
+                    <Text className="text-caption text-muted underline">{t('detail.collapseBody')}</Text>
+                  </Pressable>
+                ) : null}
+              </>
             )}
           </View>
         </View>
