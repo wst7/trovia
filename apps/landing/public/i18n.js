@@ -39,12 +39,12 @@
     '浏览器导出的书签、CSV、链接清单都能一次搬进来；重复的自动跳过，先给你看清楚会新增多少条再动手。':
       'Bookmarks exported from a browser, a CSV, or a list of links can all move in at once. Duplicates are skipped, and you see how many are new before anything is written.',
     '想换个地方': 'You want to leave',
-    '整库导出成 JSON 和 Markdown，正文、图片路径、时间都在里面，不留在任何服务器上。':
-      'Export the whole library as JSON and Markdown — text, image paths and dates included. It was never on a server of ours.',
-    '搜「延时队列」命中一篇讲写作的长文——这个词只出现在文章里的':
-      'Searching for "delayed queue" found a long essay about writing — the phrase only appears on ',
-    '一张思维导图截图上': 'a mind-map screenshot',
-    '，正文没有它。': ' inside it, nowhere in the text.',
+    '整库导出成一个 .zip：里面是可以逐字段还原的备份，外加一份能直接读的 Markdown，不留在任何服务器上。':
+      'Export the whole library as one .zip — a backup that restores field for field plus readable Markdown. It was never on a server of ours.',
+    '搜「AMD」命中一篇早报——这个词只出现在':
+      'Searching "AMD" finds a morning digest — the word only appears',
+    '正文的速览列表': 'in the body list',
+    '里，标题里没有；结果会说明它命中了哪儿。': ', never in the title, and the result says where it matched.',
 
     '怎么用': 'How it works',
     '保存': 'Save',

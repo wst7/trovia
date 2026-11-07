@@ -3,7 +3,7 @@
 [![最新版本](https://img.shields.io/github/v/release/wst7/trovia?sort=semver)](https://github.com/wst7/trovia/releases/latest)
 [![Android 构建](https://github.com/wst7/trovia/actions/workflows/android.yml/badge.svg)](https://github.com/wst7/trovia/actions/workflows/android.yml)
 ![平台](https://img.shields.io/badge/平台-Android-3DDC84?logo=android&logoColor=white)
-[![许可证](https://img.shields.io/badge/许可证-MIT-1A1917)](LICENSE)
+[![许可证](https://img.shields.io/badge/许可证-AGPL--3.0-1A1917)](LICENSE)
 
 **中文** · [English](README.md)
 
@@ -76,4 +76,4 @@ cd apps/mobile && npx tsc --noEmit
 
 ## 许可证
 
-MIT，见 [LICENSE](LICENSE)。随便用、随便改、随便发。
+AGPL-3.0，见 [LICENSE](LICENSE)。可以随便改、随便跑；但如果对外分发，或者把它架成在线服务，你的改动也必须开源。Trovia 这个名字和图标不在授权范围内。

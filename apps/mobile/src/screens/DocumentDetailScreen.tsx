@@ -220,6 +220,8 @@ export function DocumentDetailScreen() {
   )
   const showShort = Boolean(summaryShortText) && !longRepeatsShort
   const showLong = Boolean(summaryLongText)
+  // 没有可显示的文字就别画那个红色竖线和「摘要」标题——空块比没有更难看。
+  const hasSummaryText = Boolean(summaryShortText || summaryLongText)
 
   return (
     <Screen>
@@ -310,7 +312,7 @@ export function DocumentDetailScreen() {
           </Pressable>
         ) : null}
 
-        {summary && !summaryRepeatsBody ? (
+        {hasSummaryText && !summaryRepeatsBody ? (
           <View className="mt-6 border-l-2 border-accent pl-4">
             <Text className="text-[11px] font-semibold tracking-[1px] text-faint">
               {t('detail.summary')}
@@ -319,8 +321,8 @@ export function DocumentDetailScreen() {
               <Text className="mt-2 text-body text-ink">{summaryShortText}</Text>
             ) : null}
             {showLong ? (
-              <Text className={summaryShort ? 'mt-2 text-body-sm text-muted' : 'mt-2 text-body text-ink'}>
-                {summaryLong}
+              <Text className={showShort ? 'mt-2 text-body-sm text-muted' : 'mt-2 text-body text-ink'}>
+                {summaryLongText}
               </Text>
             ) : null}
           </View>

@@ -3,7 +3,7 @@
 [![Latest release](https://img.shields.io/github/v/release/wst7/trovia?sort=semver)](https://github.com/wst7/trovia/releases/latest)
 [![Android build](https://github.com/wst7/trovia/actions/workflows/android.yml/badge.svg)](https://github.com/wst7/trovia/actions/workflows/android.yml)
 ![Platform](https://img.shields.io/badge/platform-Android-3DDC84?logo=android&logoColor=white)
-[![License: MIT](https://img.shields.io/badge/license-MIT-1A1917)](LICENSE)
+[![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-1A1917)](LICENSE)
 
 **English** · [中文](README.zh-CN.md)
 
@@ -74,4 +74,4 @@ Product scope: [`docs/PRODUCT.md`](docs/PRODUCT.md). API and database convention
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Use it, fork it, ship it.
+AGPL-3.0 — see [LICENSE](LICENSE). Fork it, change it, run it; if you distribute it or host it as a service, your version has to stay open too. The Trovia name and logo are not covered by this licence.

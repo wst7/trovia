@@ -23,7 +23,7 @@ export const SERIF_FAMILY = 'NotoSerifSC-Regular'
  *   false = 系统黑体
  * 定下来之后把这个开关删掉，只留选中的那一套。
  */
-export const SERIF_ENABLED = false
+export const SERIF_ENABLED = true
 
 // 原生已注册，随时可用；保留这套订阅是为了以后换成可变字体再加载。
 let ready = true

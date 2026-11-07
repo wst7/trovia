@@ -543,6 +543,11 @@ function pickBody($: CheerioDoc): { node: AnyNode; wechat: boolean } {
   const wechat = $('#js_content').first()[0]
   if (wechat && textLength($, wechat) >= 80) return { node: wechat, wechat: true }
 
+  // GitHub 仓库页：正文是 README，但 <main> 里还有整棵文件树和提交列表，
+  // 按「最大的块」去挑会挑到文件树，正文变成 BranchesTags… 一串垃圾。
+  const readme = $('article.markdown-body').first()[0] ?? $('#readme .markdown-body').first()[0]
+  if (readme && textLength($, readme) >= 80) return { node: readme, wechat: false }
+
   let best: AnyNode | null = null
   let bestLength = 0
   for (const selector of CONTENT_SELECTORS) {
