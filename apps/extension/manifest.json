@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Trovia",
+  "version": "0.1.0",
+  "description": "把当前网页存进 Trovia，稍后在手机里用一句话找回。",
+  "permissions": ["storage", "contextMenus", "activeTab", "alarms"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "action": { "default_popup": "popup.html", "default_title": "存进 Trovia" },
+  "options_ui": { "page": "options.html", "open_in_tab": true },
+  "commands": {
+    "save-page": {
+      "suggested_key": { "default": "Alt+S" },
+      "description": "保存当前页"
+    }
+  }
+}

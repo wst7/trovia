@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>Trovia · 设置</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main>
+      <h1>连到你的 WebDAV</h1>
+      <p class="lede">
+        和手机端填同一处地址即可。插件只往 <code>docs/</code> 里写一个 JSON，正文和图片由手机端抓。
+      </p>
+
+      <form id="form">
+        <label>
+          地址
+          <input id="base" type="url" placeholder="https://dav.jianguoyun.com/dav" required autocomplete="off" />
+          <span class="hint">不带末尾的 /，也不要填文件夹。</span>
+        </label>
+
+        <label>
+          账号
+          <input id="user" type="text" autocomplete="username" required />
+        </label>
+
+        <label>
+          应用密码
+          <input id="password" type="password" autocomplete="current-password" required />
+          <span class="hint">坚果云要在「安全选项 → 添加应用密码」里生成，登录密码不能用。</span>
+        </label>
+
+        <label>
+          目录
+          <input id="folder" type="text" value="trovia" />
+          <span class="hint">手机端同步的目录名，默认 trovia。</span>
+        </label>
+
+        <div class="actions">
+          <button class="primary" type="submit">保存</button>
+          <button id="test" type="button">测试连接</button>
+        </div>
+      </form>
+
+      <p class="status" id="status" role="status"></p>
+
+      <section class="notes">
+        <h2>凭据存在哪</h2>
+        <p>
+          只存在这台电脑的 <code>chrome.storage.local</code>，不上传别处。同一个扩展的任何页面都读不到
+          别的站点，权限按需申请。
+        </p>
+        <h2>离线怎么办</h2>
+        <p>没连上云盘时保存会进本地队列，之后每 5 分钟重试一次；关掉浏览器也不丢。</p>
+      </section>
+    </main>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>
