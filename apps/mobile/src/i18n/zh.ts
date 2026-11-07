@@ -442,4 +442,10 @@ export const zh: Dictionary = {
   'update.ota.failed': '检查失败，稍后再试。',
   'update.ota.noChannel': '云端还没有发布过热更新。',
   'update.ota.misconfigured': '这个包没配好热更新通道。',
+  'save.err.busy': '本机数据库正忙，稍等一下再试。',
+  'save.err.storage': '手机存储写不进去了，清理些空间再保存。',
+  'save.err.corrupt': '本机数据库损坏了，重启 App 再试。',
+  'save.err.duplicate': '这条链接已经在收藏里了。',
+  'save.err.unknown': '保存没有完成，再试一次。',
+  'share.retry': '重试',
 }

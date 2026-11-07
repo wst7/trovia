@@ -11,7 +11,7 @@ import { Button } from '../ui/Button'
 import { Screen } from '../ui/Screen'
 import { usePalette } from '../ui/palette'
 import { useT } from '../i18n'
-import { errorText } from '../i18n/errors'
+import { classifySaveError, SAVE_FAILURE_KEY } from '../local/save-error'
 
 /** 分享进入后的保存结果页：保存到本机一次，然后跳到详情。 */
 export function ShareScreen() {
@@ -27,11 +27,13 @@ export function ShareScreen() {
 
   const started = useRef<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // 失败后原地重试：分享进来的人已经没有原 App 的上下文了，逼他回首页等于丢一次收藏。
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     if (!url) return
-    if (started.current === url) return
-    started.current = url
+    if (started.current === `${url}#${attempt}`) return
+    started.current = `${url}#${attempt}`
 
     void (async () => {
       try {
@@ -48,10 +50,12 @@ export function ShareScreen() {
           setError(t('composer.invalidUrl'))
           return
         }
-        setError(errorText(e, t('composer.saveFailed')))
+        // 原始堆栈留给 logcat，界面只说能行动的那一句。
+        console.warn('[share] save failed', e)
+        setError(t(SAVE_FAILURE_KEY[classifySaveError(e)]))
       }
     })()
-  }, [url, rawHint, router, toast])
+  }, [url, rawHint, router, toast, attempt])
 
   return (
     <Screen>
@@ -69,8 +73,21 @@ export function ShareScreen() {
           <View className="mt-6">
             <Text className="text-title font-semibold text-ink">{t('share.failedTitle')}</Text>
             <Text className="mt-2 text-body-sm text-muted">{error}</Text>
-            <View className="mt-6 self-start">
-              <Button label={t('list.backHome')} onPress={() => router.replace('/')} size="sm" />
+            <View className="mt-6 flex-row items-center gap-3">
+              <Button
+                label={t('share.retry')}
+                onPress={() => {
+                  setError(null)
+                  setAttempt((n) => n + 1)
+                }}
+                size="sm"
+              />
+              <Button
+                label={t('list.backHome')}
+                onPress={() => router.replace('/')}
+                size="sm"
+                variant="quiet"
+              />
             </View>
           </View>
         ) : (

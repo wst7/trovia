@@ -440,4 +440,10 @@ export const en: Dictionary = {
   'update.ota.failed': 'Check failed. Try again later.',
   'update.ota.noChannel': 'No hot update has been published yet.',
   'update.ota.misconfigured': 'This build is missing its update channel.',
+  'save.err.busy': 'The local database is busy. Try again in a moment.',
+  'save.err.storage': 'The phone cannot write to storage. Free some space and retry.',
+  'save.err.corrupt': 'The local database is damaged. Restart the app and retry.',
+  'save.err.duplicate': 'This link is already in your library.',
+  'save.err.unknown': 'The save did not finish. Try again.',
+  'share.retry': 'Retry',
 }

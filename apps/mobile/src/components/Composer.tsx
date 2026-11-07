@@ -6,6 +6,7 @@ import { extractHttpUrl, isValidHttpUrl } from '@trovia/shared'
 import { useT } from '../i18n'
 import { titleHintFrom } from '../local/util'
 import { composerHint } from '../local/composer-hint'
+import { classifySaveError, SAVE_FAILURE_KEY } from '../local/save-error'
 import { cx } from '../ui/cx'
 import { usePalette } from '../ui/palette'
 
@@ -91,8 +92,9 @@ export function Composer({
     setSaving(true)
     try {
       await onSave(detectedUrl, titleHintFrom(value, detectedUrl))
-    } catch {
-      setError(t('composer.saveFailed'))
+    } catch (e) {
+      console.warn('[composer] save failed', e)
+      setError(t(SAVE_FAILURE_KEY[classifySaveError(e)]))
     } finally {
       setSaving(false)
     }
