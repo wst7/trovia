@@ -1,0 +1,71 @@
+name: Release
+
+# One place to cut a version.
+#
+# The tag is the version: CI takes it from the tag name, so nothing in the
+# repo carries a release number. That means releasing is "create the tag and
+# let the build workflow do its thing" — this workflow only makes that one
+# action, but checks the things a person forgets first.
+#
+# Release notes are hand-written on purpose. Generated commit lists read as
+# "chore: translate comments", which is not what a user opens the release for.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version without the v prefix (x.y.z). Its CHANGELOG section must already exist.'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          # Tags are needed to tell "new version" from "tag already there".
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Fail before anything is tagged: a missing changelog section would
+      # make the release fall back to generated commit titles.
+      - name: Validate the version
+        run: |
+          set -euo pipefail
+          v="${{ inputs.version }}"
+          node scripts/check-changelog.mjs "$v"
+          git fetch --tags --force
+          if git rev-parse -q --verify "refs/tags/v$v" >/dev/null; then
+            echo "tag v$v already exists — pick the next version" >&2
+            exit 1
+          fi
+
+      - name: Tag and start the build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          v="${{ inputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$v" -m "v$v"
+          git push origin "v$v"
+          # A tag pushed with GITHUB_TOKEN does not start other workflows, so
+          # the build is dispatched explicitly against the tag ref. That ref
+          # is what makes android.yml treat it as a release and publish the
+          # APK with the notes from docs/CHANGELOG.md.
+          gh workflow run android.yml --ref "v$v"
+          echo "v$v tagged; the Android build is running."
