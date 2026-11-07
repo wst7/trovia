@@ -3,6 +3,7 @@
 [![最新版本](https://img.shields.io/github/v/release/wst7/trovia?sort=semver)](https://github.com/wst7/trovia/releases/latest)
 [![Android 构建](https://github.com/wst7/trovia/actions/workflows/android.yml/badge.svg)](https://github.com/wst7/trovia/actions/workflows/android.yml)
 ![平台](https://img.shields.io/badge/平台-Android-3DDC84?logo=android&logoColor=white)
+[![许可证](https://img.shields.io/badge/许可证-MIT-1A1917)](LICENSE)
 
 **中文** · [English](README.md)
 
@@ -72,3 +73,7 @@ cd apps/mobile && npx tsc --noEmit
 热更新随每个 tag 发布。`apps/mobile/app.config.ts` 里的 `runtimeVersion` 是手写常量（现在是 `native-1`），只有原生依赖、权限或包名变了才加一，并同时发一次 APK。
 
 产品边界见 [`docs/PRODUCT.md`](docs/PRODUCT.md)，接口与数据库约定见 [`docs/ENGINEERING.md`](docs/ENGINEERING.md)，每个版本改了什么见 [`docs/CHANGELOG.md`](docs/CHANGELOG.md)。
+
+## 许可证
+
+MIT，见 [LICENSE](LICENSE)。随便用、随便改、随便发。

@@ -3,6 +3,7 @@
 [![Latest release](https://img.shields.io/github/v/release/wst7/trovia?sort=semver)](https://github.com/wst7/trovia/releases/latest)
 [![Android build](https://github.com/wst7/trovia/actions/workflows/android.yml/badge.svg)](https://github.com/wst7/trovia/actions/workflows/android.yml)
 ![Platform](https://img.shields.io/badge/platform-Android-3DDC84?logo=android&logoColor=white)
+[![License: MIT](https://img.shields.io/badge/license-MIT-1A1917)](LICENSE)
 
 **English** · [中文](README.zh-CN.md)
 
@@ -70,3 +71,7 @@ Before a release, `npm run smoke` fetches a handful of real sites (WeChat, SSPAI
 Hot updates are published on every tag. `runtimeVersion` in `apps/mobile/app.config.ts` is a hand-bumped constant (`native-1`): raise it only when native code, permissions or the package name change, and ship a matching APK with it.
 
 Product scope: [`docs/PRODUCT.md`](docs/PRODUCT.md). API and database conventions: [`docs/ENGINEERING.md`](docs/ENGINEERING.md).
+
+## License
+
+MIT — see [LICENSE](LICENSE). Use it, fork it, ship it.
