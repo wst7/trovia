@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "description": "浏览器插件：把当前页存进 Trovia 的 WebDAV 目录",
   "scripts": {
-    "test": "node test/sync.test.mjs"
+    "test": "node --test test/",
+    "pack": "node scripts/pack.mjs"
   }
 }
