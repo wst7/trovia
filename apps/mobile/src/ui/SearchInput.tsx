@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { APP_FAMILY } from './fonts'
 import { Ionicons } from '@expo/vector-icons'
 import { TextInput, View } from 'react-native'
 
@@ -36,6 +37,7 @@ export function SearchInput({
     >
       <Ionicons name="search" size={16} color={focused ? p.accent : p.faint} />
       <TextInput
+          style={{ fontFamily: APP_FAMILY }}
         value={value}
         onChangeText={onChangeText}
         onFocus={() => setFocused(true)}

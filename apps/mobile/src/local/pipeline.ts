@@ -1,4 +1,5 @@
 import { fetchArticle } from './article'
+import { opLog } from './dev-log'
 import { buildVectors } from './embed'
 import { cacheImages } from './imageStore'
 import { emitChange } from './bus'
@@ -58,17 +59,26 @@ async function storeImages(id: string, images: string[], referer: string): Promi
 }
 
 async function processOne(id: string, url: string): Promise<void> {
+  const startedAt = Date.now()
   await repo.setStatus(id, 'fetching', 'fetch')
   emitChange()
+  await opLog('parse.fetch.start', { id, url })
 
   let article
   try {
     article = await fetchArticle(url)
+    await opLog('parse.fetch.ok', {
+      id,
+      ms: Date.now() - startedAt,
+      chars: article.plainText.length,
+      images: article.images.length,
+    })
   } catch (error) {
     // 403/401/412/451 是站点主动拒绝，不是网络抖动：两者的补救方式完全不同。
     const message = error instanceof Error ? error.message : ''
     const refused = /HTTP (401|403|412|451)/.test(message)
     await repo.markFailed(id, refused ? 'FETCH_BLOCKED' : 'FETCH_FAILED')
+    await opLog('parse.fetch.fail', { id, url, refused, ms: Date.now() - startedAt }, error)
     emitChange()
     return
   }
@@ -95,6 +105,7 @@ async function processOne(id: string, url: string): Promise<void> {
 
   // 和原来的后端语义一致：正文太短只算部分成功，元信息照常保留。
   if (article.plainText.length < 120) {
+    await opLog('parse.partial', { id, chars: article.plainText.length, ms: Date.now() - startedAt })
     await repo.savePartial(id, article)
     await storeImages(id, article.images, url)
     emitChange()
@@ -109,6 +120,7 @@ async function processOne(id: string, url: string): Promise<void> {
   let keywords: string[] = []
 
   const llm = await summarizeWithLlm({ title, url, text: article.plainText })
+  await opLog('parse.summary', { id, by: llm ? 'model' : 'extract' })
   if (llm) {
     summary = llm.summary
     keywords = llm.keywords
@@ -120,5 +132,11 @@ async function processOne(id: string, url: string): Promise<void> {
 
   await repo.saveParsed(id, article, summary, oneLine(summary, 160), keywords)
   await storeImages(id, article.images, url)
+  await opLog('parse.done', {
+    id,
+    ms: Date.now() - startedAt,
+    chars: article.plainText.length,
+    images: article.images.length,
+  })
   emitChange()
 }

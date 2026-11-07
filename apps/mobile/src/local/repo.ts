@@ -10,6 +10,7 @@ import type {
 
 import type { ExtractedArticle } from './article'
 import { passesCoverage } from './coverage'
+import { opLog } from './dev-log'
 import { getDb } from './db'
 import { resolveImportedSavedAt } from './import/dates'
 import type { RestoreDocument } from './import/parse'
@@ -601,6 +602,7 @@ export async function setImageFiles(id: string, files: string[]): Promise<void> 
 }
 
 export async function deleteDocument(id: string): Promise<void> {
+  await opLog('delete.one', { id })
   const db = await getDb()
   const now = nowIso()
   await db.runAsync(
@@ -807,6 +809,18 @@ async function semanticMatches(text: string, exclude: Set<string>, limit: number
 }
 
 export async function searchDocuments(query: string, limit = 20): Promise<SearchOutcome> {
+  const startedAt = Date.now()
+  const outcome = await searchDocumentsInner(query, limit)
+  await opLog('search', {
+    q: query,
+    hits: outcome.results.length,
+    interpreted: outcome.interpretation ?? null,
+    ms: Date.now() - startedAt,
+  })
+  return outcome
+}
+
+async function searchDocumentsInner(query: string, limit = 20): Promise<SearchOutcome> {
   const parsed = await resolveIntent(query, { complete: await intentCompleter() })
   const terms = queryTerms(parsed.text)
   // 「找找昨天的」没有关键词，也必须出结果——所以不能因为 terms 为空就直接返回。

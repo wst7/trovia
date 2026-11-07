@@ -24,6 +24,7 @@ export const SERIF_FAMILY = 'NotoSerifSC-Regular'
  */
 export const SANS_FAMILY = Platform.OS === 'android' ? 'sans-serif' : undefined
 
+
 /**
  * 一键切换正文/标题字体，方便对比：
  *   true  = 宋体（思源宋体子集）
@@ -50,3 +51,12 @@ export function useSerifReady(): boolean {
   const loaded = useSyncExternalStore(subscribe, isSerifReady, isSerifReady)
   return SERIF_ENABLED && loaded
 }
+
+/**
+ * 全 app 只有一套字体：思源宋体。
+ *
+ * 之前是「界面黑体 + 阅读宋体」，屏幕之间一眼能看出两套字形，列表和文章
+ * 像两个应用。现在除了等宽（日志）之外，所有文字都用这一个字族；
+ * SANS_FAMILY 只留给需要跟着系统走的极端情况。
+ */
+export const APP_FAMILY = SERIF_ENABLED ? SERIF_FAMILY : SANS_FAMILY

@@ -11,8 +11,8 @@
  */
 import { Text as RNText, type TextProps } from 'react-native'
 
-import { SANS_FAMILY } from './fonts'
+import { APP_FAMILY } from './fonts'
 
 export function Text({ style, ...rest }: TextProps) {
-  return <RNText {...rest} style={[{ fontFamily: SANS_FAMILY }, style]} />
+  return <RNText {...rest} style={[{ fontFamily: APP_FAMILY }, style]} />
 }

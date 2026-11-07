@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { APP_FAMILY } from '../ui/fonts'
 import { Ionicons } from '@expo/vector-icons'
 import { ActivityIndicator, Animated, Pressable, TextInput, View } from 'react-native'
 import { Text } from '../ui/text'
@@ -115,6 +116,7 @@ export function Composer({
       )}
     >
       <TextInput
+          style={{ fontFamily: APP_FAMILY }}
         value={value}
         onChangeText={(text) => {
           onChangeText(text)

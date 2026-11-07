@@ -8,6 +8,7 @@ import { syncOnce } from '@trovia/sync'
 import type { SyncReport } from '@trovia/sync'
 import { WebDavTarget } from '@trovia/sync/webdav'
 
+import { opLog } from './dev-log'
 import { hydrateImages } from './image-hydrate'
 import { deviceId, loadConfig, loadPassword } from './sync-config'
 import type { WebDavConfig } from './sync-config'
@@ -49,12 +50,21 @@ export async function syncNow(): Promise<SyncReport> {
   const target = await targetOf(config)
   await target.ensureDir('docs')
 
-  const report = await syncOnce({
-    target,
-    store: createSyncStore(),
-    deviceId: await deviceId(),
-    now: () => new Date().toISOString(),
-  })
+  const startedAt = Date.now()
+  await opLog('sync.start', { host: config.baseUrl.replace(/^https?:\/\//, '') })
+  let report: SyncReport
+  try {
+    report = await syncOnce({
+      target,
+      store: createSyncStore(),
+      deviceId: await deviceId(),
+      now: () => new Date().toISOString(),
+    })
+  } catch (error) {
+    await opLog('sync.fail', { ms: Date.now() - startedAt }, error)
+    throw error
+  }
+  await opLog('sync.done', { ...report, ms: Date.now() - startedAt })
 
   // 拉下来的条目只有图片地址。补图放在同步之后、不阻塞结果：
   // 用户先看到列表，图片在后台一张张补进本机。

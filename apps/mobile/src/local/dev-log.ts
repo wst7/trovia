@@ -72,6 +72,20 @@ export async function devLog(scope: string, detail: unknown, error?: unknown): P
   }
 }
 
+/**
+ * 操作日志：谁在什么时候做了什么、花了多久、结果如何。
+ *
+ * 和 devLog 写同一个文件，前缀固定成 `op:`，读的时候可以只挑操作，
+ * 也可以把保存失败的堆栈一起看——出问题时这两半总是一起看。
+ */
+export async function opLog(
+  action: string,
+  detail: Record<string, unknown> = {},
+  error?: unknown,
+): Promise<void> {
+  await devLog(`op.${action}`, detail, error)
+}
+
 export async function readDevLog(): Promise<string | null> {
   const module = fs()
   if (!module) return null

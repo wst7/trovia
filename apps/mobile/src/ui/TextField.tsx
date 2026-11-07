@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { APP_FAMILY } from './fonts'
 import { TextInput, View } from 'react-native'
 import { Text } from './text'
 import type { TextInputProps } from 'react-native'
@@ -26,6 +27,7 @@ export function TextField({ label, hint, ...input }: TextFieldProps) {
         className={cx('mt-1 border-b', focused ? 'border-accent' : 'border-line')}
       >
         <TextInput
+          style={{ fontFamily: APP_FAMILY }}
           {...input}
           onFocus={(e) => {
             setFocused(true)
