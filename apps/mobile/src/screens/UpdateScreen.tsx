@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'expo-router'
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native'
-import Constants from 'expo-constants'
+import { appVersion } from '../local/app-version'
 
 import { useT } from '../i18n'
 import { checkForUpdate } from '../local/update'
@@ -28,7 +28,7 @@ export function UpdateScreen() {
   const router = useRouter()
   const { toast } = useToast()
   const p = usePalette()
-  const current = Constants.expoConfig?.version ?? '0.0.0'
+  const [current, setCurrent] = useState('0.0.0')
 
   const [phase, setPhase] = useState<Phase>('idle')
   const [result, setResult] = useState<CheckResult | null>(null)
@@ -55,9 +55,14 @@ export function UpdateScreen() {
   )
 
   useEffect(() => {
-    void check(false)
+    void appVersion().then(setCurrent)
     void readOtaState().then(setOta)
-  }, [check])
+  }, [])
+
+  // 版本号拿到之后再查一次，否则会拿 0.0.0 去比。
+  useEffect(() => {
+    if (current !== '0.0.0') void check(false)
+  }, [current, check])
 
   async function handleOta() {
     if (otaBusy) return

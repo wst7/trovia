@@ -1,4 +1,4 @@
-import Constants from 'expo-constants'
+import { appVersion } from '../local/app-version'
 import { Ionicons } from '@expo/vector-icons'
 import type { ComponentProps, ReactNode } from 'react'
 import { useCallback, useRef, useState } from 'react'
@@ -142,8 +142,10 @@ export function SettingsScreen() {
   const [stats, setStats] = useState<DocumentStats | null>(null)
   const [llm, setLlm] = useState<{ enabled: boolean; model: string | null } | null>(null)
   const [exporting, setExporting] = useState(false)
+  const [version, setVersion] = useState<string | null>(null)
   const [sync, setSync] = useState<{ configured: boolean; at: string | null } | null>(null)
   const [localePref, setLocalePref] = useState<LocalePreference>('system')
+
   const [themePref, setThemePref] = useState<ThemePreference>('system')
   // 整库重抓：可中断的批处理，进度写在行副标题上。
   const [rebulk, setRebulk] = useState<{ done: number; total: number; current: string | null } | null>(null)
@@ -177,6 +179,7 @@ export function SettingsScreen() {
   const bottomPad = insets.bottom + TAB_BAR_HEIGHT + 24
 
   const reload = useCallback(async () => {
+    void appVersion().then(setVersion)
     try {
       const [nextStats, llm, configured, syncedAt] = await Promise.all([
         repo.documentStats(),
@@ -390,7 +393,7 @@ export function SettingsScreen() {
               icon="information-circle-outline"
               title={APP_NAME}
               subtitle={t('settings.about.local')}
-              value={`v${Constants.expoConfig?.version ?? '—'}`}
+              value={`v${version ?? '—'}`}
             />
             <Row
               icon="cloud-download-outline"
