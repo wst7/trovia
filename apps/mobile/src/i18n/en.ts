@@ -449,7 +449,7 @@ export const en: Dictionary = {
   'settings.diagnostics.title': 'Export diagnostics',
   'settings.diagnostics.subtitle': 'Version, device and recent crashes',
   'settings.diagnostics.failed': 'Could not write the diagnostics file.',
-  'home.crash.banner': 'The app quit unexpectedly last time · see the log',
+  'home.crash.banner': 'Something failed last time · see the log',
   'diagnostics.title': 'Crash log',
   'diagnostics.hint': 'The stack of the last uncaught error. Send it over and it tells me why the app closed.',
   'diagnostics.empty': 'Nothing recorded yet.',

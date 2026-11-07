@@ -11,6 +11,7 @@ import { Button } from '../ui/Button'
 import { Screen } from '../ui/Screen'
 import { usePalette } from '../ui/palette'
 import { useT } from '../i18n'
+import { recordProblem } from '../local/crash-log'
 import { classifySaveError, SAVE_FAILURE_KEY } from '../local/save-error'
 
 /** 分享进入后的保存结果页：保存到本机一次，然后跳到详情。 */
@@ -52,6 +53,7 @@ export function ShareScreen() {
         }
         // 原始堆栈留给 logcat，界面只说能行动的那一句。
         console.warn('[share] save failed', e)
+        recordProblem('share-save', e)
         setError(t(SAVE_FAILURE_KEY[classifySaveError(e)]))
       }
     })()

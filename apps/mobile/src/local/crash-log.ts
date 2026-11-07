@@ -60,6 +60,16 @@ export async function readCrashLog(): Promise<string | null> {
   }
 }
 
+/**
+ * 记录一次「没崩但失败了」的操作——保存失败最常见。
+ * 用户报「保存失败」时，这一行能说明到底是数据库、存储还是重复。
+ */
+export function recordProblem(scope: string, error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error)
+  const stack = error instanceof Error ? (error.stack ?? '') : ''
+  void append(`${new Date().toISOString()} fatal=false ${scope} ${message} ${stack}`.replace(/\s+/g, ' ').slice(0, 4000))
+}
+
 /** 有没有留下过崩溃记录，用来决定首页要不要提一句。 */
 export async function hasCrashLog(): Promise<boolean> {
   const module = fs()

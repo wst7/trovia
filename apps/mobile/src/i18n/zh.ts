@@ -451,7 +451,7 @@ export const zh: Dictionary = {
   'settings.diagnostics.title': '导出诊断信息',
   'settings.diagnostics.subtitle': '版本、设备与最近的崩溃记录',
   'settings.diagnostics.failed': '没能生成诊断文件。',
-  'home.crash.banner': '上次运行时异常退出 · 查看记录',
+  'home.crash.banner': '上次操作没有完成 · 查看记录',
   'diagnostics.title': '崩溃记录',
   'diagnostics.hint': '这是最近一次未捕获错误的调用栈。把它发给我，就能定位为什么退出。',
   'diagnostics.empty': '还没有记录。',

@@ -43,6 +43,10 @@ type CheerioDoc = ReturnType<typeof load>
 let imageBaseUrl = ''
 
 const MAX_HTML_CHARS = 2_000_000
+
+/** 自称 bot 的 UA 会被一大半站点直接 403；统一用一个真实的移动 Chrome。 */
+const REQUEST_UA =
+  'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36'
 const FETCH_TIMEOUT_MS = 25_000
 
 const NAMED_ENTITIES: Record<string, string> = {
@@ -747,7 +751,168 @@ export function extractFromHtml(html: string, url: string): ExtractedArticle {
   }
 }
 
+
+/**
+ * X / Twitter：页面本身是 JS 壳，官方接口还能给出正文。
+ *
+ * syndication 先来——字段干净（正文、作者、时间、图片）；oembed 兜底，
+ * 它给的是 blockquote 片段，正文尾巴上挂着「— 作者 日期」，要剥掉。
+ */
+async function fetchTweet(url: string, id: string): Promise<ExtractedArticle> {
+  const headers = { 'User-Agent': REQUEST_UA, Accept: 'application/json' }
+
+  try {
+    const res = await fetch(`https://cdn.syndication.twimg.com/tweet-result?id=${id}&lang=zh-cn&token=a`, {
+      headers,
+    })
+    if (res.ok) {
+      const data = (await res.json()) as {
+        text?: string
+        created_at?: string
+        user?: { name?: string; screen_name?: string }
+        mediaDetails?: Array<{ media_url_https?: string }>
+      }
+      const text = (data.text ?? '').trim()
+      if (text) {
+        const images = (data.mediaDetails ?? [])
+          .map((item) => item.media_url_https)
+          .filter((src): src is string => typeof src === 'string')
+        return {
+          url,
+          title: oneLine(text, 200),
+          siteName: 'X',
+          author: data.user?.name ?? data.user?.screen_name ?? null,
+          publishedAt: data.created_at ?? null,
+          description: oneLine(text, 300),
+          language: null,
+          markdown: text,
+          plainText: text,
+          images,
+          scriptOnly: false,
+          blocked: false,
+          appOnly: false,
+        }
+      }
+    }
+  } catch {
+    // 落到 oembed。
+  }
+
+  const res = await fetch(
+    `https://publish.twitter.com/oembed?url=${encodeURIComponent(`https://x.com/i/status/${id}`)}&omit_script=1&dnt=true`,
+    { headers },
+  )
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const data = (await res.json()) as { author_name?: string; html?: string }
+  // 片段末尾那行「— jack (@jack) March 21, 2006」是页脚，不是正文。
+  const text = htmlToMarkdownLite(data.html ?? '')
+    .split('\n')
+    .filter((line) => !/^\s*—/.test(line))
+    .join('\n')
+    .trim()
+  if (!text) throw new Error('这条推文没有可读的正文')
+  return {
+    url,
+    title: oneLine(text, 200),
+    siteName: 'X',
+    author: data.author_name ?? null,
+    publishedAt: null,
+    description: oneLine(text, 300),
+    language: null,
+    markdown: text,
+    plainText: text,
+    images: [],
+    scriptOnly: false,
+    blocked: false,
+    appOnly: false,
+  }
+}
+
+/** oembed 给的是 blockquote 片段，够用就好：去标签、留文字。 */
+function htmlToMarkdownLite(html: string): string {
+  return decodeEntities(
+    html
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(p|div|blockquote)>/gi, '\n')
+      .replace(/<[^>]+>/g, ''),
+  )
+}
+
+/** Reddit：HTML 是壳；`<帖子>.json` 能拿到标题、正文与图片。 */
+async function fetchReddit(url: string): Promise<ExtractedArticle> {
+  const jsonUrl = `${url.replace(/[?#].*$/, '').replace(/\/$/, '')}.json`
+  try {
+    const res = await fetch(jsonUrl, { headers: { 'User-Agent': REQUEST_UA, Accept: 'application/json' } })
+    if (res.ok) {
+      const data = (await res.json()) as Array<{
+        data?: { children?: Array<{ data?: Record<string, unknown> }> }
+      }>
+      const post = data?.[0]?.data?.children?.[0]?.data as
+        | { title?: string; selftext?: string; author?: string; created_utc?: number; url?: string; preview?: unknown }
+        | undefined
+      const title = post?.title?.trim()
+      const body = (post?.selftext ?? '').trim()
+      if (title) {
+        const images = redditImages(post?.preview)
+        const markdown = body ? `${title}\n\n${body}` : title
+        return {
+          url,
+          title: oneLine(title, 200),
+          siteName: 'Reddit',
+          author: post?.author ?? null,
+          publishedAt: post?.created_utc ? new Date(post.created_utc * 1000).toISOString() : null,
+          description: body ? oneLine(body, 300) : null,
+          language: null,
+          markdown,
+          plainText: toPlainText(markdown),
+          images,
+          scriptOnly: false,
+          blocked: false,
+          appOnly: false,
+        }
+      }
+    }
+  } catch {
+    // 落到底下的「被挡住」。
+  }
+
+  // Reddit 对非登录用户只给外壳：认下来，让界面说「站点没让读正文」，而不是存一段空壳。
+  return {
+    url,
+    title: hostOf(url),
+    siteName: 'Reddit',
+    author: null,
+    publishedAt: null,
+    description: null,
+    language: null,
+    markdown: '',
+    plainText: '',
+    images: [],
+    scriptOnly: false,
+    blocked: true,
+    appOnly: false,
+  }
+}
+
+function redditImages(preview: unknown): string[] {
+  const images = (preview as { images?: Array<{ source?: { url?: string } }> } | undefined)?.images
+  if (!Array.isArray(images)) return []
+  return images
+    .map((item) => item?.source?.url)
+    .filter((src): src is string => typeof src === 'string')
+    .map((src) => decodeEntities(src))
+    .slice(0, 12)
+}
+
 export async function fetchArticle(url: string): Promise<ExtractedArticle> {
+  // 这两个站点页面本身读不出正文，先走各自的数据接口。
+  const host = hostOf(url)
+  if (/(^|\.)(x\.com|twitter\.com)$/i.test(host)) {
+    const id = /\/status(?:es)?\/(\d+)/.exec(url)?.[1]
+    if (id) return fetchTweet(url, id)
+  }
+  if (/(^|\.)reddit\.com$/i.test(host)) return fetchReddit(url)
+
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
   let response: Response
@@ -756,8 +921,7 @@ export async function fetchArticle(url: string): Promise<ExtractedArticle> {
       signal: controller.signal,
       headers: {
         // 用一个真实的移动 Chrome UA：自称 bot 的 UA 会被一大半站点直接 403。
-        'User-Agent':
-          'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36',
+        'User-Agent': REQUEST_UA,
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
         'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
         'Cache-Control': 'no-cache',

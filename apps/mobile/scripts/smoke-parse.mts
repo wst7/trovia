@@ -43,7 +43,11 @@ const CASES: Case[] = [
   { label: 'Simon Willison', url: 'https://simonwillison.net/', minChars: 1500 },
   { label: 'Paul Graham', url: 'https://paulgraham.com/greatwork.html', minChars: 3000 },
 
+  // 推文走 oembed / syndication，正文本来就短，门槛按「有没有字」定。
+  { label: 'X 推文', url: 'https://x.com/jack/status/20', minChars: 20 },
+
   // 已知被挡的站点：列在这里是为了「哪天通了」能被发现，不拦发版。
+  { label: 'Reddit（需登录）', url: 'https://www.reddit.com/r/programming/comments/1g0k8zj/', minChars: 300, optional: true },
   { label: 'Ars Technica（405）', url: 'https://arstechnica.com/', minChars: 800, optional: true },
   {
     label: 'Stack Overflow（403）',
