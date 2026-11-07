@@ -218,6 +218,37 @@ async function applyOne(db: Awaited<ReturnType<typeof getDb>>, record: SyncRecor
     return
   }
 
+  // 同一链接在别的设备上已经有条目（手机端用随机 id，插件用链接散列，两边算出来的
+  // id 必然不同）：落到那一条上，否则 INSERT 会撞「同一链接只保留一条」的唯一索引，
+  // 整个同步轮次都会失败。
+  if (!existing) {
+    const canonical = stringOf(payload, 'canonical_url') ?? stringOf(payload, 'url')
+    if (canonical) {
+      const sameUrl = await db.getFirstAsync<{ id: string; updated_at: string }>(
+        `SELECT id, updated_at FROM documents
+          WHERE (url = ? OR canonical_url = ?) AND deleted_at IS NULL AND id != ?
+          LIMIT 1`,
+        stringOf(payload, 'url') ?? canonical,
+        canonical,
+        record.id,
+      )
+      if (sameUrl) {
+        if (sameUrl.updated_at < record.updated_at) {
+          await db.runAsync(
+            `UPDATE documents SET title = ?, summary_short = ?, summary_long = ?,
+               updated_at = ?, rev = rev + 1 WHERE id = ?`,
+            stringOf(payload, 'title'),
+            stringOf(payload, 'summary_short'),
+            stringOf(payload, 'summary_long'),
+            record.updated_at,
+            sameUrl.id,
+          )
+        }
+        return
+      }
+    }
+  }
+
   // 本机没有：整条插入。
   await db.runAsync(
     `INSERT INTO documents (
@@ -225,7 +256,7 @@ async function applyOne(db: Awaited<ReturnType<typeof getDb>>, record: SyncRecor
        summary_short, summary_long, keywords, topics, language, content_markdown, plain_text,
        images, image_files, search_text, parse_status, parse_stage, parse_error_code,
        saved_at, last_parsed_at, updated_at, rev, deleted_at, metadata
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '[]', ?, 'completed', NULL, NULL, ?, NULL, ?, ?, NULL, ?)`,
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '[]', ?, ?, ?, NULL, ?, NULL, ?, ?, NULL, ?)`,
     record.id,
     stringOf(payload, 'url') ?? '',
     stringOf(payload, 'canonical_url') ?? '',
@@ -244,6 +275,9 @@ async function applyOne(db: Awaited<ReturnType<typeof getDb>>, record: SyncRecor
     stringOf(payload, 'plain_text'),
     arrayAsJson(payload, 'images'),
     stringOf(payload, 'plain_text') ?? '',
+    // 插件存进来的只有链接和标题，正文留给本机抓；标成 pending 才会进队列。
+    stringOf(payload, 'content_markdown') ? 'completed' : 'pending',
+    stringOf(payload, 'content_markdown') ? null : 'fetch',
     stringOf(payload, 'saved_at') ?? record.updated_at,
     record.updated_at,
     record.rev,
