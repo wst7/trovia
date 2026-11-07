@@ -3,65 +3,66 @@ import { useEffect, useState } from 'react'
 import { Image, Linking, Pressable, View } from 'react-native'
 import { Text } from '../ui/text'
 import { t } from '../i18n'
+import { normalizeBlockSource, parseInline } from '../local/markdown-inline'
 
 /**
  * Restricted Markdown renderer: headings, paragraphs, lists, quotes, code blocks, inline code/bold/italic,
  * and http(s) links. Text is always emitted as Text children; raw HTML is never parsed and no WebView is used.
  */
 
-const INLINE_PATTERN = /(`[^`]+`|\*\*[^*]+?\*\*|\*[^*]+?\*|\[[^\]]+\]\([^)\s]+\))/g
-
+/**
+ * Inline text: the token scanner in local/markdown-inline keeps brackets and
+ * parentheses nesting correct, which a regex could not — a README badge is an
+ * image wrapped in a link, and the old pattern printed its `](url)` tail.
+ */
 function renderInline(text: string, keyPrefix: string): ReactNode[] {
   const nodes: ReactNode[] = []
-  const parts = text.split(INLINE_PATTERN)
-
-  parts.forEach((part, i) => {
-    if (!part) return
+  parseInline(text).forEach((token, i) => {
     const key = `${keyPrefix}-${i}`
-
-    if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
-      nodes.push(
-        <Text key={key} className="text-body-sm text-ink">
-          {part.slice(1, -1)}
-        </Text>,
-      )
-      return
+    switch (token.type) {
+      case 'text':
+        nodes.push(token.value)
+        return
+      case 'code':
+        nodes.push(
+          <Text key={key} className="text-body-sm text-ink">
+            {token.value}
+          </Text>,
+        )
+        return
+      case 'bold':
+        nodes.push(
+          <Text key={key} className="font-semibold text-ink">
+            {renderInline(token.value, key)}
+          </Text>,
+        )
+        return
+      case 'italic':
+        nodes.push(
+          <Text key={key} className="italic text-ink">
+            {renderInline(token.value, key)}
+          </Text>,
+        )
+        return
+      case 'link':
+        nodes.push(
+          <Text
+            key={key}
+            className="text-accent underline"
+            accessibilityRole="link"
+            onPress={() => {
+              void Linking.openURL(token.href).catch(() => undefined)
+            }}
+          >
+            {token.value}
+          </Text>,
+        )
+        return
+      case 'image':
+        // Inline images are badges or decorations; block-level images are
+        // handled before this point, so there is nothing to show here.
+        return
     }
-    if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
-      nodes.push(
-        <Text key={key} className="font-semibold text-ink">
-          {renderInline(part.slice(2, -2), key)}
-        </Text>,
-      )
-      return
-    }
-    if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
-      nodes.push(
-        <Text key={key} className="italic text-ink">
-          {renderInline(part.slice(1, -1), key)}
-        </Text>,
-      )
-      return
-    }
-
-    const linkMatch = /^\[([^\]]+)\]\(([^)\s]+)\)$/.exec(part)
-    if (linkMatch && /^https?:\/\//i.test(linkMatch[2])) {
-      nodes.push(
-        <Text
-          key={key}
-          className="text-accent underline"
-          accessibilityRole="link"
-          onPress={() => {
-            void Linking.openURL(linkMatch[2]).catch(() => undefined)
-          }}
-        >
-          {linkMatch[1]}
-        </Text>,
-      )
-      return
-    }
-
-    nodes.push(part)
   })
 
   return nodes
@@ -140,7 +141,7 @@ export function Markdown({
   resolveImage?: (url: string) => string
 }) {
   // Images always get a paragraph of their own: when a paragraph holds both text and images, the original order still holds.
-  const normalized = source.replace(/(!\[[^\]]*\]\([^)\s]+\))/g, '\n\n$1\n\n')
+  const normalized = normalizeBlockSource(source)
   const images = [...new Set([...source.matchAll(/!\[[^\]]*\]\(([^)\s]+)\)/g)].map((match) => match[1]))]
   const resolved = images.map((url) => resolveImage?.(url) ?? url)
   return <View>{renderBlocks(normalized, onImagePress, resolved, resolveImage)}</View>
