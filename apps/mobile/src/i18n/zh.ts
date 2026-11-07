@@ -459,6 +459,7 @@ export const zh: Dictionary = {
   'diagnostics.back': '回到首页',
   'diagnostics.share': '分享',
   'diagnostics.clear': '清空日志',
+  'diagnostics.ops': '操作日志（最新在上）',
   'diagnostics.env': '环境',
   'diagnostics.crash': '崩溃记录',
   'dev.onTitle': '开发者模式：开',

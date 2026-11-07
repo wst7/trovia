@@ -32,7 +32,16 @@ export default function DiagnosticsScreen() {
       diagnosticsSnapshot(),
     ])
     setCrash(crashLog)
-    setDev(devLogText)
+    // 最新的在最上面：出问题时用户刚做完那个动作，第一眼就该看到它。
+    setDev(
+      devLogText === null
+        ? null
+        : devLogText
+            .split('\n')
+            .filter((line) => line.trim())
+            .reverse()
+            .join('\n'),
+    )
     setSnapshot(snap)
     setDevOn(isDevMode())
   }, [])
@@ -85,19 +94,20 @@ export default function DiagnosticsScreen() {
 
         <Text className="mt-6 text-caption text-muted">{t('diagnostics.env')}</Text>
         <View className="mt-2 rounded-md border border-line p-3">
-          <Text className="text-caption leading-5 text-ink" style={{ fontFamily: 'monospace' }}>
+          <Text className="text-caption leading-5 text-ink">
             {snapshot || '—'}
           </Text>
         </View>
 
         <Text className="mt-6 text-caption text-muted">{t('diagnostics.crash')}</Text>
         <View className="mt-2 rounded-md border border-line p-3">
-          <Text className="text-caption leading-5 text-muted" style={{ fontFamily: 'monospace' }}>
+          <Text className="text-caption leading-5 text-muted">
             {crash ?? t('diagnostics.empty')}
           </Text>
         </View>
 
-        <View className="mt-6 flex-row items-center justify-between">
+        <Text className="mt-6 text-caption text-muted">{t('diagnostics.ops')}</Text>
+        <View className="mt-2 flex-row items-center justify-between">
           <Text className="text-caption text-muted">{devOn ? t('dev.onTitle') : t('dev.offTitle')}</Text>
           <Text
             className="text-caption text-accent"
@@ -112,7 +122,7 @@ export default function DiagnosticsScreen() {
           </Text>
         </View>
         <View className="mt-2 rounded-md border border-line p-3">
-          <Text className="text-caption leading-5 text-muted" style={{ fontFamily: 'monospace' }}>
+          <Text className="text-caption leading-5 text-muted">
             {dev ?? t('diagnostics.empty')}
           </Text>
         </View>

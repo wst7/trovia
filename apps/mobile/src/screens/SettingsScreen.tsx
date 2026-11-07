@@ -2,7 +2,7 @@ import { appVersion } from '../local/app-version'
 import { Ionicons } from '@expo/vector-icons'
 import type { ComponentProps, ReactNode } from 'react'
 import { useCallback, useRef, useState } from 'react'
-import { Pressable, ScrollView, View } from 'react-native'
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native'
 import { Text } from '../ui/text'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -91,6 +91,7 @@ function Row({
   valueIcon,
   onPress,
   danger = false,
+  busy = false,
   accessibilityLabel,
 }: {
   icon: IconName
@@ -101,6 +102,8 @@ function Row({
   valueIcon?: IconName
   onPress?: () => void
   danger?: boolean
+  /** 正在做一件要等的事：右侧图标位置换成转圈。 */
+  busy?: boolean
   accessibilityLabel?: string
 }) {
   const p = usePalette()
@@ -113,7 +116,8 @@ function Row({
         </Text>
         {subtitle ? <Text className="mt-0.5 text-caption text-muted">{subtitle}</Text> : null}
       </View>
-      {valueIcon ? <Ionicons name={valueIcon} size={13} color={p.accent} /> : null}
+      {busy ? <ActivityIndicator size="small" color={p.muted} /> : null}
+      {!busy && valueIcon ? <Ionicons name={valueIcon} size={13} color={p.accent} /> : null}
       {value ? (
         <Text className="max-w-[52%] text-caption text-muted" numberOfLines={1}>
           {value}
@@ -158,6 +162,8 @@ export function SettingsScreen() {
   const [progress, setProgress] = useState<DownloadProgress | null>(null)
   // 热更新下好了但还没重启：这一状态要一直摆着，直到用户自己点。
   const [otaReady, setOtaReady] = useState(false)
+  // 手动查过一次、结果是「已是最新」：要在副标题上说一句，否则点完像没反应。
+  const [checkedJustNow, setCheckedJustNow] = useState(false)
   // 开发者模式：默认关；开着才在这一页出现「查看日志」。
   const [devOn, setDevOn] = useState(false)
   const [sync, setSync] = useState<{ configured: boolean; at: string | null } | null>(null)
@@ -184,8 +190,49 @@ export function SettingsScreen() {
         size: formatMb(update.latest.asset?.size ?? 0),
       })
     }
+    if (update?.error) return t('update.state.unknown')
+    if (checkedJustNow) return t('update.state.latest')
     // 没更新、也没出错的时候不多话：这一行本来是「只保存在这台手机上」。
     return t('settings.about.local')
+  }
+
+  /**
+   * 手动检查一次，绕过十分钟缓存。
+   * 用户点这一行的意思就是「现在有没有新版」，不能拿缓存糊弄。
+   */
+  const checkNow = async () => {
+    if (updatePhase === 'checking') return null
+    setUpdatePhase('checking')
+    setCheckedJustNow(false)
+    try {
+      const current = version ?? (await appVersion())
+      const result = await checkForUpdate(current, true)
+      setUpdate(result)
+      setCheckedJustNow(true)
+      if (result.hasUpdate && result.latest) {
+        toast(t('update.state.available', {
+          version: result.latest.version,
+          size: formatMb(result.latest.asset?.size ?? 0),
+        }))
+      } else if (!result.error) {
+        toast(t('update.state.latest'))
+      }
+      return result
+    } catch {
+      setCheckedJustNow(false)
+      return null
+    } finally {
+      setUpdatePhase('idle')
+    }
+  }
+
+  /**
+   * 点版本行：先现查一次，再决定要不要下载。
+   * 直接拿缓存里的版本去下载，可能已经在下一版发布了——那就会装回旧的。
+   */
+  const checkThenUpdate = async () => {
+    const result = await checkNow()
+    if (result?.hasUpdate) await handleUpdate()
   }
 
   /**
@@ -483,7 +530,11 @@ export function SettingsScreen() {
               subtitle={updateSubtitle()}
               value={`v${version ?? '—'}`}
               valueIcon={update?.hasUpdate || otaReady ? 'arrow-up-circle' : undefined}
-              onPress={update?.hasUpdate || otaReady ? () => void handleUpdate() : undefined}
+              busy={updatePhase === 'checking'}
+              onPress={() => {
+                if (otaReady) void handleUpdate()
+                else void checkThenUpdate()
+              }}
             />
             <Row
               icon="code-slash-outline"

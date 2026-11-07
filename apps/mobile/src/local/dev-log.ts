@@ -136,5 +136,23 @@ export async function diagnosticsSnapshot(): Promise<string> {
   } catch (error) {
     lines.push(`db: ${error instanceof Error ? error.message : String(error)}`)
   }
+  // 日志本身的状态：开发者看着这块代码判断「为什么日志是空的」。
+  try {
+    const module = fs()
+    const path = module ? logPath(module) : null
+    if (module && path) {
+      const info = await module.getInfoAsync(path)
+      if (!info.exists) {
+        lines.push(`dev_log: 空（dev_mode=${enabled ? 'on' : 'off'}）`)
+      } else {
+        const text = await module.readAsStringAsync(path)
+        lines.push(`dev_log: ${text.length}B ${text.trim().split('\n').filter(Boolean).length}行（dev_mode=${enabled ? 'on' : 'off'}）`)
+      }
+    } else {
+      lines.push('dev_log: 文件系统不可用')
+    }
+  } catch (error) {
+    lines.push(`dev_log: ${error instanceof Error ? error.message : String(error)}`)
+  }
   return lines.join('\n')
 }

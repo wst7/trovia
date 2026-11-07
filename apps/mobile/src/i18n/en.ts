@@ -457,6 +457,7 @@ export const en: Dictionary = {
   'diagnostics.back': 'Back to home',
   'diagnostics.share': 'Share',
   'diagnostics.clear': 'Clear log',
+  'diagnostics.ops': 'Operations (newest first)',
   'diagnostics.env': 'Environment',
   'diagnostics.crash': 'Crash log',
   'dev.onTitle': 'Developer mode: on',

@@ -112,6 +112,8 @@ async function writeCache(result: CheckResult): Promise<void> {
  * 查一次。`force` 为真时忽略缓存（用户手动点了检查更新）。
  * 网络失败不会抛错，而是把原因放进 error——检查更新失败不该打断任何事。
  */
+import { opLog } from './dev-log'
+
 export async function checkForUpdate(current: string, force = false): Promise<CheckResult> {
   if (!force) {
     const cached = await readCache()
@@ -152,6 +154,7 @@ export async function checkForUpdate(current: string, force = false): Promise<Ch
     }
     const payload = (await response.json()) as GitHubRelease
     const latest = parseRelease(payload)
+    await opLog('update.check', { current, latest: latest?.version ?? null, manual: force })
     const result: CheckResult = {
       current,
       latest,
