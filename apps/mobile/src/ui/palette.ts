@@ -8,7 +8,7 @@ import { useColorScheme } from 'react-native'
  */
 export const palette = {
   light: {
-    canvas: '#fbfaf7',
+    canvas: '#f6f5f1',
     surface: '#ffffff',
     sunken: '#f4f3ef',
     line: '#e8e6e1',
@@ -24,7 +24,7 @@ export const palette = {
     onAccent: '#ffffff',
   },
   dark: {
-    canvas: '#121211',
+    canvas: '#10100f',
     surface: '#1b1b19',
     sunken: '#0c0c0b',
     line: '#2b2b28',

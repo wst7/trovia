@@ -2,7 +2,7 @@
 name: 寻迹 Mobile
 description: 克制的找回工具 —— 两档中性色、一个输入框、一个强调色
 colors:
-  canvas: "#fbfaf7"
+  canvas: "#f6f5f1"
   surface: "#ffffff"
   sunken: "#f4f3ef"
   line: "#e8e6e1"
@@ -90,7 +90,7 @@ components:
 
 | 角色 | Light | Dark | 用途 |
 | --- | --- | --- | --- |
-| canvas | `#fbfaf7` | `#121211` | 页面底、导航栏底 |
+| canvas | `#f6f5f1` | `#10100f` | 页面底、导航栏底 |
 | surface | `#ffffff` | `#1b1b19` | 抬起的表面：输入框、对话框 |
 | sunken | `#f4f3ef` | `#0c0c0b` | 下沉表面：摘要块、代码块 |
 | line | `#e8e6e1` | `#2b2b28` | 发丝线、分隔、描边静息态 |

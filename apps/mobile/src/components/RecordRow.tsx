@@ -104,15 +104,9 @@ export function RecentRow({
       className="min-h-[60px] justify-center"
     >
       {({ pressed }) => (
-        // 按压反馈用底色，不用整体降透明度：整行变淡时字先糊掉，而这一页是拿来扫读的。
-        // 底色正好铺满这一行，不加水平内边距，避免行内内容和分组标题错位。
-        <View
-          className={
-            pressed
-              ? 'flex-row items-center gap-3 rounded-sm bg-sunken py-3'
-              : 'flex-row items-center gap-3 py-3'
-          }
-        >
+        // 不给行加底色：行是表格里的一行，铺底会让整列变成一张张白卡。
+        // 按压只降透明度——底色方案在画布色上行不通，sunken 只比 canvas 深 2/255。
+        <View style={{ opacity: pressed ? 0.6 : 1 }} className="flex-row items-center gap-3 py-3">
           {/* 真图标和字母占位共用同一个 34×34 容器：favicon 有方有横，
               不套容器时左列看着「直」但重量不齐，扫视时会跳。
               多选时这个容器原地换成勾选圈，左列宽度不变，整列文字不会横跳。 */}
@@ -120,7 +114,9 @@ export function RecentRow({
             className={
               selecting
                 ? 'items-center justify-center'
-                : 'items-center justify-center overflow-hidden rounded-sm bg-sunken'
+                : thumbnail && !imageBroken
+                  ? 'items-center justify-center overflow-hidden rounded-sm'
+                  : 'items-center justify-center overflow-hidden rounded-sm border border-line'
             }
             style={{ width: 34, height: 34 }}
           >
