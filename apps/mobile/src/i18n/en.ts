@@ -308,6 +308,7 @@ export const en: Dictionary = {
   'sync.report.deleted': '{count} deleted',
   'sync.report.conflicts': '{count} conflict copies kept',
   'sync.report.none': 'Both sides match; nothing to sync.',
+  'sync.report.skipped': '{count} files in the cloud could not be read',
   'sync.report.join': ', ',
 
   'llm.title': 'Model',

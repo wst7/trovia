@@ -309,6 +309,7 @@ export const zh: Dictionary = {
   'sync.report.deleted': '删除 {count} 条',
   'sync.report.conflicts': '保留 {count} 份冲突副本',
   'sync.report.none': '两端已经一致，没有需要同步的改动。',
+  'sync.report.skipped': '云端有 {count} 份读不出来',
   'sync.report.join': '，',
 
   // 大模型设置

@@ -75,6 +75,8 @@ export interface SyncReport {
   conflictNames: string[]
   /** 云端 docs/ 里到底有多少份文件：0 和「已是最新」不是一回事，界面要能说清。 */
   remoteFiles: number
+  /** 列到了但读不出来 / 解析不了的文件数：云端数与本地数对不上时看这个。 */
+  skipped: number
   syncedAt: string
 }
 
@@ -131,6 +133,8 @@ export async function syncOnce(options: SyncOptions): Promise<SyncReport> {
 
   const allEntries = await target.list(DOCS_PREFIX)
   const baseEtags = (await store.baseEtags?.()) ?? new Map<string, string>()
+  /** 列到了但读不出来 / 解析不了的文件数。 */
+  let skipped = 0
   const remoteById = new Map<string, SyncRecord>()
   const seenEtags = new Map<string, string>()
 
@@ -141,7 +145,13 @@ export async function syncOnce(options: SyncOptions): Promise<SyncReport> {
   for (const entry of allEntries) {
     const id = idFromPath(entry.path)
     if (!id) continue
-    const unchanged = Boolean(entry.etag) && baseEtags.get(id) === entry.etag && !dirtyById.has(id)
+    // 必须同时有基准 rev 和 etag 一致才算「没变」：只有 etag 的话，
+    // 一旦基准 rev 丢了（清空过库），这条就永远不会再被读。
+    const unchanged =
+      Boolean(entry.etag) &&
+      baseEtags.get(id) === entry.etag &&
+      baseRevs.has(id) &&
+      !dirtyById.has(id)
     if (unchanged) {
       if (entry.etag) seenEtags.set(id, entry.etag)
       continue
@@ -150,12 +160,16 @@ export async function syncOnce(options: SyncOptions): Promise<SyncReport> {
     reads += 1
     if (entry.etag) seenEtags.set(id, entry.etag)
     const raw = await target.read(entry.path)
-    if (!raw) continue
+    if (!raw) {
+      skipped += 1
+      continue
+    }
     try {
       const parsed: unknown = JSON.parse(raw)
       if (isRecord(parsed)) remoteById.set(parsed.id, parsed)
     } catch {
       // 坏文件跳过：可能上次写到一半，下一轮会被正确版本覆盖。
+      skipped += 1
     }
   }
 
@@ -244,7 +258,16 @@ export async function syncOnce(options: SyncOptions): Promise<SyncReport> {
   // 即使这次什么都没推进也要标记一次：界面上的「上次同步」应该是「上次尝试」。
   await store.markSynced([...pushedRecords, ...applied], syncedAt, seenEtags)
 
-  return { pushed, pulled, deleted, conflicts, conflictNames, remoteFiles: allEntries.length, syncedAt }
+  return {
+    pushed,
+    pulled,
+    deleted,
+    conflicts,
+    conflictNames,
+    remoteFiles: allEntries.length,
+    skipped,
+    syncedAt,
+  }
 }
 
 /** `docs/<id>.json` → `<id>`；不是这个形状的条目直接忽略。 */

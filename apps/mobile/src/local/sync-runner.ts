@@ -70,6 +70,8 @@ export function describeReport(report: SyncReport): string {
   if (report.pulled > 0) parts.push(t('sync.report.pulled', { count: report.pulled }))
   if (report.deleted > 0) parts.push(t('sync.report.deleted', { count: report.deleted }))
   if (report.conflicts > 0) parts.push(t('sync.report.conflicts', { count: report.conflicts }))
+  // 云端有、却读不出来的文件：数字对不上时，这一句就是答案。
+  if (report.skipped > 0) parts.push(t('sync.report.skipped', { count: report.skipped }))
   // 「没有要同步的」有两种：云端是空的，和云端有东西但两边一致。
   // 之前两种情况都显示同一句话，用户分不清是同步没生效还是本来就没内容。
   if (parts.length === 0) {

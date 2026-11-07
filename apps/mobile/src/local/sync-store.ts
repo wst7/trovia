@@ -115,11 +115,20 @@ async function listDirty(): Promise<SyncRecord[]> {
  * 云端的数据被当成「本机已经有了」而永远不再拉取——表现就是同步显示
  * 「两端已经一致」，本地却是空的。这里顺手把孤儿行清掉，让老用户自愈。
  */
-/** doc_id → 远端文件的 etag；没记过的条目不在表里。 */
+/**
+ * doc_id → 远端文件的 etag；没记过的条目不在表里。
+ *
+ * 同样只认「本机确实还有这条」。否则清空过库、或某条被物理删掉之后，
+ * 这份 etag 会让引擎以为「这条已经同步过了」而跳过读取——
+ * 表现就是云端 7 份、本地 6 份，同步却报「没有可同步的」。
+ */
 async function baseEtags(): Promise<Map<string, string>> {
   const db = await getDb()
+  await db
+    .runAsync('DELETE FROM sync_base WHERE doc_id NOT IN (SELECT id FROM documents)')
+    .catch(() => undefined)
   const rows = await db.getAllAsync<{ doc_id: string; remote_etag: string }>(
-    'SELECT doc_id, remote_etag FROM sync_base WHERE remote_etag IS NOT NULL',
+    'SELECT b.doc_id AS doc_id, b.remote_etag AS remote_etag FROM sync_base b JOIN documents d ON d.id = b.doc_id WHERE b.remote_etag IS NOT NULL',
   )
   return new Map(rows.map((row) => [row.doc_id, row.remote_etag]))
 }

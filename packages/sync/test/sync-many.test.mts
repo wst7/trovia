@@ -132,4 +132,22 @@ const third = await syncOnce({
 assert.deepEqual(target.reads, [changed], `只该重读被改的那一个，实际 ${target.reads.join(', ')}`)
 assert.equal(third.pulled, 1, '改过的那条应该被拉回来')
 
+/*
+ * 另一个真实故障：云端 7 份、本地 6 份，同步却报「没有可同步的」。
+ * 原因是 etag 记着、基准 rev 丢了（清空过库或那条被物理删了）——
+ * 只有 etag 一致就跳过读取，这份就永远拉不回来。
+ */
+{
+  const t2 = new MemoryTarget()
+  t2.files.set('docs/only.json', JSON.stringify(makeRecord('only', '只存在本地记录里的那条')))
+  t2.etags.set('docs/only.json', 'etag-only')
+  const s2 = new MemoryStore()
+  s2.etags.set('only', 'etag-only') // 有 etag，没有 rev —— 就是丢基准的状态
+  s2.revs.set('keep', 1)
+
+  const report = await syncOnce({ target: t2, store: s2, deviceId: 'test', now: () => '2026-01-03T00:00:00.000Z' })
+  assert.equal(t2.reads.length, 1, '没有基准 rev 时必须照读，不能因为 etag 一样就跳过')
+  assert.equal(report.pulled, 1, '这一条应该被拉回来')
+}
+
 console.log(`同步大库：${TOTAL} 条云端文件，一轮读 ${LIMIT} 个，未变的条目不再请求 —— 全部通过`)
