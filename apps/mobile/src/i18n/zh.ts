@@ -135,7 +135,7 @@ export const zh: Dictionary = {
   'settings.language.zh': '中文',
   'settings.language.en': 'English',
   'settings.section.about': '关于',
-  'settings.about.local': '只保存在这台手机上',
+  'settings.about.local': '本地存储',
   'settings.stats.loading': '读取中…',
   'settings.stats.empty': '还没有收藏',
   'settings.stats.total': '{count} 条',

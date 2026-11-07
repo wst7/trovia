@@ -133,7 +133,7 @@ export const en: Dictionary = {
   'settings.section.language': 'LANGUAGE',
   'settings.language.system': 'Follow system',
   'settings.section.about': 'ABOUT',
-  'settings.about.local': 'Kept on this phone only',
+  'settings.about.local': 'Local storage',
   'settings.stats.loading': 'Reading…',
   'settings.stats.empty': 'Nothing saved yet',
   'settings.stats.total': '{count} items',
