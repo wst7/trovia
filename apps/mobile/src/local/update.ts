@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const REPO = 'wst7/trovia'
 const API = `https://api.github.com/repos/${REPO}/releases/latest`
+const CACHE_TTL_MS = 10 * 60 * 1000
 const CACHE_KEY = 'trovia.update.check.v1'
 const TTL_MS = 6 * 60 * 60 * 1000
 
@@ -114,9 +115,13 @@ async function writeCache(result: CheckResult): Promise<void> {
 export async function checkForUpdate(current: string, force = false): Promise<CheckResult> {
   if (!force) {
     const cached = await readCache()
+    // 缓存只保鲜十分钟：发版之后，之前查到的「最新版」会一直挂在版本号旁边，
+    // 点下载拿到的还是上一版。超时就重新问一次，网络失败仍然退回缓存。
+    const fresh =
+      cached?.checkedAt !== undefined && Date.now() - new Date(cached.checkedAt).getTime() < CACHE_TTL_MS
     // 缓存里存的是「上次查到的最新版」，不是「这台机器该不该更新」：
     // 版本会变（刚装了新包），是否更新每次都要现算。
-    if (cached) {
+    if (cached && fresh) {
       return {
         ...cached,
         current,
@@ -139,6 +144,9 @@ export async function checkForUpdate(current: string, force = false): Promise<Ch
           : response.status === 404
             ? '找不到发布页'
             : `GitHub 返回 ${response.status}`
+      // 查失败时退回上一次的结果：宁可显示旧版本号，也别让版本那一行突然说「查不到」。
+      const stale = await readCache()
+      if (stale) return { ...stale, current, hasUpdate: stale.latest ? isNewer(stale.latest.version, current) : false, error: reason }
       const result: CheckResult = { current, latest: null, hasUpdate: false, error: reason, checkedAt: new Date().toISOString() }
       return result
     }
