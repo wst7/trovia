@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
-import { ActivityIndicator, FlatList, Keyboard, Pressable, RefreshControl, Text, View } from 'react-native'
+import { ActivityIndicator, FlatList, Keyboard, Pressable, RefreshControl, View } from 'react-native'
+import { Text } from '../ui/text'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { DocumentSummary, ParseStatus } from '@trovia/shared'
 import { domainOf } from '@trovia/shared'
@@ -378,16 +379,20 @@ export function DocumentsScreen() {
           const previous = index > 0 ? groupOf(displayItems[index - 1]) : null
           // 组里有多少条，写在组标题后面：按站点分组时这个数字比标题本身有用。
           const groupSize = displayItems.filter((doc) => groupOf(doc) === label).length
+          // 组内每一行下面拉一条发丝线，最后一行不画——列表是表格，不是一张张卡片。
+          const nextLabel = index + 1 < displayItems.length ? groupOf(displayItems[index + 1]) : null
+          const lastOfGroup = nextLabel !== label
           return (
-          <View className="mb-2">
+          <View>
             {label && label !== previous ? (
-              <View className={index === 0 ? 'mb-1' : 'mb-1 mt-6 border-t border-line pt-4'}>
+              <View className={index === 0 ? 'mb-1' : 'mb-1 mt-7'}>
                 <Text className="text-caption font-medium text-faint">
                   {label}
                   {groupBy === 'site' && groupSize > 0 ? `  ${groupSize}` : ''}
                 </Text>
               </View>
             ) : null}
+            <View className={lastOfGroup ? '' : 'border-b border-line'}>
             <SwipeRow
               open={swipeId === item.id}
               onOpen={() => setSwipeId(item.id)}
@@ -423,6 +428,7 @@ export function DocumentsScreen() {
               }
             />
             </SwipeRow>
+            </View>
           </View>
           )
         }}

@@ -1,4 +1,5 @@
-import { Text, View } from 'react-native'
+import { View } from 'react-native'
+import { Text } from './text'
 import type { ParseStatus } from '@trovia/shared'
 import { statusLabel } from '../i18n/status'
 

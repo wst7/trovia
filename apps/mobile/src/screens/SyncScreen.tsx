@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'expo-router'
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native'
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native'
+import { Text } from '../ui/text'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { lastSyncAt, loadConfig, loadPassword, saveConfig } from '../local/sync-config'

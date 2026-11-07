@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Image, Pressable, Text, View } from 'react-native'
+import { Image, Pressable, View } from 'react-native'
+import { Text } from '../ui/text'
 import type { DocumentSummary, ParseStatus, SearchResult } from '@trovia/shared'
 import { domainOf, formatRelativeDate } from '@trovia/shared'
 

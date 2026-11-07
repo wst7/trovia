@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { ActivityIndicator, Text, View } from 'react-native'
+import { ActivityIndicator, View } from 'react-native'
+import { Text } from '../ui/text'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { isValidHttpUrl } from '@trovia/shared'

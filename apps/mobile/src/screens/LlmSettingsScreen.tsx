@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { useFocusEffect, useRouter } from 'expo-router'
-import { KeyboardAvoidingView, Platform, ScrollView, Switch, Text, View } from 'react-native'
+import { KeyboardAvoidingView, Platform, ScrollView, Switch, View } from 'react-native'
+import { Text } from '../ui/text'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { buildVectors, loadEmbedConfig, vectorStats } from '../local/embed'

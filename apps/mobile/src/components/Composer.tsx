@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Ionicons } from '@expo/vector-icons'
-import { ActivityIndicator, Animated, Pressable, Text, TextInput, View } from 'react-native'
+import { ActivityIndicator, Animated, Pressable, TextInput, View } from 'react-native'
+import { Text } from '../ui/text'
 import { extractHttpUrl, isValidHttpUrl } from '@trovia/shared'
 
 import { useT } from '../i18n'

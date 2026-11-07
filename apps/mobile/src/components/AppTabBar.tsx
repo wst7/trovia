@@ -1,7 +1,8 @@
 import type { ComponentProps } from 'react'
 import { Ionicons } from '@expo/vector-icons'
 import { usePathname, useRouter } from 'expo-router'
-import { Pressable, Text, View } from 'react-native'
+import { Pressable, View } from 'react-native'
+import { Text } from '../ui/text'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useT } from '../i18n'

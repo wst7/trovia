@@ -8,7 +8,8 @@
  * 会自动合上，避免一排红按钮摊在屏幕上。
  */
 import { useEffect, useMemo, useRef } from 'react'
-import { Animated, PanResponder, Pressable, Text, View } from 'react-native'
+import { Animated, PanResponder, Pressable, View } from 'react-native'
+import { Text } from '../ui/text'
 
 import { useT } from '../i18n'
 import { usePalette } from '../ui/palette'
@@ -97,7 +98,9 @@ export function SwipeRow({
           </Text>
         </Pressable>
       </View>
-      <Animated.View style={{ transform: [{ translateX: translate }], backgroundColor: p.surface }} {...pan.panHandlers}>
+      {/* 底色用画布色而不是 surface：行是表格里的一行，不是一张卡片。
+          铺 surface 会在浅色模式下列表变成一张张白卡，和发丝线分隔的版式打架。 */}
+      <Animated.View style={{ transform: [{ translateX: translate }], backgroundColor: p.canvas }} {...pan.panHandlers}>
         {children}
       </Animated.View>
     </View>

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
-import { Image, Linking, Pressable, Text, View } from 'react-native'
+import { Image, Linking, Pressable, View } from 'react-native'
+import { Text } from '../ui/text'
 import { t } from '../i18n'
 import { SERIF_FAMILY, useSerifReady } from '../ui/fonts'
 

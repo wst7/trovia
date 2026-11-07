@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Animated, Pressable, Text, View } from 'react-native'
+import { Animated, Pressable, View } from 'react-native'
+import { Text } from '../ui/text'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 type ToastType = 'info' | 'success' | 'warning' | 'error'

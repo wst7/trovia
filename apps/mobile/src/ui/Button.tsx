@@ -1,6 +1,7 @@
 import type { ComponentProps } from 'react'
 import { Ionicons } from '@expo/vector-icons'
-import { ActivityIndicator, Pressable, Text, View } from 'react-native'
+import { ActivityIndicator, Pressable, View } from 'react-native'
+import { Text } from './text'
 
 import { cx } from './cx'
 import { usePalette } from './palette'

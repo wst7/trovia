@@ -1,14 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  Animated,
-  Dimensions,
-  Image,
-  Modal,
-  PanResponder,
-  Pressable,
-  Text,
-  View,
-} from 'react-native'
+import { Animated, Dimensions, Image, Modal, PanResponder, Pressable, View } from 'react-native'
+import { Text } from '../ui/text'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { saveImageToLibrary } from '../local/save-image'

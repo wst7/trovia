@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { AppState, Text, View } from 'react-native'
+import { AppState, View } from 'react-native'
+import { Text } from '../src/ui/text'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import * as SystemUI from 'expo-system-ui'

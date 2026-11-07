@@ -9,6 +9,7 @@
  * 到位后重渲染一次，而不是永远停在系统字体上。
  */
 import { useSyncExternalStore } from 'react'
+import { Platform } from 'react-native'
 
 /**
  * 字体名来自 expo-font 插件按文件名注册的结果。
@@ -16,6 +17,12 @@ import { useSyncExternalStore } from 'react'
  * 运行时 loadAsync 会在没有嵌入 asset 表时失败（ExpoAsset.downloadAsync）。
  */
 export const SERIF_FAMILY = 'NotoSerifSC-Regular'
+
+/**
+ * 界面字体：显式点名，不吃厂商皮肤。
+ * iOS 的 System 已经是苹方，不需要额外写字族名。
+ */
+export const SANS_FAMILY = Platform.OS === 'android' ? 'sans-serif' : undefined
 
 /**
  * 一键切换正文/标题字体，方便对比：

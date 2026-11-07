@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Text, TextInput, View } from 'react-native'
+import { TextInput, View } from 'react-native'
+import { Text } from './text'
 import type { TextInputProps } from 'react-native'
 
 import { cx } from './cx'

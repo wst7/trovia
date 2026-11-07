@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ActivityIndicator, Image, Linking, Pressable, ScrollView, Text, View } from 'react-native'
+import { ActivityIndicator, Image, Linking, Pressable, ScrollView, View } from 'react-native'
+import { Text } from '../ui/text'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { DocumentDetail, ParseStatus, RelatedItem } from '@trovia/shared'

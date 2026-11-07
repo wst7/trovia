@@ -244,20 +244,16 @@ h2 {
   margin: 34px 0 0;
 }
 
+/* 截图是整屏的，不裁切、不加相框：当作版面里的一块纸，边缘就是它的边界。 */
 .shot img {
   display: block;
   width: 100%;
-  max-width: 360px;
-  /* 手机截图是全屏长图：限高 + 顶部对齐，避免首屏被一张图拉长。 */
-  max-height: 620px;
-  object-fit: cover;
-  object-position: top;
+  max-width: 460px;
   height: auto;
   margin: 0 auto;
-  border: 1px solid var(--line-strong);
-  border-radius: 10px;
-  background: var(--surface);
-  box-shadow: 0 12px 32px rgba(56, 44, 24, 0.1);
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
 }
 
 .shot-inline {
@@ -410,11 +406,9 @@ tr:last-child td {
     max-width: 980px;
   }
 
+  /* 首屏不再左右分栏：截图是整屏的，挤在 340px 一列里就成了缩略图。 */
   .intro {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
-    gap: 52px;
-    align-items: center;
+    display: block;
   }
 
   .intro h1 {
@@ -425,10 +419,6 @@ tr:last-child td {
     margin-top: 6px;
   }
 
-  /* 截图按 340px 宽等比缩放，完整露出「搜索 → 结果 → 为什么找到它」 */
-  .intro .shot img {
-    max-width: 340px;
-  }
 }
 
 @media (max-width: 600px) {

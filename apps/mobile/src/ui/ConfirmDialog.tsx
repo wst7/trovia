@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { Animated, Modal, Pressable, Text, View } from 'react-native'
+import { Animated, Modal, Pressable, View } from 'react-native'
+import { Text } from './text'
 
 import { Button } from './Button'
 import { useT } from '../i18n'

@@ -7,7 +7,8 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native'
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native'
+import { Text } from '../ui/text'
 
 import { useT } from '../i18n'
 import { askLibraryLive } from '../local/assistant-live'

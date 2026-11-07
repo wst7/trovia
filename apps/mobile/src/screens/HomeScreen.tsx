@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
-import { ActivityIndicator, KeyboardAvoidingView, ScrollView, Text, View } from 'react-native'
+import { ActivityIndicator, KeyboardAvoidingView, ScrollView, View } from 'react-native'
+import { Text } from '../ui/text'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { DocumentSummary, ParseStatus, SearchResult } from '@trovia/shared'
 import { queryTerms } from '../local/terms'
