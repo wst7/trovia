@@ -84,6 +84,19 @@ export async function hasCrashLog(): Promise<boolean> {
   }
 }
 
+/** 清空崩溃记录：用户把日志发出去之后，没有理由继续留着。 */
+export async function clearCrashLog(): Promise<void> {
+  const module = fs()
+  if (!module) return
+  const path = logPath(module)
+  if (!path) return
+  try {
+    await module.writeAsStringAsync(path, '')
+  } catch {
+    // 清不掉也只能算了。
+  }
+}
+
 let installed = false
 
 /** 装一次全局兜底，必须在 App 最外层尽早调用。 */

@@ -3,7 +3,7 @@ import { ScrollView, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import { readCrashLog } from '../src/local/crash-log'
+import { clearCrashLog, readCrashLog } from '../src/local/crash-log'
 import { clearDevLog, diagnosticsSnapshot, isDevMode, readDevLog, setDevMode } from '../src/local/dev-log'
 import { useT } from '../src/i18n'
 import { Button } from '../src/ui/Button'
@@ -122,7 +122,8 @@ export default function DiagnosticsScreen() {
             label={t('diagnostics.clear')}
             onPress={() => {
               void (async () => {
-                await clearDevLog()
+                // 两份一起清：用户点「清空日志」的意思是「这些别再留着了」。
+                await Promise.all([clearCrashLog(), clearDevLog()])
                 await reload()
               })()
             }}
