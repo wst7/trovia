@@ -36,7 +36,9 @@ const CASES: Case[] = [
 
   // 外网常读的几类页面：百科、聚合站、开发者社区、老牌媒体、个人博客。
   { label: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/Transformer_(deep_learning_architecture)', minChars: 3000 },
-  { label: 'Hacker News', url: 'https://news.ycombinator.com/item?id=38000000', minChars: 200 },
+  // HN 与 Ars 会按来源 IP 变脸：GitHub 的数据中心 IP 常被 HN 回 419，
+  // 我这边的出口又读不到 Ars。两个都只记录，不拦发版。
+  { label: 'Hacker News（419 视网络）', url: 'https://news.ycombinator.com/item?id=38000000', minChars: 200, optional: true },
   { label: 'DEV', url: 'https://dev.to/', minChars: 1000 },
   { label: 'BBC', url: 'https://www.bbc.com/news', minChars: 1000 },
   { label: 'The Guardian', url: 'https://www.theguardian.com/international', minChars: 1500 },
@@ -48,7 +50,7 @@ const CASES: Case[] = [
 
   // 已知被挡的站点：列在这里是为了「哪天通了」能被发现，不拦发版。
   { label: 'Reddit（需登录）', url: 'https://www.reddit.com/r/programming/comments/1g0k8zj/', minChars: 300, optional: true },
-  { label: 'Ars Technica（405）', url: 'https://arstechnica.com/', minChars: 800, optional: true },
+  { label: 'Ars Technica（视网络）', url: 'https://arstechnica.com/', minChars: 800, optional: true },
   {
     label: 'Stack Overflow（403）',
     url: 'https://stackoverflow.com/questions/11227809/why-is-processing-a-sorted-array-faster-than-processing-an-unsorted-array',
