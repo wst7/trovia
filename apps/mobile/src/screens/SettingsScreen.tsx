@@ -197,6 +197,9 @@ export function SettingsScreen() {
   // Kept in storage too: this screen remounts when the user switches tabs, and a
   // restart hint that disappears on remount leaves a download button that does nothing.
   const [otaReady, setOtaReady] = useState(false)
+  // True when the JS on screen came from a hot update rather than the installed
+  // package: that is the case where the UI can look older than the version number.
+  const [runningOta, setRunningOta] = useState(false)
   // A manual check came back "already latest": the subtitle has to say so, otherwise tapping looks like nothing happened.
   const [checkedJustNow, setCheckedJustNow] = useState(false)
   // Developer mode: off by default; "view log" only appears on this page while it is on.
@@ -392,6 +395,7 @@ export function SettingsScreen() {
       // Marking it applied at download time made the row claim the app was current while
       // the old JavaScript was still on screen — the user updates, and nothing changes.
       const state = await readOtaState().catch(() => null)
+      setRunningOta(Boolean(state?.enabled && state.runningUpdate))
       const pending = await readOtaPending()
       if (state?.runningUpdate && pending) {
         const waitingVersion = await readOtaPendingVersion()
@@ -615,7 +619,7 @@ export function SettingsScreen() {
               icon="information-circle-outline"
               title={APP_NAME}
               subtitle={updateSubtitle()}
-              value={`v${version ?? '—'}`}
+              value={`v${version ?? '—'}${runningOta ? t('settings.about.hotAppend') : ''}`}
               valueIcon={update?.hasUpdate || otaReady ? 'arrow-up-circle' : undefined}
               busy={updatePhase === 'checking'}
               onPress={() => {
