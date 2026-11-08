@@ -71,6 +71,44 @@ jobs:
       # The Gradle distribution host intermittently answers 504 and takes the
       # whole build with it. Try it first, then fall back to a mirror rather than
       # failing a release because one CDN had a bad minute.
+      # Included builds (AGP's own :gradle-plugin) resolve from their own
+      # repositories, so the project-level mirror in android/build.gradle cannot
+      # reach them. An init script injects the mirrors ahead of everything,
+      # official repositories stay behind them as fallback.
+      - name: 为 Gradle 注入镜像
+        run: |
+          mkdir -p ~/.gradle/init.d
+          cat > ~/.gradle/init.d/mirror.gradle <<'EOF'
+          def mirrors = [
+            'https://maven.aliyun.com/repository/public',
+            'https://maven.aliyun.com/repository/google',
+            'https://maven.aliyun.com/repository/gradle-plugin',
+          ]
+          def officials = [
+            'https://dl.google.com/dl/android/maven2',
+            'https://repo.maven.apache.org/maven2',
+            'https://plugins.gradle.org/m2',
+            'https://www.jitpack.io',
+          ]
+
+          beforeSettings { settings ->
+            [settings.pluginManagement, settings.dependencyResolutionManagement].each { handler ->
+              handler.repositories {
+                mirrors.each { m -> maven { url m } }
+                officials.each { o -> maven { url o } }
+              }
+            }
+          }
+
+          allprojects { project ->
+            [project.buildscript.repositories, project.repositories].each { repos ->
+              mirrors.each { m -> repos.maven { url m } }
+              officials.each { o -> repos.maven { url o } }
+            }
+          }
+          EOF
+          echo "init 脚本已写入"; cat ~/.gradle/init.d/mirror.gradle | head -5
+
       - name: 确保 Gradle 分发包可用
         working-directory: apps/mobile/android
         run: |
