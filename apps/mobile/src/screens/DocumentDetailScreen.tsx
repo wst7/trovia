@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Image, Linking, Pressable, ScrollView, View } from 'react-native'
 import { Text } from '../ui/text'
 import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -21,6 +21,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { Divider } from '../ui/Divider'
 import { GUTTER, Screen } from '../ui/Screen'
 import { usePalette } from '../ui/palette'
+import { opLog } from '../local/dev-log'
 import { useT } from '../i18n'
 import { errorText } from '../i18n/errors'
 
@@ -40,6 +41,7 @@ export function DocumentDetailScreen() {
   const p = usePalette()
 
   const [doc, setDoc] = useState<DocumentDetail | null>(null)
+  const openedRef = useRef(false)
   const [related, setRelated] = useState<RelatedItem[]>([])
   const [status, setStatus] = useState<ParseStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -67,6 +69,12 @@ export function DocumentDetailScreen() {
       if (!detail) {
         setError(t('detail.notFound'))
         return
+      }
+      // Only the first successful open is interesting; re-reads after a re-parse
+      // would flood the log with the same id.
+      if (!openedRef.current) {
+        openedRef.current = true
+        void opLog('open', { id })
       }
       setDoc(detail)
       setStatus(detail.parse_status)

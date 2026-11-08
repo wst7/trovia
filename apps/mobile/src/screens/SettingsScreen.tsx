@@ -354,6 +354,7 @@ export function SettingsScreen() {
   }
 
   const handleReprocessAll = () => {
+    void opLog('rebulk.toggle', { running: Boolean(rebulk) })
     if (rebulk) {
       stopRebulk.current = true
       return
@@ -429,6 +430,7 @@ export function SettingsScreen() {
   )
 
   async function handleExport() {
+    void opLog('export.start', { documents: stats?.total ?? 0 })
     if (exporting) return
     setExporting(true)
     try {
@@ -462,10 +464,13 @@ export function SettingsScreen() {
   }
 
   async function handleClear() {
+    // The most destructive action in the app: it should always leave a line.
+    await opLog('clearAll.start')
     try {
       await clearAllDocuments()
       emitChange()
       await reload()
+      await opLog('clearAll.done')
       toast(t('settings.clear.done'), { type: 'success' })
     } catch {
       toast(t('settings.clear.failed'), { type: 'error' })
@@ -585,6 +590,7 @@ export function SettingsScreen() {
                 selected={themePref === option.value}
                 title={t(option.labelKey)}
                 onPress={() => {
+                  void opLog('pref.theme', { value: option.value })
                   setThemePref(option.value)
                   void setThemePreference(option.value)
                 }}
@@ -603,6 +609,7 @@ export function SettingsScreen() {
                 selected={localePref === option.value}
                 title={t(option.labelKey)}
                 onPress={() => {
+                  void opLog('pref.locale', { value: option.value })
                   setLocalePref(option.value)
                   void setLocalePreference(option.value)
                 }}

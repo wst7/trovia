@@ -17,6 +17,7 @@ import { loadLlmState } from '../local/llm'
 import { processPendingQueue } from '../local/pipeline'
 import * as repo from '../local/repo'
 import { useLocalRevision } from '../local/useLocalRevision'
+import { opLog } from '../local/dev-log'
 import { useToast } from '../providers/ToastProvider'
 import { TextButton } from '../ui/Button'
 import { Divider } from '../ui/Divider'
@@ -146,6 +147,9 @@ export function HomeScreen() {
   }
 
   async function handleSave(url: string, titleHint: string | null): Promise<SaveResult | null> {
+    // Taps are the one thing the log never recorded, which is exactly what makes
+    // "I did something and nothing happened" impossible to reconstruct later.
+    await opLog('save.start', { url })
     setWriting(true)
     try {
       const res = await repo.createDocument(url, titleHint)
@@ -163,8 +167,10 @@ export function HomeScreen() {
         // Sync once a bit after saving: several saves within 8 seconds are merged into one round.
         scheduleSyncAfterSave()
       }
+      await opLog('save.done', { id: res.id, duplicate: res.duplicate })
       return { id: res.id, duplicate: res.duplicate }
     } catch (e) {
+      await opLog('save.fail', { url }, e)
       if (e instanceof Error && e.message === 'INVALID_URL') {
         toast(t('composer.invalidUrl'), { type: 'error' })
       } else {

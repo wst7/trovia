@@ -10,6 +10,7 @@ import { useToast } from '../providers/ToastProvider'
 import { Button, IconButton, TextButton } from '../ui/Button'
 import { Screen } from '../ui/Screen'
 import { TextField } from '../ui/TextField'
+import { opLog } from '../local/dev-log'
 import { useT } from '../i18n'
 import { GUTTER } from '../ui/Screen'
 import { usePalette } from '../ui/palette'
@@ -116,6 +117,7 @@ export function LlmSettingsScreen() {
 
     setSaving(true)
     try {
+      await opLog('llm.save', { enabled, intent, semantic, hasKey: Boolean(apiKey.trim()) || hasKey })
       await saveLlmState({ enabled, baseUrl, model, intent, embedModel, semantic }, apiKey.trim() ? apiKey : undefined)
       setApiKey('')
       await reload()
@@ -143,6 +145,7 @@ export function LlmSettingsScreen() {
 
     setTesting(true)
     try {
+      await opLog('llm.test', { model })
       const reply = await testLlmConnection({ enabled: true, baseUrl, model, intent, embedModel, semantic }, apiKey)
       toast(t('llm.testOk', { reply }), { type: 'success' })
     } catch (error) {

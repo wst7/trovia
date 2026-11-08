@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AppState, View } from 'react-native'
 import { Text } from '../src/ui/text'
-import { Stack } from 'expo-router'
+import { Stack, usePathname } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import * as SystemUI from 'expo-system-ui'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
@@ -10,7 +10,7 @@ import { useColorScheme } from 'react-native'
 import '../global.css'
 
 import { installCrashLogger } from '../src/local/crash-log'
-import { loadDevMode } from '../src/local/dev-log'
+import { loadDevMode, opLog } from '../src/local/dev-log'
 import { maybeAutoSync } from '../src/local/auto-sync'
 import { maybeRetryFailed } from '../src/local/auto-retry'
 import { hydrateImages } from '../src/local/image-hydrate'
@@ -58,6 +58,37 @@ function AppShell() {
 function RootNavigator() {
   const [ready, setReady] = useState(false)
   const p = usePalette()
+  const pathname = usePathname()
+
+  // Developer mode is meant to answer "what did I just do": the launch line says
+  // which code is running, and every screen change leaves a trail.
+  useEffect(() => {
+    void (async () => {
+      try {
+        const [{ appVersion }, { readOtaState }] = await Promise.all([
+          import('../src/local/app-version'),
+          import('../src/local/ota'),
+        ])
+        const [native, ota] = await Promise.all([appVersion(), readOtaState()])
+        await opLog('app.launch', {
+          native,
+          js: ota.runningUpdate ? `ota:${ota.updateId ?? '?'}` : 'embedded',
+          created: ota.createdAt ?? null,
+        })
+      } catch {
+        // Logging must never stand in the way of launching.
+      }
+    })()
+  }, [])
+
+  // Screens: one line per visit, skipping the initial value React already holds.
+  const lastPath = useRef<string | null>(null)
+  useEffect(() => {
+    if (lastPath.current === pathname) return
+    const first = lastPath.current === null
+    lastPath.current = pathname
+    if (!first) void opLog('nav', { path: pathname })
+  }, [pathname])
 
   // Once the local DB is open, keep processing the saves left unprocessed last time; scan again when the app returns to the foreground.
   useEffect(() => {
@@ -77,6 +108,7 @@ function RootNavigator() {
     })()
 
     const sub = AppState.addEventListener('change', (state) => {
+      void opLog('app.state', { state })
       if (state !== 'active') return
       void processPendingQueue()
       void maybeAutoSync()

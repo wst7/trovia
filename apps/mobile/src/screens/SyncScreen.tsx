@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native'
 import { Text } from '../ui/text'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import { opLog } from '../local/dev-log'
 import { lastSyncAt, loadConfig, loadPassword, saveConfig } from '../local/sync-config'
 import { describeReport, syncNow, SyncNotConfigured, testConnection } from '../local/sync-runner'
 import { useToast } from '../providers/ToastProvider'
@@ -87,6 +88,7 @@ export function SyncScreen() {
       return false
     }
     await saveConfig({ baseUrl: baseUrl.trim(), username: username.trim(), folder: folder.trim() || 'trovia' }, password)
+    await opLog('sync.config.save', { hasPassword: Boolean(password) })
     return true
   }
 
@@ -249,6 +251,7 @@ export function SyncScreen() {
           setConfirmingClear(false)
           void (async () => {
             await saveConfig({ baseUrl, username, folder }, '')
+            await opLog('sync.password.clear')
             setPassword('')
             toast(t('sync.cleared'), { type: 'success' })
           })()

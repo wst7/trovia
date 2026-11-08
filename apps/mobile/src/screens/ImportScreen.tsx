@@ -11,6 +11,7 @@ import { processPendingQueue } from '../local/pipeline'
 import { useToast } from '../providers/ToastProvider'
 import { Button, IconButton, TextButton } from '../ui/Button'
 import { GUTTER, Screen } from '../ui/Screen'
+import { opLog } from '../local/dev-log'
 import { useT } from '../i18n'
 import { usePalette } from '../ui/palette'
 
@@ -42,6 +43,7 @@ export function ImportScreen() {
   }
 
   async function handlePick() {
+    void opLog('import.pick')
     if (busy) return
     setBusy(true)
     setSummary(null)
@@ -61,6 +63,7 @@ export function ImportScreen() {
   }
 
   async function handleImport() {
+    void opLog('import.start')
     if (!picked || busy) return
     const restoring = (picked.documents?.length ?? 0) > 0
     setBusy(true)
