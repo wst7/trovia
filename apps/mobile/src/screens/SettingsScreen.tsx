@@ -26,7 +26,7 @@ import { listAllForExportFidelity } from '../local/repo'
 import { loadLlmState } from '../local/llm'
 import * as repo from '../local/repo'
 import type { DocumentStats } from '../local/repo'
-import { isDevMode, setDevMode } from '../local/dev-log'
+import { isDevMode, opLog, setDevMode } from '../local/dev-log'
 import { useLocalRevision } from '../local/useLocalRevision'
 import { useToast } from '../providers/ToastProvider'
 import { useT } from '../i18n'
@@ -246,6 +246,7 @@ export function SettingsScreen() {
    *   * Downloading based on the cached version could already be a release behind — that would install the old build.
    */
   const checkThenUpdate = async () => {
+    if (updatePhase === 'downloading' || updatePhase === 'installing') return
     const result = await checkNow()
     if (result?.hasUpdate) await handleUpdate()
   }
@@ -257,6 +258,10 @@ export function SettingsScreen() {
    *   * Nothing downloads unless the user taps — automatic download is turned off.
    */
   const handleUpdate = async () => {
+    // A download or install is already running: ignore further taps. The device
+    // log showed four taps in 43 seconds, each starting another download into
+    // the same temp file.
+    if (updatePhase === 'downloading' || updatePhase === 'installing') return
     if (otaReady) {
       try {
         await applyOta()
@@ -268,6 +273,7 @@ export function SettingsScreen() {
     setUpdatePhase('downloading')
     try {
       const outcome = await checkOta()
+      await opLog('update.ota', { kind: outcome.kind })
       if (outcome.kind === 'downloaded') {
         // Remember which release this bundle corresponds to; otherwise the row
         // keeps offering the full package for a version we already run.
@@ -276,8 +282,9 @@ export function SettingsScreen() {
         setUpdatePhase('idle')
         return
       }
-    } catch {
+    } catch (error) {
       // When hot updates aren't available (no channel configured, offline), carry on to the full package.
+      await opLog('update.ota', { kind: 'failed' }, error)
     }
     await startUpdate()
   }
@@ -285,15 +292,24 @@ export function SettingsScreen() {
   /** Download + hand to the system installer. A mid-way failure must leave its reason in the subtitle, not flash by. */
   const startUpdate = async () => {
     if (!update?.latest?.asset) return
+    const version = update.latest.version
+    const size = update.latest.asset.size
+    const startedAt = Date.now()
     setUpdatePhase('downloading')
-    setProgress({ ratio: 0, written: 0, total: update.latest.asset.size })
+    setProgress({ ratio: 0, written: 0, total: size })
+    // Logged because otherwise a diagnostics dump cannot answer "did the
+    // download start, and how long did it take".
+    await opLog('update.download.start', { version, size })
     try {
-      const name = update.latest.asset.name || `trovia-${update.latest.version}.apk`
+      const name = update.latest.asset.name || `trovia-${version}.apk`
       const file = await downloadApk(update.latest.asset.url, name, (next) => setProgress(next))
+      await opLog('update.download.done', { version, ms: Date.now() - startedAt })
       setUpdatePhase('installing')
+      await opLog('update.install', { version })
       await installApk(file)
       setUpdatePhase('idle')
-    } catch {
+    } catch (error) {
+      await opLog('update.fail', { version, stage: 'download' }, error)
       setUpdatePhase('error')
     }
   }
