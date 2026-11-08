@@ -22,15 +22,14 @@ import { formatBytes, writeExport } from '../local/exporter'
 import {
   applyOta,
   checkOta,
+  checkOtaAvailability,
   readOtaPending,
-  readOtaPendingVersion,
   readOtaState,
-  readOtaTakenVersion,
-  recordOtaTakenVersion,
   writeOtaPending,
   writeOtaPendingVersion,
 } from '../local/ota'
-import { checkForUpdate, effectiveVersion, type CheckResult } from '../local/update'
+import { checkForUpdate, type CheckResult } from '../local/update'
+import { resolveUpdateAction, resolveUpdateView } from '../local/update-state'
 import { downloadApk, formatMb, installApk, type DownloadProgress } from '../local/update-install'
 import { listAllForExportFidelity } from '../local/repo'
 import { loadLlmState } from '../local/llm'
@@ -190,168 +189,157 @@ export function SettingsScreen() {
   const [exporting, setExporting] = useState(false)
   const [version, setVersion] = useState<string | null>(null)
   // The version row is the update entry point itself: no separate page, and no split into "full package / hot update" downloads.
-  const [update, setUpdate] = useState<CheckResult | null>(null)
-  const [updatePhase, setUpdatePhase] = useState<'idle' | 'checking' | 'downloading' | 'installing' | 'error'>('idle')
-  const [progress, setProgress] = useState<DownloadProgress | null>(null)
-  // The hot update is downloaded but not yet restarted into: this state stays on screen until the user taps.
-  // Kept in storage too: this screen remounts when the user switches tabs, and a
-  // restart hint that disappears on remount leaves a download button that does nothing.
-  const [otaReady, setOtaReady] = useState(false)
-  // True when the JS on screen came from a hot update rather than the installed
-  // package: that is the case where the UI can look older than the version number.
+  // Two channels, two states. `native` is the installed package (only a new APK
+  // changes it); `ota` is JavaScript delivered without touching the version.
+  const [native, setNative] = useState<CheckResult | null>(null)
+  const [otaAvailable, setOtaAvailable] = useState(false)
+  const [otaPending, setOtaPending] = useState(false)
+  // Which JavaScript is on screen: embedded in the package, or a downloaded update.
   const [runningOta, setRunningOta] = useState(false)
-  // A manual check came back "already latest": the subtitle has to say so, otherwise tapping looks like nothing happened.
-  const [checkedJustNow, setCheckedJustNow] = useState(false)
-  // Developer mode: off by default; "view log" only appears on this page while it is on.
+  const [phase, setPhase] = useState<'idle' | 'checking' | 'downloading' | 'installing' | 'error'>('idle')
   const [devOn, setDevOn] = useState(false)
   const [sync, setSync] = useState<{ configured: boolean; at: string | null } | null>(null)
   const [localePref, setLocalePref] = useState<LocalePreference>('system')
-
   const [themePref, setThemePref] = useState<ThemePreference>('system')
   // Re-fetch the whole library: an interruptible batch whose progress goes in the row subtitle.
   const [rebulk, setRebulk] = useState<{ done: number; total: number; current: string | null } | null>(null)
   const stopRebulk = useRef(false)
+  const [progress, setProgress] = useState<DownloadProgress | null>(null)
 
-  /** The version row's subtitle is the update status, said in one sentence. */
+  const view = resolveUpdateView({
+    phase,
+    otaPending,
+    otaAvailable,
+    nativeUpdate:
+      native?.hasUpdate && native.latest
+        ? { version: native.latest.version, sizeBytes: native.latest.asset?.size ?? 0 }
+        : null,
+    progress,
+  })
+
+  /** One sentence for the row, derived from the state table in update-state.ts. */
   const updateSubtitle = (): string => {
-    if (otaReady) return t('update.state.restart')
-    if (updatePhase === 'checking') return t('update.state.checking')
-    if (updatePhase === 'downloading') {
-      // A download sitting at zero for ten seconds reads as stuck; say what is
-      // actually happening until the first byte lands.
-      if (!progress || progress.written === 0) return t('update.state.connecting')
-      const percent = progress.ratio >= 0 ? Math.round(progress.ratio * 100) : null
-      return percent === null ? t('update.state.downloading.noSize') : t('update.state.downloading', { percent })
+    switch (view.kind) {
+      case 'checking':
+        return t('update.state.checking')
+      case 'downloading':
+        // Zero bytes for ten seconds reads as stuck: say what is actually happening.
+        if (view.written === 0) return t('update.state.connecting')
+        return view.ratio >= 0
+          ? t('update.state.downloading', { percent: Math.round(view.ratio * 100) })
+          : t('update.state.downloading.noSize')
+      case 'installing':
+        return t('update.state.installing')
+      case 'error':
+        return t('update.state.retry')
+      case 'restart':
+        return t('update.state.restart')
+      case 'ota':
+        return t('update.state.otaAvailable')
+      case 'native':
+        return t('update.state.available', { version: view.version, size: formatMb(view.sizeBytes) })
+      case 'latest':
+        return native?.error ? t('update.state.unknown') : t('update.state.latest')
     }
-    if (updatePhase === 'installing') return t('update.state.installing')
-    if (updatePhase === 'error') return t('update.state.retry')
-    if (update?.hasUpdate && update.latest) {
-      return t('update.state.available', {
-        version: update.latest.version,
-        size: formatMb(update.latest.asset?.size ?? 0),
-      })
-    }
-    if (update?.error) return t('update.state.unknown')
-    if (checkedJustNow) return t('update.state.latest')
-    // When there is no update and no error, say little: this row is really "kept only on this phone".
-    return t('settings.about.local')
   }
 
-  /**
-   *   * Check manually once, bypassing the ten-minute cache.
-   *   * Tapping this row means "is there a new version right now", so a cached answer won't do.
-   */
-  const checkNow = async () => {
-    if (updatePhase === 'checking') return null
-    setUpdatePhase('checking')
-    setCheckedJustNow(false)
+  /** Look at both channels. Cheap: the OTA check downloads nothing. */
+  const refreshUpdate = async (manual: boolean) => {
+    if (phase === 'checking' || phase === 'downloading' || phase === 'installing') return
+    setPhase('checking')
     try {
-      // A hot update does not change the installed versionName, so comparing the
-      // native version alone would keep offering a release we already run.
-      const native = version ?? (await appVersion())
-      const current = effectiveVersion(native, await readOtaTakenVersion()) ?? native
-      const result = await checkForUpdate(current, true)
-      setUpdate(result)
-      setCheckedJustNow(true)
-      if (result.hasUpdate && result.latest) {
-        // The toast has no action attached, so the copy must not say "tap to
-        // download"; it also must not linger once a download is under way or a
-        // hot update is waiting for a restart.
-        // Note: updatePhase is still 'checking' here, so gating on 'idle'
-        // would suppress this toast entirely. Only a pending restart silences it.
-        if (!otaReady) {
-          toast(
-            t('update.toast.available', {
-              version: result.latest.version,
-              size: formatMb(result.latest.asset?.size ?? 0),
-            }),
-          )
-        }
-      } else if (!result.error) {
+      const [nativeVersion, ota, state, pending] = await Promise.all([
+        version ?? appVersion(),
+        checkOtaAvailability(),
+        readOtaState().catch(() => null),
+        readOtaPending(),
+      ])
+      const result = await checkForUpdate(nativeVersion, manual)
+      setNative(result)
+      setOtaAvailable(ota.available)
+      setOtaPending(pending)
+      setRunningOta(Boolean(state?.enabled && state.runningUpdate))
+      if (manual && !ota.available && !result.hasUpdate && !result.error) {
         toast(t('update.state.latest'))
       }
-      return result
     } catch {
-      setCheckedJustNow(false)
-      return null
+      setNative((current) => current ?? null)
     } finally {
-      setUpdatePhase('idle')
+      setPhase('idle')
     }
   }
 
-  /**
-   *   * Tapping the version row: check fresh first, then decide whether to download.
-   *   * Downloading based on the cached version could already be a release behind — that would install the old build.
-   */
-  const checkThenUpdate = async () => {
-    if (updatePhase === 'downloading' || updatePhase === 'installing') return
-    const result = await checkNow()
-    if (result?.hasUpdate) await handleUpdate()
-  }
-
-  /**
-   *   * The update entry point the user tapped.
-   *
-   *   * Ask for a hot update first (a few MB, live after a restart); without one, download the full package (tens of MB, via the system installer).
-   *   * Nothing downloads unless the user taps — automatic download is turned off.
-   */
-  const handleUpdate = async () => {
-    // A download or install is already running: ignore further taps. The device
-    // log showed four taps in 43 seconds, each starting another download into
-    // the same temp file.
-    if (updatePhase === 'downloading' || updatePhase === 'installing') return
-    if (otaReady) {
-      try {
-        await applyOta()
-      } catch {
-        setUpdatePhase('error')
-      }
-      return
-    }
-    setUpdatePhase('downloading')
+  /** Download the JavaScript update; it applies on the next launch. */
+  const downloadOta = async () => {
+    setPhase('downloading')
+    setProgress({ ratio: 0, written: 0, total: 0 })
     try {
       const outcome = await checkOta()
       await opLog('update.ota', { kind: outcome.kind })
       if (outcome.kind === 'downloaded') {
-        // Downloaded is not applied. Store what is waiting; promote it to "taken"
-        // only after the app restarts into it (see the mount effect above).
-        await writeOtaPendingVersion(update?.latest?.version)
+        // Downloaded is not applied: the row keeps offering the restart until the
+        // app actually starts on it (see the mount path in reload()).
+        await writeOtaPendingVersion(native?.latest?.version)
         await writeOtaPending(true)
-        setOtaReady(true)
-        setUpdatePhase('idle')
+        setOtaPending(true)
+        setOtaAvailable(false)
+        setPhase('idle')
         return
       }
+      // Nothing on the channel after all: fall back to a fresh look.
+      setPhase('idle')
+      void refreshUpdate(false)
     } catch (error) {
-      // When hot updates aren't available (no channel configured, offline), carry on to the full package.
       await opLog('update.ota', { kind: 'failed' }, error)
+      setPhase('error')
+    } finally {
+      setProgress(null)
     }
-    await startUpdate()
   }
 
-  /** Download + hand to the system installer. A mid-way failure must leave its reason in the subtitle, not flash by. */
-  const startUpdate = async () => {
-    if (!update?.latest?.asset) return
-    const version = update.latest.version
-    const size = update.latest.asset.size
+  /** Download the package and hand it to the system installer. */
+  const downloadNative = async () => {
+    if (!native?.latest?.asset) return
+    const targetVersion = native.latest.version
+    const size = native.latest.asset.size
     const startedAt = Date.now()
-    setUpdatePhase('downloading')
+    setPhase('downloading')
     setProgress({ ratio: 0, written: 0, total: size })
-    // Logged because otherwise a diagnostics dump cannot answer "did the
-    // download start, and how long did it take".
-    await opLog('update.download.start', { version, size })
+    await opLog('update.download.start', { version: targetVersion, size })
     try {
-      const name = update.latest.asset.name || `trovia-${version}.apk`
-      const file = await downloadApk(update.latest.asset.url, name, (next) => setProgress(next))
-      await opLog('update.download.done', { version, ms: Date.now() - startedAt })
-      setUpdatePhase('installing')
-      await opLog('update.install', { version })
+      const name = native.latest.asset.name || `trovia-${targetVersion}.apk`
+      const file = await downloadApk(native.latest.asset.url, name, (next) => setProgress(next))
+      await opLog('update.download.done', { version: targetVersion, ms: Date.now() - startedAt })
+      setPhase('installing')
+      await opLog('update.install', { version: targetVersion })
       await installApk(file)
-      setUpdatePhase('idle')
+      setPhase('idle')
     } catch (error) {
-      await opLog('update.fail', { version, stage: 'download' }, error)
-      setUpdatePhase('error')
+      await opLog('update.fail', { version: targetVersion, stage: 'download' }, error)
+      setPhase('error')
+    } finally {
+      setProgress(null)
     }
   }
+
+  /** The version row's only tap target. */
+  const onTapUpdate = () => {
+    const action = resolveUpdateAction(view)
+    if (action === 'check') void refreshUpdate(true)
+    else if (action === 'download-ota') void downloadOta()
+    else if (action === 'download-apk') void downloadNative()
+    else if (action === 'restart') {
+      void (async () => {
+        try {
+          await opLog('update.restart')
+          await applyOta()
+        } catch {
+          setPhase('error')
+        }
+      })()
+    }
+  }
+
 
   const handleReprocessAll = () => {
     void opLog('rebulk.toggle', { running: Boolean(rebulk) })
@@ -385,27 +373,16 @@ export function SettingsScreen() {
     setDevOn(isDevMode())
     void appVersion().then(async (next) => {
       setVersion(next)
-      // Same comparison the manual check uses. Using the raw native version here
-      // made the row resurrect "new version" on every visit after a hot update.
-      const taken = await readOtaTakenVersion()
-      const current = effectiveVersion(next, taken) ?? next
-      void checkForUpdate(current, false)
-        .then(setUpdate)
-        .catch(() => setUpdate(null))
-      // A downloaded bundle is only "applied" once the app is actually running it.
-      // Marking it applied at download time made the row claim the app was current while
-      // the old JavaScript was still on screen — the user updates, and nothing changes.
+      // A downloaded bundle stops being "pending" the moment the app runs it.
       const state = await readOtaState().catch(() => null)
       setRunningOta(Boolean(state?.enabled && state.runningUpdate))
       const pending = await readOtaPending()
       if (state?.runningUpdate && pending) {
-        const waitingVersion = await readOtaPendingVersion()
-        await recordOtaTakenVersion(waitingVersion)
         await writeOtaPending(false)
         await writeOtaPendingVersion(null)
-      } else if (pending) {
-        setOtaReady(true)
       }
+      setOtaPending(state?.runningUpdate ? false : pending)
+      void refreshUpdate(false)
     })
     try {
       const [nextStats, llm, configured, syncedAt] = await Promise.all([
@@ -528,7 +505,7 @@ export function SettingsScreen() {
                   ? ''
                   : llm.enabled
                     ? t('settings.llm.on', { model: llm.model || t('settings.llm.unnamed') })
-                    : t('settings.llm.off')
+                    : t('llm.state.off')
               }
               onPress={() => router.push('/settings/llm')}
               accessibilityLabel={t('settings.llm.a11y')}
@@ -627,12 +604,9 @@ export function SettingsScreen() {
               title={APP_NAME}
               subtitle={updateSubtitle()}
               value={`v${version ?? '—'}${runningOta ? t('settings.about.hotAppend') : ''}`}
-              valueIcon={update?.hasUpdate || otaReady ? 'arrow-up-circle' : undefined}
-              busy={updatePhase === 'checking'}
-              onPress={() => {
-                if (otaReady) void handleUpdate()
-                else void checkThenUpdate()
-              }}
+              valueIcon={view.kind === 'latest' ? undefined : 'arrow-up-circle'}
+              busy={view.kind === 'checking'}
+              onPress={onTapUpdate}
             />
             <Row
               icon="code-slash-outline"

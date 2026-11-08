@@ -29,7 +29,7 @@ export interface CheckResult {
 // Re-exported so call sites keep importing from update.ts. These live in
 // version.ts because they need no runtime, and update.ts imports AsyncStorage.
 export type { ReleaseAsset, ReleaseInfo } from './version'
-export { effectiveVersion, isNewer, parseRelease, parseVersion, pickAsset } from './version'
+export { isNewer, parseRelease, parseVersion, pickAsset } from './version'
 
 async function readCache(): Promise<CheckResult | null> {
   try {

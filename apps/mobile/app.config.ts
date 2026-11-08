@@ -72,6 +72,10 @@ const config: ExpoConfig = {
    * can never reach the old build in the user's hands, and hot updates become pointless. Changing this requires shipping a new APK,
    * otherwise the old build receives JS built for the "new native version" and may crash outright.
    */
+  // Every OTA bundle is served to every install sharing this value, so it must
+  // change exactly when the native side does (dependencies, permissions, native
+  // modules, DB schema). JavaScript-only fixes ship without touching it, and
+  // without touching the version number: see docs on releasing.
   runtimeVersion: 'native-1',
   extra: {
     ...(expoProjectId ? { eas: { projectId: expoProjectId } } : {}),

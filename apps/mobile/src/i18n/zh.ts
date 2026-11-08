@@ -495,6 +495,7 @@ export const zh: Dictionary = {
   'settings.dev.off': '关闭',
   'settings.dev.logTitle': '查看日志',
   'settings.dev.logSubtitle': '环境、崩溃记录与操作日志',
+  'update.state.otaAvailable': '有新版本 · 点这里下载热更新',
   'update.state.restart': '新版本已下好 · 点这里重启生效',
   'update.state.otaDownloading': '正在下载更新…',
   'sync.filesNote': '删除的条目在云端留一个空文件，所以文件数略多于收藏数。',

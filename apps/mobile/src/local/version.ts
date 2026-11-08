@@ -28,21 +28,6 @@ export function isNewer(latest: string, current: string): boolean {
   return false
 }
 
-/**
- * Which version to compare against.
- *
- * The installed build's versionName only changes when a new APK is installed,
- * while a hot update swaps the JS without touching it. Comparing the native
- * version alone means a release that arrived by hot update still looks
- * "newer than installed" forever, so the app asks for the full package it no
- * longer needs. Whichever of the two is newer is the honest answer.
- */
-export function effectiveVersion(native: string | null, otaTaken: string | null): string | null {
-  if (!native) return otaTaken
-  if (!otaTaken) return native
-  return isNewer(otaTaken, native) ? otaTaken : native
-}
-
 export interface ReleaseAsset {
   name: string
   url: string

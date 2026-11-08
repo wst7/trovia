@@ -493,6 +493,7 @@ export const en: Dictionary = {
   'settings.dev.off': 'Off',
   'settings.dev.logTitle': 'View log',
   'settings.dev.logSubtitle': 'Environment, crash log and operations',
+  'update.state.otaAvailable': 'New version · tap to download the update',
   'update.state.restart': 'Update ready · tap to restart',
   'update.state.otaDownloading': 'Downloading the update…',
   'sync.filesNote': 'Deleted items leave an empty file in the cloud, so the file count runs slightly above the item count.',

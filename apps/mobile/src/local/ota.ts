@@ -113,6 +113,25 @@ export type OtaOutcome =
   | { kind: 'latest' }
   | { kind: 'downloaded'; id: string | null }
 
+/**
+ * Is there a JavaScript update waiting on the channel?
+ *
+ * Cheap and side-effect free: no download, no restart. This is the only thing
+ * the app should ask when deciding "is there a hot update for me", because the
+ * channel does not move the version number and GitHub knows nothing about it.
+ */
+export async function checkOtaAvailability(): Promise<{ available: boolean; id: string | null }> {
+  const expo = await updates()
+  if (!expo?.isEnabled) return { available: false, id: null }
+  try {
+    const check = await expo.checkForUpdateAsync()
+    return { available: Boolean(check.isAvailable), id: check.manifest?.id?.slice(0, 6) ?? null }
+  } catch {
+    // No channel, offline, or a broken manifest: no hot update to offer.
+    return { available: false, id: null }
+  }
+}
+
 /** Check + download; once downloaded, the caller decides when to restart (reload). */
 export async function checkOta(): Promise<OtaOutcome> {
   const expo = await updates()

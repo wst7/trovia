@@ -78,6 +78,18 @@ the repo stores a release number.
 
 `node scripts/check-changelog.mjs <version>` runs the same check locally.
 
+**JavaScript-only fixes do not need a release.** Dispatch the Android workflow
+by hand with `publish_update` ticked: it publishes the bundle to the OTA channel
+and builds no APK. The version number stays where it is, and installed phones
+pick the bundle up on their next check and apply it on restart. The app asks the
+OTA channel and the GitHub releases separately — a hot fix never makes the
+"full package" row appear, and installing a package never hides a waiting
+bundle.
+
+Bump `runtimeVersion` in `app.config.ts` only when the native side changes
+(dependencies, permissions, native modules, DB schema). Anything that needs it
+cannot ship as a hot fix.
+
 There is no release-it / semantic-release here on purpose: both generate the
 notes from commit subjects, and the notes are product copy. They would also
 need a working local `git push`, which this project's contributors do not
