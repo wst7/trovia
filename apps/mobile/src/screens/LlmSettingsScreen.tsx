@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { useFocusEffect, useRouter } from 'expo-router'
-import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, Switch, View } from 'react-native'
+import { ActivityIndicator, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, Switch, View } from 'react-native'
 import { Text } from '../ui/text'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -10,9 +10,12 @@ import { useToast } from '../providers/ToastProvider'
 import { Button, IconButton, TextButton } from '../ui/Button'
 import { Screen } from '../ui/Screen'
 import { TextField } from '../ui/TextField'
+import { Ionicons } from '@expo/vector-icons'
+
 import { opLog } from '../local/dev-log'
 import { CUSTOM_PROVIDER_ID, LLM_PRESETS, matchPreset } from '../local/llm-presets'
 import { isChatModel } from '../local/llm-models'
+import { SelectField } from '../ui/SelectField'
 import { useT } from '../i18n'
 import { GUTTER } from '../ui/Screen'
 import { usePalette } from '../ui/palette'
@@ -51,6 +54,9 @@ export function LlmSettingsScreen() {
   const [modelFailed, setModelFailed] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [customChosen, setCustomChosen] = useState(false)
+  // The list is a convenience, not a cage: a model the provider does not return
+  // (a preview id, a self-hosted gateway) still has to be usable.
+  const [manualModel, setManualModel] = useState(false)
 
   const openModelPicker = async () => {
     setPickerOpen(true)
@@ -352,7 +358,7 @@ export function LlmSettingsScreen() {
               keyboardType="url"
               accessibilityLabel={t('llm.field.baseUrl')}
             />
-            <View>
+            {manualModel ? (
               <TextField
                 label={t('llm.field.model')}
                 value={model}
@@ -362,56 +368,20 @@ export function LlmSettingsScreen() {
                 autoCorrect={false}
                 accessibilityLabel={t('llm.field.model')}
               />
-              <Pressable
-                onPress={() => {
-                  if (pickerOpen) {
-                    setPickerOpen(false)
-                    return
-                  }
-                  void openModelPicker()
-                }}
-                hitSlop={8}
-                accessibilityRole="button"
+            ) : (
+              <SelectField
+                label={t('llm.field.model')}
+                value={model}
+                placeholder={DEFAULT_LLM.model}
+                onPress={() => void openModelPicker()}
                 accessibilityLabel={t('llm.model.pick')}
-                className="mt-1 self-start"
-              >
-                <Text className="text-caption text-accent underline">
-                  {pickerOpen ? t('llm.model.close') : t('llm.model.pick')}
-                </Text>
-              </Pressable>
-              {/* Inline rather than a modal: a modal would cover the field the
-                  user is filling in, and this list is short. */}
-              {pickerOpen ? (
-                <View className="mt-2 rounded-sm border border-line px-3">
-                  {modelLoading ? (
-                    <Text className="py-3 text-caption text-muted">{t('llm.model.loading')}</Text>
-                  ) : modelFailed ? (
-                    <Text className="py-3 text-caption text-muted">{t('llm.model.failed')}</Text>
-                  ) : (
-                    (modelList ?? []).map((id) => (
-                      <Pressable
-                        key={id}
-                        onPress={() => {
-                          setModel(id)
-                          setPickerOpen(false)
-                        }}
-                        className="border-b border-line py-2.5"
-                        accessibilityRole="button"
-                        accessibilityState={{ selected: id === model }}
-                      >
-                        <Text
-                          className={
-                            id === model ? 'text-body-sm text-accent' : 'text-body-sm text-ink'
-                          }
-                        >
-                          {id}
-                        </Text>
-                      </Pressable>
-                    ))
-                  )}
-                </View>
-              ) : null}
-            </View>
+              />
+            )}
+            <TextButton
+              label={manualModel ? t('llm.model.useList') : t('llm.model.typeManually')}
+              onPress={() => setManualModel((current) => !current)}
+              tone="muted"
+            />
             <TextField
               label={t('llm.field.embed')}
               value={embedModel}
@@ -472,6 +442,61 @@ export function LlmSettingsScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
+
+      <Modal visible={pickerOpen} transparent animationType="fade" onRequestClose={() => setPickerOpen(false)}>
+        <Pressable className="flex-1 justify-end bg-black/40" onPress={() => setPickerOpen(false)}>
+          <Pressable className="max-h-[72%] rounded-t-xl bg-surface px-4 pb-8 pt-4" onPress={() => undefined}>
+            <View className="mb-3 flex-row items-center justify-between">
+              <Text className="text-body font-semibold text-ink">{t('llm.model.title')}</Text>
+              <Pressable onPress={() => setPickerOpen(false)} hitSlop={10}>
+                <Text className="text-caption text-muted">{t('llm.model.close')}</Text>
+              </Pressable>
+            </View>
+
+            {modelLoading ? (
+              <View className="flex-row items-center gap-2 py-6">
+                <ActivityIndicator size="small" color={p.muted} />
+                <Text className="text-caption text-muted">{t('llm.model.loading')}</Text>
+              </View>
+            ) : modelFailed ? (
+              <View className="py-4">
+                <Text className="text-caption text-muted">{t('llm.model.failed')}</Text>
+                <TextButton
+                  label={t('llm.model.typeManually')}
+                  onPress={() => {
+                    setManualModel(true)
+                    setPickerOpen(false)
+                  }}
+                  tone="accent"
+                />
+              </View>
+            ) : (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {(modelList ?? []).map((id) => (
+                  <Pressable
+                    key={id}
+                    onPress={() => {
+                      setModel(id)
+                      setPickerOpen(false)
+                    }}
+                    className="flex-row items-center justify-between border-b border-line py-3"
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: id === model }}
+                  >
+                    <Text
+                      className={id === model ? 'flex-1 text-body-sm text-accent' : 'flex-1 text-body-sm text-ink'}
+                      numberOfLines={1}
+                    >
+                      {id}
+                    </Text>
+                    {id === model ? <Ionicons name="checkmark" size={16} color={p.accent} /> : null}
+                  </Pressable>
+                ))}
+              </ScrollView>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </Screen>
   )
 }

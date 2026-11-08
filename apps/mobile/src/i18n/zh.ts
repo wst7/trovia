@@ -341,6 +341,8 @@ export const zh: Dictionary = {
   'llm.provider.opencode-zen': 'Zen 按用量扣费（Console 余额），Go 是月付订阅。同一个 Key，地址不同。',
   'llm.model.loading': '正在获取模型列表…',
   'llm.model.failed': '拿不到模型列表，直接填模型名也可以。',
+  'llm.model.typeManually': '直接手填模型名',
+  'llm.model.useList': '从列表里选',
   'llm.model.title': '选择模型',
   'llm.model.close': '取消',
   'llm.provider.getKey': '去拿 API Key',
