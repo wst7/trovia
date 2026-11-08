@@ -243,7 +243,7 @@ export function ResultRow({
                   typeof part === 'string' ? (
                     <Text key={i}>{part}</Text>
                   ) : (
-                    <Text key={i} className="text-ink">
+                    <Text key={i} className="font-medium text-accent">
                       {part.hit}
                     </Text>
                   ),

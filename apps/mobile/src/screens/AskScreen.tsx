@@ -14,6 +14,7 @@ import { useT } from '../i18n'
 import { askLibraryLive } from '../local/assistant-live'
 import type { AssistantResult, Citation, ToolStep } from '../local/assistant'
 import { Screen, GUTTER } from '../ui/Screen'
+import { Button, IconButton } from '../ui/Button'
 import { Divider } from '../ui/Divider'
 import { usePalette } from '../ui/palette'
 
@@ -65,15 +66,25 @@ export function AskScreen() {
   return (
     <Screen>
       <View className="flex-row items-center justify-between px-[22px] pt-2">
-        <Pressable onPress={() => router.back()} hitSlop={10} accessibilityRole="button">
-          <Text className="text-body text-muted">{t('detail.back')}</Text>
-        </Pressable>
+        <IconButton name="chevron-back" onPress={() => router.back()} accessibilityLabel={t('detail.back')} />
         <Text className="text-caption tracking-[0.14em] text-faint">{t('ask.title').toUpperCase()}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: GUTTER, paddingBottom: 48 }}>
-        <Text className="mt-5 font-serif text-[26px] leading-[36px] text-ink">{question}</Text>
+        {question.trim() ? (
+          <Text className="mt-5 font-serif text-[26px] leading-[36px] text-ink">{question}</Text>
+        ) : (
+          // Opened without a question (deep link, share sheet): a blank page gives
+          // the user nowhere to go, so say what this screen needs and hand them a way back.
+          <View className="mt-8">
+            <Text className="text-title font-semibold text-ink">{t('ask.noQuestion')}</Text>
+            <Text className="mt-3 text-body-sm text-muted">{t('ask.noQuestionHint')}</Text>
+            <View className="mt-6">
+              <Button label={t('ask.backHome')} onPress={() => router.replace('/')} size="sm" />
+            </View>
+          </View>
+        )}
 
         {steps.length > 0 ? (
           <View className="mt-5">

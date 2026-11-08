@@ -132,7 +132,8 @@ export async function diagnosticsSnapshot(): Promise<string> {
     )
     lines.push(`documents: ${counts?.total ?? 0} (deleted ${counts?.deleted ?? 0})`)
     const base = await db.getFirstAsync<{ n: number }>('SELECT COUNT(*) AS n FROM sync_base')
-    lines.push(`sync_base: ${base?.n ?? 0}`)
+    // Named as rows, not "base": next to documents:N it read like a second document count.
+    lines.push(`sync_base_rows: ${base?.n ?? 0}`)
   } catch (error) {
     lines.push(`db: ${error instanceof Error ? error.message : String(error)}`)
   }

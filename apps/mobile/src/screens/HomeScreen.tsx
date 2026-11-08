@@ -88,10 +88,15 @@ export function HomeScreen() {
     }
   }, [revision, inResults])
 
-  // When local data changes (e.g. the article just saved finished parsing), refresh the current search results.
+  // The single place a search runs: on a new query, and again when local data
+  // changes (the article just saved finished parsing). It used to be started
+  // here and inside runSearch, so every query ran twice — the diagnostics log
+  // shows identical op.search lines a few hundred milliseconds apart.
   useEffect(() => {
     if (!lastQuery) return
     let cancelled = false
+    setSearching(true)
+    setSearchError(null)
     void repo
       .searchDocuments(lastQuery)
       .then((next) => {
@@ -99,24 +104,27 @@ export function HomeScreen() {
         setResults(next.results)
         setInterpretation(next.interpretation)
       })
-      .catch(() => undefined)
+      .catch((error) => {
+        if (cancelled) return
+        setSearchError(errorText(error, t('home.toast.searchFailed')))
+      })
+      .finally(() => {
+        if (!cancelled) setSearching(false)
+      })
     return () => {
       cancelled = true
     }
-  }, [revision, lastQuery])
+  }, [revision, lastQuery, t])
 
   useEffect(() => {
     const seeded = typeof routeParams.q === 'string' ? routeParams.q.trim() : ''
     if (!seeded) return
     setQuery(seeded)
+    setResults(null)
     setLastQuery(seeded)
-    void repo.searchDocuments(seeded).then((outcome) => {
-      setResults(outcome.results)
-      setInterpretation(outcome.interpretation)
-    })
   }, [routeParams.q])
 
-  async function runSearch(text?: string) {
+  function runSearch(text?: string) {
     const q = (text ?? query).trim()
     if (!q || searching) return
     // With "ask the model" on: input that isn't a link goes to the model, which searches the library and then answers.
@@ -124,19 +132,9 @@ export function HomeScreen() {
       router.push(`/ask?q=${encodeURIComponent(q)}`)
       return
     }
-    setSearching(true)
-    setSearchError(null)
-    setLastQuery(q)
+    // Setting the query is enough; the effect above performs the search once.
     setResults(null)
-    try {
-      const outcome = await repo.searchDocuments(q)
-      setResults(outcome.results)
-      setInterpretation(outcome.interpretation)
-    } catch (e) {
-      setSearchError(errorText(e, t('home.toast.searchFailed')))
-    } finally {
-      setSearching(false)
-    }
+    setLastQuery(q)
   }
 
   function clearSearch() {
@@ -365,14 +363,17 @@ export function HomeScreen() {
                     <Text className="text-body font-semibold text-ink">{t('home.recent')}</Text>
                   </View>
                   <View className="mt-1">
-                    {recent.map((item) => (
-                      <View key={item.id} className="mb-2">
+                    {recent.map((item, index) => (
+                      // Same hairline as the saved list: rows of one component should
+                      // not look like cards on one screen and a table on another.
+                      <View key={item.id}>
                         <RecentRow
                           item={item}
                           onPress={() => router.push(`/documents/${item.id}`)}
                           onTerminal={handleTerminal}
                           showDate={false}
                         />
+                        {index === recent.length - 1 ? null : <View className="h-px bg-line" />}
                       </View>
                     ))}
                   </View>

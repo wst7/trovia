@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { clearCrashLog, readCrashLog } from '../src/local/crash-log'
 import { clearDevLog, diagnosticsSnapshot, isDevMode, readDevLog, setDevMode } from '../src/local/dev-log'
 import { useT } from '../src/i18n'
-import { Button } from '../src/ui/Button'
+import { Button, IconButton } from '../src/ui/Button'
 import { Screen } from '../src/ui/Screen'
 
 /**
@@ -80,9 +80,7 @@ export default function DiagnosticsScreen() {
   return (
     <Screen>
       <View className="flex-row items-center justify-between px-4" style={{ paddingTop: insets.top + 8 }}>
-        <Text onPress={() => router.back()} className="text-body text-muted">
-          {t('detail.back')}
-        </Text>
+        <IconButton name="chevron-back" onPress={() => router.back()} accessibilityLabel={t('detail.back')} />
         <Text onPress={() => void share()} className="text-body text-accent">
           {t('diagnostics.share')}
         </Text>
@@ -94,7 +92,7 @@ export default function DiagnosticsScreen() {
 
         <Text className="mt-6 text-caption text-muted">{t('diagnostics.env')}</Text>
         <View className="mt-2 rounded-md border border-line p-3">
-          <Text className="text-caption leading-5 text-ink">
+          <Text className="text-mono leading-5 text-ink">
             {snapshot || '—'}
           </Text>
         </View>
@@ -122,7 +120,7 @@ export default function DiagnosticsScreen() {
           </Text>
         </View>
         <View className="mt-2 rounded-md border border-line p-3">
-          <Text className="text-caption leading-5 text-muted">
+          <Text className="text-mono leading-5 text-muted">
             {dev ?? t('diagnostics.empty')}
           </Text>
         </View>

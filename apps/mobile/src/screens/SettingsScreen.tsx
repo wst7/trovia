@@ -117,7 +117,13 @@ function Row({
   const p = usePalette()
   const body = (
     <View className="min-h-[52px] flex-row items-center gap-3 px-4">
-      {icon ? <Ionicons name={icon} size={18} color={danger ? p.danger : p.muted} /> : null}
+      {/* Rows without a glyph keep the same left edge: the icon slot is a fixed
+          18px column, and the gap after it is part of the layout too. */}
+      {icon ? (
+        <Ionicons name={icon} size={18} color={danger ? p.danger : p.muted} />
+      ) : (
+        <View style={{ width: 18 }} />
+      )}
       <View className="flex-1">
         <Text className={danger ? 'text-body-sm text-danger' : 'text-body-sm text-ink'}>
           {title}

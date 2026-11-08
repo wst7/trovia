@@ -177,14 +177,27 @@ export function Composer({
                 }}
               />
             </View>
-            <Text
-              className={cx(
-                'text-caption tracking-[0.02em]',
-                ask ? 'font-semibold text-ink' : 'text-faint',
-              )}
-            >
-              {ask ? t('composer.mode.ai') : t('composer.mode.search')}
-            </Text>
+            {/* Both modes stay visible, the active one in ink: a lone word next to
+                a switch never told anyone that a second mode existed. */}
+            <View className="flex-row items-center gap-1">
+              <Text
+                className={cx(
+                  'text-caption tracking-[0.02em]',
+                  ask ? 'text-faint' : 'font-semibold text-ink',
+                )}
+              >
+                {t('composer.mode.search')}
+              </Text>
+              <Text className="text-caption text-faint">/</Text>
+              <Text
+                className={cx(
+                  'text-caption tracking-[0.02em]',
+                  ask ? 'font-semibold text-ink' : 'text-faint',
+                )}
+              >
+                {t('composer.mode.ai')}
+              </Text>
+            </View>
           </Pressable>
 
           {hint ? (

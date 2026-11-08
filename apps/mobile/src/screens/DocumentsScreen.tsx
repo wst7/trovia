@@ -310,49 +310,69 @@ export function DocumentsScreen() {
               </View>
             )}
 
-            {failed > 0 ? (
-              <View className="mt-3 flex-row items-center justify-between">
-                <Text className="flex-1 text-body-sm text-muted" onPress={() => setFailedOnly((on) => !on)}>
-                  {failedOnly
-                    ? t('list.failedOnlyOn')
-                    : t('list.failedCount', { count: failed, total: libraryTotal || total || 0 })}
-                </Text>
+            {/* Two filters, one row. As bare text links they read like stray
+                labels, and each took a line of its own before any content. */}
+            <View className="mt-3 flex-row items-center justify-between gap-3">
+              <View className="flex-1 flex-row flex-wrap items-center gap-2">
+                {failed > 0 ? (
+                  <Pressable
+                    onPress={() => {
+                      setFailedOnly((on) => !on)
+                      setImportedOnly(false)
+                    }}
+                    hitSlop={6}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: failedOnly }}
+                    accessibilityLabel={t('list.failedCount', { count: failed, total: libraryTotal || total || 0 })}
+                  >
+                    <View
+                      className={
+                        failedOnly
+                          ? 'rounded-full border border-ink px-3 py-1'
+                          : 'rounded-full border border-line px-3 py-1'
+                      }
+                    >
+                      <Text className={failedOnly ? 'text-caption text-ink' : 'text-caption text-muted'}>
+                        {t('list.failedChip', { count: failed })}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ) : null}
+                <Pressable
+                  onPress={() => {
+                    setImportedOnly((on) => !on)
+                    setFailedOnly(false)
+                  }}
+                  hitSlop={6}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: importedOnly }}
+                  accessibilityLabel={t('list.importedOnly')}
+                >
+                  <View
+                    className={
+                      importedOnly
+                        ? 'rounded-full border border-ink px-3 py-1'
+                        : 'rounded-full border border-line px-3 py-1'
+                    }
+                  >
+                    <Text className={importedOnly ? 'text-caption text-ink' : 'text-caption text-muted'}>
+                      {t('list.importedOnly')}
+                    </Text>
+                  </View>
+                </Pressable>
+              </View>
+              {failed > 0 ? (
                 <TextButton
                   label={retrying ? t('list.requeuing') : t('list.retryAll')}
                   onPress={() => void handleRetryFailed()}
                   tone="muted"
                 />
-              </View>
-            ) : null}
-
-            <View className="mt-3 flex-row items-center gap-4">
-              <Pressable
-                onPress={() => {
-                  setImportedOnly((on) => !on)
-                  setFailedOnly(false)
-                }}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel={t('list.importedOnly')}
-              >
-                <Text
-                  className={
-                    importedOnly ? 'text-caption font-medium text-ink underline' : 'text-caption text-faint'
-                  }
-                >
-                  {t('list.importedOnly')}
-                </Text>
-              </Pressable>
-              {importedOnly ? (
-                <Text className="text-caption text-faint">
-                  {t('list.importedHint')}
-                </Text>
               ) : null}
             </View>
 
-            {failedOnly ? (
+            {failedOnly || importedOnly ? (
               <Text className="mt-2 text-caption text-faint">
-                {t('list.failedOnlyHint')}
+                {failedOnly ? t('list.failedOnlyHint') : t('list.importedHint')}
               </Text>
             ) : null}
 
