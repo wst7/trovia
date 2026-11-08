@@ -6,7 +6,7 @@ import { domainOf, formatRelativeDate } from '@trovia/shared'
 
 import { Ionicons } from '@expo/vector-icons'
 
-import { usePalette } from '../ui/palette'
+import { useIsDark, usePalette } from '../ui/palette'
 import { LiveStatusMark } from './LiveStatusMark'
 import { useT } from '../i18n'
 
@@ -84,6 +84,7 @@ export function RecentRow({
   onRetry?: () => void
 }) {
   const p = usePalette()
+  const dark = useIsDark()
   const t = useT()
   // On some sites the favicon URL opens but the content is empty (0 bytes / transparent image), leaving an empty box behind.
   // On load failure fall back to the first letter, so the left column at least still has something in it.
@@ -128,9 +129,13 @@ export function RecentRow({
               />
             ) : thumbnail && !imageBroken ? (
               // Fill the tile: this is the article's lead image, not a site icon; shrinking it into a small block with padding makes it look like the image is missing.
+              // Cover images are usually light (screenshots, white-background
+              // illustrations); on a near-black canvas a full-brightness tile
+              // reads as a hole punched in the list. Knock them back a little in
+              // dark mode instead of leaving the row to look "light".
               <Image
                 source={{ uri: thumbnail }}
-                style={{ width: 34, height: 34 }}
+                style={{ width: 34, height: 34, opacity: dark ? 0.72 : 1 }}
                 resizeMode="cover"
                 onError={() => setImageBroken(true)}
               />

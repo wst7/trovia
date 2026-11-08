@@ -49,3 +49,8 @@ export function usePalette(): Palette {
   const scheme = useColorScheme()
   return scheme === 'dark' ? palette.dark : palette.light
 }
+
+/** True when the effective theme is dark. Used where a colour alone cannot express the change (images). */
+export function useIsDark(): boolean {
+  return useColorScheme() === 'dark'
+}
