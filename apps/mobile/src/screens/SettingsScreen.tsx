@@ -179,7 +179,7 @@ export function SettingsScreen() {
   const [llm, setLlm] = useState<{ enabled: boolean; model: string | null } | null>(null)
   const [exporting, setExporting] = useState(false)
   const [version, setVersion] = useState<string | null>(null)
-  // The version row is the update entry point itself: no separate page, and no split into "full package / hot update" downloads.
+  // The version row is the update entry point itself: there is no separate update page.
   // One channel: a newer release means a package to download and install.
   const [native, setNative] = useState<CheckResult | null>(null)
 

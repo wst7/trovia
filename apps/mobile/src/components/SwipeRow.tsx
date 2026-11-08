@@ -2,7 +2,7 @@
  * Row container that reveals "Delete" on a left swipe.
  *
  * PanResponder + Animated only, no gesture library: this interaction only needs "drag sideways,
- * snap on release", and another native dependency isn't worth it, plus it adds risk to hot updates.
+ * snap on release", which is not worth another native dependency.
  *
  * Only one row may be open at a time — the parent's openId decides it, so opening any row
  * closes the others, keeping a row of red buttons from spreading across the screen.

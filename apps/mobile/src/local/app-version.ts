@@ -1,9 +1,11 @@
 /**
  * The app's own version number.
  *
- * It must read the **native** version: after a hot update, `expoConfig.version` in JS comes from that update's manifest,
- * and updates are built from main, so the version in the manifest can be older than the installed APK — users end up seeing
- * "0.13.2 is installed but the UI shows 0.12.2". The native version only changes on reinstall; that is a fact.
+ * It must read the **native** version, not the one in the JS manifest: the two
+ * can disagree (a package installed by hand, or a build whose manifest was
+ * generated earlier than the APK), and the user in front of the phone can only
+ * tell us what they installed. `expoConfig.version` is a fallback for the rare
+ * runtime where `expo-application` is missing.
  */
 export async function appVersion(): Promise<string> {
   try {

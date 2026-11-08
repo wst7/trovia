@@ -8,9 +8,9 @@ const isProduction = process.env.APP_VARIANT === 'production'
 const rawVersion: string = process.env.XUNJI_APP_VERSION?.trim() || '0.13.9'
 
 /**
- * The hosting URL for hot updates (expo-updates) comes from the EAS project id.
- * Without it, updates are switched off entirely — local builds and machines that never logged in to Expo can still produce a package,
- * it just ships without hot-update capability (`Updates.isEnabled` is false).
+ * EAS project id. It is baked into the package for tooling (and would be needed
+ * if this project ever went back to EAS builds); it has nothing to do with
+ * updates any more — those are switched off below.
  */
 const expoProjectId = process.env.EXPO_PROJECT_ID?.trim() ?? ''
 /** Account slug: eas-cli needs it to find the project; without it the projectId is ignored. */
@@ -58,17 +58,8 @@ const config: ExpoConfig = {
   updates: {
     enabled: false,
   },
-  /**
-   * Native runtime version: **bump it only when native dependencies, permissions, the package name or the like change**.
-   *
-   * Do not tie it to appVersion — that makes every patch version a separate runtime, so JS-only updates
-   * can never reach the old build in the user's hands, and hot updates become pointless. Changing this requires shipping a new APK,
-   * otherwise the old build receives JS built for the "new native version" and may crash outright.
-   */
-  // Every OTA bundle is served to every install sharing this value, so it must
-  // change exactly when the native side does (dependencies, permissions, native
-  // modules, DB schema). JavaScript-only fixes ship without touching it, and
-  // without touching the version number: see docs on releasing.
+  // Inert while `updates.enabled` is false, and kept only so the value does not
+  // silently change if updates are ever turned back on.
   runtimeVersion: 'native-1',
   extra: {
     ...(expoProjectId ? { eas: { projectId: expoProjectId } } : {}),

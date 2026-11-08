@@ -95,24 +95,6 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      # OTA update: only the JS is swapped, so users do not have to reinstall the APK. Native changes still have to go through the APK above.
-      - name: 发布热更新
-        if: startsWith(github.ref, 'refs/tags/v') && env.EXPO_PROJECT_ID != '' && env.EXPO_PROJECT_ID != null
-        # A failed OTA release must not drag down the APK build; users can still upgrade by reinstalling.
-        continue-on-error: true
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        working-directory: apps/mobile
-        run: |
-          if [ -z "$EXPO_TOKEN" ]; then
-            echo "没有 EXPO_TOKEN，跳过（去 expo.dev 建一个再放到仓库 Secrets）"
-            exit 0
-          fi
-          # The channel has to match the expo-channel-name inside the package, otherwise the client request is rejected with a 400.
-          npx eas-cli@latest channel:create production --non-interactive || true
-          npx eas-cli@latest channel:edit production --branch production --non-interactive || true
-          npx eas-cli@latest update --branch production --message "$GITHUB_REF_NAME" --non-interactive --auto
-
       # When tagging v*, publish the APK to the Release so the releases/latest link on the description page actually works.
       - name: 发布到 Release
         if: startsWith(github.ref, 'refs/tags/v')
