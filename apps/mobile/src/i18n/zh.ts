@@ -463,7 +463,7 @@ export const zh: Dictionary = {
   'save.err.duplicate': '这条链接已经在收藏里了。',
   'save.err.unknown': '保存没有完成，再试一次。',
   'share.retry': '重试',
-  'settings.about.hotAppend': ' · 热更新',
+  'settings.about.hotAppend': ' · 热更 {id}',
   'settings.diagnostics.title': '导出诊断信息',
   'settings.diagnostics.subtitle': '版本、设备与最近的崩溃记录',
   'settings.diagnostics.failed': '没能生成诊断文件。',

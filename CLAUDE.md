@@ -95,6 +95,24 @@ notes from commit subjects, and the notes are product copy. They would also
 need a working local `git push`, which this project's contributors do not
 reliably have.
 
+### Versioning (what goes in a version number, and what does not)
+
+Follows the Expo/EAS Update model, which is the platform this app ships on:
+
+- `version` (0.14.9) and the tag exist for **native** releases: store listings,
+  crash reports, support, and the `versionCode` Android needs to allow an
+  upgrade. It changes only when the package does.
+- A hot update has **no version number**. EAS identifies it by `updateId` and
+  `createdAt`, and both are recorded at launch and shown in diagnostics. The
+  version row appends `· 热更 <id>` while a downloaded bundle is running, so a
+  screenshot identifies the exact publish.
+- Never invent a counter such as `0.14.9-3`. In semver `-3` means a
+  *pre-release*, which sorts below `0.14.9`; `parseVersion` here strips the
+  suffix (so comparisons silently ignore it) and `versionCode` would collide
+  with the plain version, blocking installs.
+- `runtimeVersion` is the compatibility contract. It changes when the native
+  side does, and a JavaScript-only fix must never need it.
+
 ## Comments
 
 Code comments are English, everywhere: source, tests, scripts, workflows,

@@ -196,6 +196,10 @@ export function SettingsScreen() {
   const [otaPending, setOtaPending] = useState(false)
   // Which JavaScript is on screen: embedded in the package, or a downloaded update.
   const [runningOta, setRunningOta] = useState(false)
+  // Expo identifies an update by id and creation time, never by a version
+  // number: there is no "hot fix #3" in the platform, and inventing one would
+  // put a number in the version string that sorts below its own release.
+  const [otaId, setOtaId] = useState<string | null>(null)
   const [phase, setPhase] = useState<'idle' | 'checking' | 'downloading' | 'installing' | 'error'>('idle')
   const [devOn, setDevOn] = useState(false)
   const [sync, setSync] = useState<{ configured: boolean; at: string | null } | null>(null)
@@ -376,6 +380,7 @@ export function SettingsScreen() {
       // A downloaded bundle stops being "pending" the moment the app runs it.
       const state = await readOtaState().catch(() => null)
       setRunningOta(Boolean(state?.enabled && state.runningUpdate))
+      setOtaId(state?.updateId ?? null)
       const pending = await readOtaPending()
       if (state?.runningUpdate && pending) {
         await writeOtaPending(false)
@@ -603,7 +608,9 @@ export function SettingsScreen() {
               icon="information-circle-outline"
               title={APP_NAME}
               subtitle={updateSubtitle()}
-              value={`v${version ?? '—'}${runningOta ? t('settings.about.hotAppend') : ''}`}
+              value={`v${version ?? '—'}${
+                runningOta ? t('settings.about.hotAppend', { id: otaId ?? '?' }) : ''
+              }`}
               valueIcon={view.kind === 'latest' ? undefined : 'arrow-up-circle'}
               busy={view.kind === 'checking'}
               onPress={onTapUpdate}
