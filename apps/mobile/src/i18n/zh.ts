@@ -338,6 +338,7 @@ export const zh: Dictionary = {
   'llm.provider.title': '服务商',
   'llm.provider.custom': '自定义',
   'llm.model.pick': '选择模型',
+  'llm.provider.opencode-zen': 'Zen 按用量扣费（Console 余额），Go 是月付订阅。同一个 Key，地址不同。',
   'llm.model.loading': '正在获取模型列表…',
   'llm.model.failed': '拿不到模型列表，直接填模型名也可以。',
   'llm.model.title': '选择模型',

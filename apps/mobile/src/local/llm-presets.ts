@@ -32,12 +32,22 @@ export const LLM_PRESETS: LlmPreset[] = [
     keyUrl: 'https://platform.deepseek.com/api_keys',
   },
   {
-    id: 'opencode',
-    name: 'OpenCode',
-    // Console speaks OpenAI's chat/completions dialect here; the same models are
-    // also served under /anthropic and /google for other SDKs.
+    id: 'opencode-zen',
+    name: 'OpenCode Zen',
+    // Console credits: pay per use, full model list, OpenAI chat/completions
+    // dialect under this path.
     baseUrl: 'https://opencode.ai/inference/openai/v1',
-    // Cheap and fast, which is what summarising a saved page needs.
+    model: 'deepseek-v4.1-flash',
+    embedModel: '',
+    keyUrl: 'https://opencode.ai/console',
+  },
+  {
+    id: 'opencode-go',
+    name: 'OpenCode Go',
+    // Subscription ($10/month and up) rather than credits, with its own path and
+    // its own — smaller, open-model — list. Same Console key, different address:
+    // pasting a Go key into the Zen address answers 401.
+    baseUrl: 'https://opencode.ai/inference/go/openai/v1',
     model: 'deepseek-v4.1-flash',
     embedModel: '',
     keyUrl: 'https://opencode.ai/console',

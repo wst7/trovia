@@ -2,6 +2,14 @@
 
 每个版本发布时，GitHub Release 的正文直接取这里的对应小节；没有小节时退回自动生成。
 
+## 0.15.4
+
+- **OpenCode 拆成两个**，因为它们是两套东西：
+  - **OpenCode Zen**：Console 充值、按用量扣费，地址 `opencode.ai/inference/openai/v1`，全量模型（81 个，含 Claude、GPT、Gemini 系列）
+  - **OpenCode Go**：月付订阅（Go $10/月、Go Plus $40/月、Teams $20/人/月），地址 `opencode.ai/inference/go/openai/v1`，只包含开源编码模型（30 个）
+  - 同一个 Console Key，**地址不同**：把 Go 的 Key 填到 Zen 的地址会 401。选中任一 OpenCode 时，页面会提示这句区别。
+- 服务商因此变成五个：DeepSeek、OpenCode Zen、OpenCode Go、OpenAI、自定义。
+
 ## 0.15.3
 
 - **大模型服务商收敛成四个**：DeepSeek、OpenCode、OpenAI、自定义。其余厂商需要时用「自定义」填地址即可。

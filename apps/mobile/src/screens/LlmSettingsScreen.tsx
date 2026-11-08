@@ -323,7 +323,9 @@ export function LlmSettingsScreen() {
             {preset ? (
               <View className="mt-2 flex-row items-center gap-3">
                 <Text className="flex-1 text-caption text-muted">
-                  {t('llm.provider.prefilled', { provider: preset.name })}
+                  {preset.id.startsWith('opencode')
+                    ? t('llm.provider.opencode-zen')
+                    : t('llm.provider.prefilled', { provider: preset.name })}
                 </Text>
                 {preset.keyUrl ? (
                   <Pressable

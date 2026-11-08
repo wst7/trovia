@@ -336,6 +336,7 @@ export const en: Dictionary = {
   'llm.provider.title': 'Provider',
   'llm.provider.custom': 'Custom',
   'llm.model.pick': 'Pick a model',
+  'llm.provider.opencode-zen': 'Zen bills per use from Console credits; Go is a monthly plan. Same key, different address.',
   'llm.model.loading': 'Loading models…',
   'llm.model.failed': 'Could not load the list; typing a model name works too.',
   'llm.model.title': 'Pick a model',

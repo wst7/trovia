@@ -35,16 +35,23 @@ assert.equal(openai?.embedModel, 'text-embedding-3-small')
 // Only the three built-in providers plus a custom option remain.
 assert.deepEqual(
   LLM_PRESETS.map((preset) => preset.id),
-  ['deepseek', 'opencode', 'openai'],
+  ['deepseek', 'opencode-zen', 'opencode-go', 'openai'],
 )
 // OpenCode serves an OpenAI-compatible dialect under its own path, and its
 // console is where keys come from. No embeddings endpoint, so that field is
 // empty rather than carrying another provider's model across.
-const opencode = LLM_PRESETS.find((preset) => preset.id === 'opencode')
+const opencode = LLM_PRESETS.find((preset) => preset.id === 'opencode-zen')
 assert.equal(opencode?.baseUrl, 'https://opencode.ai/inference/openai/v1')
 assert.equal(opencode?.embedModel, '')
 assert.ok(opencode?.keyUrl?.startsWith('https://opencode.ai/'))
-assert.equal(matchPreset('https://opencode.ai/inference/openai/v1')?.id, 'opencode')
+assert.equal(matchPreset('https://opencode.ai/inference/openai/v1')?.id, 'opencode-zen')
+
+// Go is a subscription with its own path; the two must not collapse into one
+// chip, because a key for one does not work against the other's address.
+const go = LLM_PRESETS.find((preset) => preset.id === 'opencode-go')
+assert.equal(go?.baseUrl, 'https://opencode.ai/inference/go/openai/v1')
+assert.equal(matchPreset('https://opencode.ai/inference/go/openai/v1')?.id, 'opencode-go')
+assert.notEqual(go?.baseUrl, opencode?.baseUrl)
 
 // A self-hosted server is still usable by typing its address, even though no
 // preset ships for one any more.
