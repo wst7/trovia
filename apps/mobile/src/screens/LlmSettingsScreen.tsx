@@ -35,6 +35,13 @@ export function LlmSettingsScreen() {
   const [indexed, setIndexed] = useState<{ indexed: number; total: number } | null>(null)
   const [building, setBuilding] = useState(false)
   const [apiKey, setApiKey] = useState('')
+  /**
+   * The switches are drawn immediately, but without an address or key they cannot
+   * do anything; validating only on save means the user flips them on, presses
+   * save, and then gets told to go fill something in. Only switching on is
+   * blocked — anything already on must still be switchable off.
+   */
+  const needsKey = !hasKey && !apiKey.trim() && !isLocalEndpoint(baseUrl)
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
 
@@ -172,6 +179,7 @@ export function LlmSettingsScreen() {
             <Switch
               value={enabled}
               onValueChange={setEnabled}
+              disabled={needsKey && !enabled}
               trackColor={{ false: p.line, true: p.accent }}
               thumbColor={p.surface}
               ios_backgroundColor={p.line}
@@ -187,6 +195,7 @@ export function LlmSettingsScreen() {
             <Switch
               value={intent}
               onValueChange={setIntent}
+              disabled={needsKey && !intent}
               trackColor={{ false: p.line, true: p.accent }}
               thumbColor={p.surface}
               ios_backgroundColor={p.line}
@@ -202,6 +211,7 @@ export function LlmSettingsScreen() {
             <Switch
               value={semantic}
               onValueChange={setSemantic}
+              disabled={needsKey && !semantic}
               trackColor={{ false: p.line, true: p.accent }}
               thumbColor={p.surface}
               ios_backgroundColor={p.line}
@@ -209,7 +219,12 @@ export function LlmSettingsScreen() {
             />
           </View>
 
-          <View className={enabled ? 'mt-6 gap-5' : 'mt-6 gap-5 opacity-45'}>
+          {needsKey ? (
+            <Text className="mt-3 text-caption text-muted">{t('llm.needKeyToToggle')}</Text>
+          ) : null}
+
+          {/* These fields serve all three switches, so dim them only when every one is off. */}
+          <View className={enabled || intent || semantic ? 'mt-6 gap-5' : 'mt-6 gap-5 opacity-45'}>
             <TextField
               label={t('llm.field.baseUrl')}
               value={baseUrl}
@@ -262,6 +277,9 @@ export function LlmSettingsScreen() {
             </Text>
             <TextButton label={t('llm.buildIndex')} onPress={() => void handleBuildIndex()} tone="muted" />
           </View>
+          {semantic && indexed !== null && indexed.indexed === 0 ? (
+            <Text className="mt-2 text-caption text-muted">{t('llm.semanticNoIndex')}</Text>
+          ) : null}
 
           <View className="mt-4 flex-row gap-2">
             <Button

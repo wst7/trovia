@@ -21,7 +21,7 @@ export function TextField({ label, hint, ...input }: TextFieldProps) {
 
   return (
     <View>
-      <Text className="text-[11px] font-semibold tracking-[1px] text-faint">{label}</Text>
+      <Text className="text-[11px] font-semibold tracking-[1px] text-muted">{label}</Text>
       <View
         className={cx('mt-1 border-b', focused ? 'border-accent' : 'border-line')}
       >

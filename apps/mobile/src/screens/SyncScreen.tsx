@@ -8,6 +8,7 @@ import { lastSyncAt, loadConfig, loadPassword, saveConfig } from '../local/sync-
 import { describeReport, syncNow, SyncNotConfigured, testConnection } from '../local/sync-runner'
 import { useToast } from '../providers/ToastProvider'
 import { Button, IconButton, TextButton } from '../ui/Button'
+import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { GUTTER, Screen } from '../ui/Screen'
 import { TextField } from '../ui/TextField'
 import { useT } from '../i18n'
@@ -58,6 +59,7 @@ export function SyncScreen() {
     baseUrl.trim() && folder.trim() && baseUrl.trim().replace(/\/+$/, '').endsWith(`/${folder.trim()}`),
   )
 
+  const [confirmingClear, setConfirmingClear] = useState(false)
   const [busy, setBusy] = useState<'test' | 'sync' | null>(null)
   const [result, setResult] = useState<string | null>(null)
 
@@ -191,7 +193,7 @@ export function SyncScreen() {
 
           <View className="mt-8 flex-row gap-3">
             <Button
-              label={busy === 'test' ? t('sync.testing') : t('sync.test')}
+              label={busy === 'test' ? t('sync.testing') : t('sync.testAndSave')}
               onPress={() => void handleTest()}
               variant="secondary"
               size="sm"
@@ -229,17 +231,29 @@ export function SyncScreen() {
             <TextButton
               label={t('sync.clearPassword')}
               tone="muted"
-              onPress={() => {
-                void (async () => {
-                  await saveConfig({ baseUrl, username, folder }, '')
-                  setPassword('')
-                  toast(t('sync.cleared'), { type: 'success' })
-                })()
-              }}
+              // Clearing the saved password cannot be undone from here: ask first.
+              onPress={() => setConfirmingClear(true)}
             />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <ConfirmDialog
+        visible={confirmingClear}
+        title={t('sync.clearPassword')}
+        message={t('sync.clearConfirm')}
+        confirmLabel={t('sync.clearPassword')}
+        destructive
+        onCancel={() => setConfirmingClear(false)}
+        onConfirm={() => {
+          setConfirmingClear(false)
+          void (async () => {
+            await saveConfig({ baseUrl, username, folder }, '')
+            setPassword('')
+            toast(t('sync.cleared'), { type: 'success' })
+          })()
+        }}
+      />
     </Screen>
   )
 }
