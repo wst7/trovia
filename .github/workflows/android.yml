@@ -68,6 +68,25 @@ jobs:
         working-directory: apps/mobile
         run: npx expo prebuild --platform android --no-install
 
+      # The Gradle distribution host intermittently answers 504 and takes the
+      # whole build with it. Try it first, then fall back to a mirror rather than
+      # failing a release because one CDN had a bad minute.
+      - name: 确保 Gradle 分发包可用
+        working-directory: apps/mobile/android
+        run: |
+          url=$(grep '^distributionUrl=' gradle/wrapper/gradle-wrapper.properties | cut -d= -f2- | sed 's/\\//g')
+          echo "wrapper 指向: $url"
+          if curl -sSfL -m 90 -o /dev/null "$url"; then
+            echo "官方源可用"
+            exit 0
+          fi
+          file=$(basename "$url")
+          mirror="https://mirrors.cloud.tencent.com/gradle/$file"
+          echo "官方源不可用，改用镜像: $mirror"
+          curl -sSfL -m 300 -o /dev/null "$mirror"
+          sed -i "s#^distributionUrl=.*#distributionUrl=$mirror#" gradle/wrapper/gradle-wrapper.properties
+          grep '^distributionUrl=' gradle/wrapper/gradle-wrapper.properties
+
       - name: 构建 release APK
         working-directory: apps/mobile/android
         # Build for arm64-v8a only: that covers the vast majority of Android phones on sale, builds faster and yields a smaller package.
