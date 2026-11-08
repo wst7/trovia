@@ -1,0 +1,35 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+buildscript {
+  repositories {
+    // Maven Central intermittently answers with a redirect to GitHub's release
+    // CDN, which has been returning 504 and failing whole builds. The mirror
+    // serves the same artifacts directly; the official repositories stay as the
+    // fallback for anything it does not carry.
+    maven { url 'https://maven.aliyun.com/repository/public' }
+    google()
+    mavenCentral()
+  }
+  dependencies {
+    classpath('com.android.tools.build:gradle')
+    classpath('com.facebook.react:react-native-gradle-plugin')
+    def kotlinVersion = findProperty('android.kotlinVersion')
+    classpath(kotlinVersion ? "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion" : 'org.jetbrains.kotlin:kotlin-gradle-plugin')
+  }
+}
+
+allprojects {
+  repositories {
+    // Maven Central intermittently answers with a redirect to GitHub's release
+    // CDN, which has been returning 504 and failing whole builds. The mirror
+    // serves the same artifacts directly; the official repositories stay as the
+    // fallback for anything it does not carry.
+    maven { url 'https://maven.aliyun.com/repository/public' }
+    google()
+    mavenCentral()
+    maven { url 'https://www.jitpack.io' }
+  }
+}
+
+apply plugin: "expo-root-project"
+apply plugin: "com.facebook.react.rootproject"
