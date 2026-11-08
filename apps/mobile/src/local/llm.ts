@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as SecureStore from 'expo-secure-store'
 
+import { modelsEndpoint, parseModelList } from './llm-models'
+
 /**
  * The LLM is an “optional enhancement”, not a prerequisite for running:
  * with nothing configured it uses extractive summaries (sentences taken from the original text); only when configured does it call the user's own
@@ -316,6 +318,36 @@ export async function summarizeWithLlm(input: {
   } catch {
     return null
   }
+}
+
+/**
+ * Model ids the provider accepts, for the settings page's picker.
+ *
+ * Uses the key already in SecureStore when the field on screen is empty, so the
+ * list works without retyping a key that is already saved.
+ */
+export async function listModels(config: Pick<LlmConfig, 'baseUrl'>, apiKey = ''): Promise<string[]> {
+  const key = apiKey.trim() || (await loadLlmKey())
+  const endpoint = modelsEndpoint(config.baseUrl)
+  if (!endpoint) throw new Error('还没有填写服务地址')
+  // Offline or a provider that never answers must not leave the picker spinning:
+  // give up quickly and let the user type the name instead.
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 8000)
+  let response: Response
+  try {
+    response = await fetch(endpoint, {
+      signal: controller.signal,
+      headers: key ? { Authorization: `Bearer ${key}` } : {},
+    })
+  } finally {
+    clearTimeout(timer)
+  }
+  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  const payload = await response.json().catch(() => null)
+  const ids = parseModelList(payload)
+  if (ids.length === 0) throw new Error('这个服务没有返回模型列表')
+  return ids
 }
 
 /** The settings page's “test connection”: returns the model's actual reply and throws an Error carrying the reason on failure. */

@@ -5,13 +5,14 @@ import { Text } from '../ui/text'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { buildVectors, loadEmbedConfig, vectorStats } from '../local/embed'
-import { DEFAULT_LLM, isLocalEndpoint, loadLlmState, saveLlmState, testLlmConnection } from '../local/llm'
+import { DEFAULT_LLM, isLocalEndpoint, listModels, loadLlmState, saveLlmState, testLlmConnection } from '../local/llm'
 import { useToast } from '../providers/ToastProvider'
 import { Button, IconButton, TextButton } from '../ui/Button'
 import { Screen } from '../ui/Screen'
 import { TextField } from '../ui/TextField'
 import { opLog } from '../local/dev-log'
-import { LLM_PRESETS, matchPreset } from '../local/llm-presets'
+import { CUSTOM_PROVIDER_ID, LLM_PRESETS, matchPreset } from '../local/llm-presets'
+import { isChatModel } from '../local/llm-models'
 import { useT } from '../i18n'
 import { GUTTER } from '../ui/Screen'
 import { usePalette } from '../ui/palette'
@@ -45,6 +46,26 @@ export function LlmSettingsScreen() {
    */
   const needsKey = !hasKey && !apiKey.trim() && !isLocalEndpoint(baseUrl)
   const preset = matchPreset(baseUrl)
+  const [modelList, setModelList] = useState<string[] | null>(null)
+  const [modelLoading, setModelLoading] = useState(false)
+  const [modelFailed, setModelFailed] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [customChosen, setCustomChosen] = useState(false)
+
+  const openModelPicker = async () => {
+    setPickerOpen(true)
+    if (modelList || modelLoading) return
+    setModelLoading(true)
+    setModelFailed(false)
+    try {
+      const ids = (await listModels({ baseUrl }, apiKey)).filter(isChatModel)
+      setModelList(ids)
+    } catch {
+      setModelFailed(true)
+    } finally {
+      setModelLoading(false)
+    }
+  }
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
 
@@ -265,6 +286,38 @@ export function LlmSettingsScreen() {
                   </Pressable>
                 )
               })}
+              {/* Custom is a state, not an address: picking it clears the fields
+                  so they are obviously the user's to fill. */}
+              <Pressable
+                onPress={() => {
+                  void opLog('llm.provider', { id: CUSTOM_PROVIDER_ID })
+                  setCustomChosen(true)
+                  setBaseUrl('')
+                  setModel('')
+                  setEmbedModel('')
+                  setModelList(null)
+                }}
+                hitSlop={4}
+                accessibilityRole="button"
+                accessibilityState={{ selected: customChosen && !preset }}
+                accessibilityLabel={t('llm.provider.custom')}
+              >
+                <View
+                  className={
+                    customChosen && !preset
+                      ? 'rounded-full border border-ink px-3 py-1'
+                      : 'rounded-full border border-line px-3 py-1'
+                  }
+                >
+                  <Text
+                    className={
+                      customChosen && !preset ? 'text-caption text-ink' : 'text-caption text-muted'
+                    }
+                  >
+                    {t('llm.provider.custom')}
+                  </Text>
+                </View>
+              </Pressable>
             </View>
 
             {preset ? (
@@ -297,15 +350,66 @@ export function LlmSettingsScreen() {
               keyboardType="url"
               accessibilityLabel={t('llm.field.baseUrl')}
             />
-            <TextField
-              label={t('llm.field.model')}
-              value={model}
-              onChangeText={setModel}
-              placeholder={DEFAULT_LLM.model}
-              autoCapitalize="none"
-              autoCorrect={false}
-              accessibilityLabel={t('llm.field.model')}
-            />
+            <View>
+              <TextField
+                label={t('llm.field.model')}
+                value={model}
+                onChangeText={setModel}
+                placeholder={DEFAULT_LLM.model}
+                autoCapitalize="none"
+                autoCorrect={false}
+                accessibilityLabel={t('llm.field.model')}
+              />
+              <Pressable
+                onPress={() => {
+                  if (pickerOpen) {
+                    setPickerOpen(false)
+                    return
+                  }
+                  void openModelPicker()
+                }}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={t('llm.model.pick')}
+                className="mt-1 self-start"
+              >
+                <Text className="text-caption text-accent underline">
+                  {pickerOpen ? t('llm.model.close') : t('llm.model.pick')}
+                </Text>
+              </Pressable>
+              {/* Inline rather than a modal: a modal would cover the field the
+                  user is filling in, and this list is short. */}
+              {pickerOpen ? (
+                <View className="mt-2 rounded-sm border border-line px-3">
+                  {modelLoading ? (
+                    <Text className="py-3 text-caption text-muted">{t('llm.model.loading')}</Text>
+                  ) : modelFailed ? (
+                    <Text className="py-3 text-caption text-muted">{t('llm.model.failed')}</Text>
+                  ) : (
+                    (modelList ?? []).map((id) => (
+                      <Pressable
+                        key={id}
+                        onPress={() => {
+                          setModel(id)
+                          setPickerOpen(false)
+                        }}
+                        className="border-b border-line py-2.5"
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: id === model }}
+                      >
+                        <Text
+                          className={
+                            id === model ? 'text-body-sm text-accent' : 'text-body-sm text-ink'
+                          }
+                        >
+                          {id}
+                        </Text>
+                      </Pressable>
+                    ))
+                  )}
+                </View>
+              ) : null}
+            </View>
             <TextField
               label={t('llm.field.embed')}
               value={embedModel}
@@ -365,6 +469,7 @@ export function LlmSettingsScreen() {
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
+
     </Screen>
   )
 }

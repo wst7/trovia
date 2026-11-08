@@ -4,8 +4,13 @@
 
 ## 0.15.3
 
-- **大模型服务商：加上 OpenCode，去掉 Ollama**。OpenCode 的地址与模型取自它官方文档：OpenAI 兼容端点是 `https://opencode.ai/inference/openai/v1`，默认模型 `deepseek-v4.1-flash`（写摘要够快够便宜），密钥在 opencode.ai/console 申请。
-- OpenCode 只提供对话模型，没有 embeddings 接口，所以选中它时「向量模型」会留空——语义检索需要另外配一个带 embeddings 的服务，不影响字面检索。
+- **大模型服务商收敛成四个**：DeepSeek、OpenCode、OpenAI、自定义。其余厂商需要时用「自定义」填地址即可。
+  - OpenCode 的地址与模型取自它官方文档：OpenAI 兼容端点是 `https://opencode.ai/inference/openai/v1`，默认模型 `deepseek-v4.1-flash`，密钥在 opencode.ai/console 申请
+  - 「自定义」会清空地址、模型与向量模型，让这几个字段明显是留给你填的
+- **模型名可以选了，不用背**。模型名称下面多了「选择模型」：点开就列出这个服务商实际支持的模型（读它的 `/models` 接口），点一个自动填入；聊天模型排在前面，向量、语音、绘图类会被过滤掉。
+  - 列表拿不到（没填 Key、断网、服务商不返回列表）时显示一句提示，输入框照常可以手填
+  - 请求 8 秒超时，不会一直转圈
+- OpenCode 只提供对话模型，没有 embeddings 接口，选中它时「向量模型」会留空——语义检索需要另外配一个带 embeddings 的服务，不影响字面检索。
 - 本机服务（如 Ollama）不再有预设，仍然可以直接在「服务地址」里填 `http://localhost:11434/v1` 使用。
 
 ## 0.15.2

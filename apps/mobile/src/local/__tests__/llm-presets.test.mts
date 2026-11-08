@@ -32,6 +32,11 @@ assert.equal(deepseek?.embedModel, '')
 const openai = LLM_PRESETS.find((preset) => preset.id === 'openai')
 assert.equal(openai?.embedModel, 'text-embedding-3-small')
 
+// Only the three built-in providers plus a custom option remain.
+assert.deepEqual(
+  LLM_PRESETS.map((preset) => preset.id),
+  ['deepseek', 'opencode', 'openai'],
+)
 // OpenCode serves an OpenAI-compatible dialect under its own path, and its
 // console is where keys come from. No embeddings endpoint, so that field is
 // empty rather than carrying another provider's model across.

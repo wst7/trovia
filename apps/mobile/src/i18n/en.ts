@@ -334,6 +334,12 @@ export const en: Dictionary = {
   'llm.switch.semanticHint':
     'Finds near matches by meaning when the words miss. Building vectors takes a while the first time; off only affects that.',
   'llm.provider.title': 'Provider',
+  'llm.provider.custom': 'Custom',
+  'llm.model.pick': 'Pick a model',
+  'llm.model.loading': 'Loading models…',
+  'llm.model.failed': 'Could not load the list; typing a model name works too.',
+  'llm.model.title': 'Pick a model',
+  'llm.model.close': 'Cancel',
   'llm.provider.getKey': 'Get an API key',
   'llm.provider.prefilled': 'Address and default model for {provider} are filled in; paste a key and it works.',
   'llm.field.baseUrl': 'Service address',
