@@ -92,9 +92,10 @@ function Row({
   onPress,
   danger = false,
   busy = false,
+  selected,
   accessibilityLabel,
 }: {
-  icon: IconName
+  icon?: IconName
   title: string
   subtitle?: string
   value?: string
@@ -104,12 +105,19 @@ function Row({
   danger?: boolean
   /** Work that requires waiting is running: the right-side icon slot becomes a spinner. */
   busy?: boolean
+  /**
+   * One-of-several row. Shows the radio on the right and drops the chevron:
+   * a chevron promises "this leads somewhere", which is the opposite of
+   * "picking this applies it here". Passing an icon as well is allowed
+   * (some settings want both a glyph and a choice).
+   */
+  selected?: boolean
   accessibilityLabel?: string
 }) {
   const p = usePalette()
   const body = (
     <View className="min-h-[52px] flex-row items-center gap-3 px-4">
-      <Ionicons name={icon} size={18} color={danger ? p.danger : p.muted} />
+      {icon ? <Ionicons name={icon} size={18} color={danger ? p.danger : p.muted} /> : null}
       <View className="flex-1">
         <Text className={danger ? 'text-body-sm text-danger' : 'text-body-sm text-ink'}>
           {title}
@@ -117,13 +125,21 @@ function Row({
         {subtitle ? <Text className="mt-0.5 text-caption text-muted">{subtitle}</Text> : null}
       </View>
       {busy ? <ActivityIndicator size="small" color={p.muted} /> : null}
-      {!busy && valueIcon ? <Ionicons name={valueIcon} size={13} color={p.accent} /> : null}
+      {!busy && valueIcon ? <Ionicons name={valueIcon} size={13} color={p.muted} /> : null}
       {value ? (
         <Text className="max-w-[52%] text-caption text-muted" numberOfLines={1}>
           {value}
         </Text>
       ) : null}
-      {onPress ? <Ionicons name="chevron-forward" size={15} color={p.faint} /> : null}
+      {selected !== undefined ? (
+        <Ionicons
+          name={selected ? 'radio-button-on' : 'radio-button-off'}
+          size={18}
+          color={selected ? p.accent : p.faint}
+        />
+      ) : onPress ? (
+        <Ionicons name="chevron-forward" size={15} color={p.faint} />
+      ) : null}
     </View>
   )
 
@@ -131,7 +147,8 @@ function Row({
   return (
     <Pressable
       onPress={onPress}
-      accessibilityRole="button"
+      accessibilityRole={selected !== undefined ? 'radio' : 'button'}
+      accessibilityState={selected !== undefined ? { checked: selected } : undefined}
       accessibilityLabel={accessibilityLabel ?? title}
     >
       {({ pressed }) => <View style={{ opacity: pressed ? 0.55 : 1 }}>{body}</View>}
@@ -525,7 +542,7 @@ export function SettingsScreen() {
             {THEME_OPTIONS.map((option) => (
               <Row
                 key={option.value}
-                icon={themePref === option.value ? 'radio-button-on' : 'radio-button-off'}
+                selected={themePref === option.value}
                 title={t(option.labelKey)}
                 onPress={() => {
                   setThemePref(option.value)
@@ -543,7 +560,7 @@ export function SettingsScreen() {
             {LOCALE_OPTIONS.map((option) => (
               <Row
                 key={option.value}
-                icon={localePref === option.value ? 'radio-button-on' : 'radio-button-off'}
+                selected={localePref === option.value}
                 title={t(option.labelKey)}
                 onPress={() => {
                   setLocalePref(option.value)

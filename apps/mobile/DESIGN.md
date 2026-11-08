@@ -161,6 +161,23 @@ components:
 - **收藏页的行挂在日期轨右侧**：行本身仍是 `RecentRow`，不额外包卡片。
 - **ResultRow**：命中类型（`字面命中` / `意思相近`）在标题之上、右侧补日期；标题下是命中的那句原文（左侧 2px 线），最后一行才是 `match_reason`。判断依据先于标题。没有卡片底色、没有缩略图、没有箭头。
 
+### Settings page: the one grouped-list screen
+
+Every other surface is a hairline list on paper. Settings is the exception: rows
+sit in rounded `surface` groups, because a settings page is scanned as a form,
+not as a stream of content. Documented here so nobody "fixes" it back.
+
+Three rules that came out of writing it:
+
+- **One affordance per row.** A row that applies a choice in place shows the radio
+  on the right and **no chevron**. A chevron means "this leads to another screen";
+  showing both tells the user two contradictory things.
+- **Red is for destructive only.** `清空全部收藏` is the single red thing on the
+  page. The "new version" arrow is `muted` — a hint, not an alarm.
+- **State lives in the subtitle.** A row's subtitle says what is happening
+  ("正在下载 40%", "新版本 v0.14.2 · 48.2 MB"), and the row itself is the only
+  tap target. A toast in this page must never claim an action it does not have.
+
 ### Fields
 - **TextField**（设置页）：11px 栏目名在上，输入框只有一条下划线，聚焦变朱红；下方可带一行 caption 说明。
 - **SearchInput**（收藏页）：放大镜 + 下划线，聚焦时下划线变朱红，有内容时出现清除按钮。
