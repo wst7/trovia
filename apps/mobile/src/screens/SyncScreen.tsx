@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'expo-router'
-import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native'
+import { KeyboardAvoidingView, ScrollView, View } from 'react-native'
 import { Text } from '../ui/text'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -133,7 +133,9 @@ export function SyncScreen() {
         <IconButton name="chevron-back" onPress={goBack} accessibilityLabel={t('detail.back')} />
       </View>
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
+      {/* Android needs this too: with edge-to-edge the window no longer resizes for
+          the keyboard, so "padding" is what keeps the focused field above it. */}
+      <KeyboardAvoidingView behavior="padding" className="flex-1">
         <ScrollView
           contentContainerStyle={{ paddingHorizontal: GUTTER, paddingBottom: insets.bottom + 40 }}
           keyboardShouldPersistTaps="handled"

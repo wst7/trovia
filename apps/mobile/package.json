@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "doctor": "npx expo-doctor",
     "export": "expo export --platform all --output-dir dist",
-    "test": "npm run test:query && tsx src/local/__tests__/composer-hint.test.mts && tsx src/local/__tests__/save-error.test.mts && tsx src/local/__tests__/db-columns.test.mts && tsx src/local/__tests__/i18n.test.mts && tsx src/local/__tests__/markdown-inline.test.mts && tsx src/local/__tests__/update.test.mts && tsx src/local/__tests__/ocr-text.test.mts && tsx src/local/__tests__/update-state.test.mts && tsx src/local/__tests__/llm-presets.test.mts && tsx src/local/__tests__/llm-models.test.mts",
+    "test": "npm run test:query && tsx src/local/__tests__/composer-hint.test.mts && tsx src/local/__tests__/save-error.test.mts && tsx src/local/__tests__/db-columns.test.mts && tsx src/local/__tests__/i18n.test.mts && tsx src/local/__tests__/markdown-inline.test.mts && tsx src/local/__tests__/update.test.mts && tsx src/local/__tests__/ocr-text.test.mts && tsx src/local/__tests__/update-state.test.mts && tsx src/local/__tests__/llm-presets.test.mts && tsx src/local/__tests__/llm-models.test.mts && tsx src/local/__tests__/llm-endpoints.test.mts",
     "smoke": "tsx scripts/smoke-parse.mts",
     "test:query": "tsx src/local/__tests__/query.test.mts"
   },

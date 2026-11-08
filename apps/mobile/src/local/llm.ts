@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as SecureStore from 'expo-secure-store'
 
 import { modelsEndpoint, parseModelList } from './llm-models'
+import { providerHeaders } from './llm-endpoints'
 
 /**
  * The LLM is an “optional enhancement”, not a prerequisite for running:
@@ -117,6 +118,36 @@ function endpointOf(baseUrl: string): string {
   return base.endsWith('/chat/completions') ? base : `${base}/chat/completions`
 }
 
+/**
+ * Session id sent to OpenCode Go.
+ *
+ * It must be stable across one install (Go caches prompts per session) but not
+ * shared between installs, so it is generated once and kept in AsyncStorage.
+ */
+const SESSION_KEY = 'llm.sessionId'
+let cachedSessionId: string | null = null
+
+async function sessionId(): Promise<string> {
+  if (cachedSessionId) return cachedSessionId
+  try {
+    const stored = await AsyncStorage.getItem(SESSION_KEY)
+    if (stored) {
+      cachedSessionId = stored
+      return stored
+    }
+  } catch {
+    // Storage failure must not block a request: fall through to an ephemeral id.
+  }
+  const generated = `trovia-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+  cachedSessionId = generated
+  try {
+    await AsyncStorage.setItem(SESSION_KEY, generated)
+  } catch {
+    // Best effort only.
+  }
+  return generated
+}
+
 /** One JSON-friendly completion; intent parsing reuses it with a shorter timeout than summarization. */
 export async function chat(
   config: LlmConfig,
@@ -134,6 +165,7 @@ export async function chat(
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${key}`,
+        ...providerHeaders(config.baseUrl, await sessionId()),
       },
       body: JSON.stringify({
         model: config.model,
@@ -215,6 +247,7 @@ export async function chatStep(
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${key}`,
+        ...providerHeaders(config.baseUrl, await sessionId()),
       },
       body: JSON.stringify({
         model: config.model,
@@ -338,7 +371,10 @@ export async function listModels(config: Pick<LlmConfig, 'baseUrl'>, apiKey = ''
   try {
     response = await fetch(endpoint, {
       signal: controller.signal,
-      headers: key ? { Authorization: `Bearer ${key}` } : {},
+      headers: {
+        ...(key ? { Authorization: `Bearer ${key}` } : {}),
+        ...providerHeaders(config.baseUrl, await sessionId()),
+      },
     })
   } finally {
     clearTimeout(timer)

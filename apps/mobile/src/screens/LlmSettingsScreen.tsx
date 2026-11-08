@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { useFocusEffect, useRouter } from 'expo-router'
-import { ActivityIndicator, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, Switch, View } from 'react-native'
+import { ActivityIndicator, KeyboardAvoidingView, Linking, Modal, Pressable, ScrollView, Switch, View } from 'react-native'
 import { Text } from '../ui/text'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -187,10 +187,10 @@ export function LlmSettingsScreen() {
 
   return (
     <Screen>
-      <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      {/* Android needs this too: with edge-to-edge the window no longer resizes
+          for the keyboard, so the "padding" behaviour is what keeps the focused
+          field above it. */}
+      <KeyboardAvoidingView className="flex-1" behavior="padding">
         <View className="h-14 flex-row items-center">
           <IconButton name="chevron-back" size={22} accessibilityLabel={t('detail.back')} onPress={goBack} />
         </View>
