@@ -19,15 +19,6 @@ import { clearAllDocuments } from '../local/db'
 import { relativeTime } from '../local/dates'
 import { lastSyncAt } from '../local/sync-config'
 import { formatBytes, writeExport } from '../local/exporter'
-import {
-  applyOta,
-  checkOta,
-  checkOtaAvailability,
-  readOtaPending,
-  readOtaState,
-  writeOtaPending,
-  writeOtaPendingVersion,
-} from '../local/ota'
 import { checkForUpdate, type CheckResult } from '../local/update'
 import { resolveUpdateAction, resolveUpdateView } from '../local/update-state'
 import { downloadApk, formatMb, installApk, type DownloadProgress } from '../local/update-install'
@@ -189,17 +180,9 @@ export function SettingsScreen() {
   const [exporting, setExporting] = useState(false)
   const [version, setVersion] = useState<string | null>(null)
   // The version row is the update entry point itself: no separate page, and no split into "full package / hot update" downloads.
-  // Two channels, two states. `native` is the installed package (only a new APK
-  // changes it); `ota` is JavaScript delivered without touching the version.
+  // One channel: a newer release means a package to download and install.
   const [native, setNative] = useState<CheckResult | null>(null)
-  const [otaAvailable, setOtaAvailable] = useState(false)
-  const [otaPending, setOtaPending] = useState(false)
-  // Which JavaScript is on screen: embedded in the package, or a downloaded update.
-  const [runningOta, setRunningOta] = useState(false)
-  // Expo identifies an update by id and creation time, never by a version
-  // number: there is no "hot fix #3" in the platform, and inventing one would
-  // put a number in the version string that sorts below its own release.
-  const [otaId, setOtaId] = useState<string | null>(null)
+
   const [phase, setPhase] = useState<'idle' | 'checking' | 'downloading' | 'installing' | 'error'>('idle')
   const [devOn, setDevOn] = useState(false)
   const [sync, setSync] = useState<{ configured: boolean; at: string | null } | null>(null)
@@ -212,9 +195,7 @@ export function SettingsScreen() {
 
   const view = resolveUpdateView({
     phase,
-    otaPending,
-    otaAvailable,
-    nativeUpdate:
+    update:
       native?.hasUpdate && native.latest
         ? { version: native.latest.version, sizeBytes: native.latest.asset?.size ?? 0 }
         : null,
@@ -236,68 +217,26 @@ export function SettingsScreen() {
         return t('update.state.installing')
       case 'error':
         return t('update.state.retry')
-      case 'restart':
-        return t('update.state.restart')
-      case 'ota':
-        return t('update.state.otaAvailable')
-      case 'native':
+      case 'available':
         return t('update.state.available', { version: view.version, size: formatMb(view.sizeBytes) })
       case 'latest':
         return native?.error ? t('update.state.unknown') : t('update.state.latest')
     }
   }
 
-  /** Look at both channels. Cheap: the OTA check downloads nothing. */
+  /** Ask GitHub whether there is a newer release. */
   const refreshUpdate = async (manual: boolean) => {
     if (phase === 'checking' || phase === 'downloading' || phase === 'installing') return
     setPhase('checking')
     try {
-      const [nativeVersion, ota, state, pending] = await Promise.all([
-        version ?? appVersion(),
-        checkOtaAvailability(),
-        readOtaState().catch(() => null),
-        readOtaPending(),
-      ])
+      const nativeVersion = version ?? (await appVersion())
       const result = await checkForUpdate(nativeVersion, manual)
       setNative(result)
-      setOtaAvailable(ota.available)
-      setOtaPending(pending)
-      setRunningOta(Boolean(state?.enabled && state.runningUpdate))
-      if (manual && !ota.available && !result.hasUpdate && !result.error) {
-        toast(t('update.state.latest'))
-      }
+      if (manual && !result.hasUpdate && !result.error) toast(t('update.state.latest'))
     } catch {
       setNative((current) => current ?? null)
     } finally {
       setPhase('idle')
-    }
-  }
-
-  /** Download the JavaScript update; it applies on the next launch. */
-  const downloadOta = async () => {
-    setPhase('downloading')
-    setProgress({ ratio: 0, written: 0, total: 0 })
-    try {
-      const outcome = await checkOta()
-      await opLog('update.ota', { kind: outcome.kind })
-      if (outcome.kind === 'downloaded') {
-        // Downloaded is not applied: the row keeps offering the restart until the
-        // app actually starts on it (see the mount path in reload()).
-        await writeOtaPendingVersion(native?.latest?.version)
-        await writeOtaPending(true)
-        setOtaPending(true)
-        setOtaAvailable(false)
-        setPhase('idle')
-        return
-      }
-      // Nothing on the channel after all: fall back to a fresh look.
-      setPhase('idle')
-      void refreshUpdate(false)
-    } catch (error) {
-      await opLog('update.ota', { kind: 'failed' }, error)
-      setPhase('error')
-    } finally {
-      setProgress(null)
     }
   }
 
@@ -330,20 +269,8 @@ export function SettingsScreen() {
   const onTapUpdate = () => {
     const action = resolveUpdateAction(view)
     if (action === 'check') void refreshUpdate(true)
-    else if (action === 'download-ota') void downloadOta()
-    else if (action === 'download-apk') void downloadNative()
-    else if (action === 'restart') {
-      void (async () => {
-        try {
-          await opLog('update.restart')
-          await applyOta()
-        } catch {
-          setPhase('error')
-        }
-      })()
-    }
+    else if (action === 'download') void downloadNative()
   }
-
 
   const handleReprocessAll = () => {
     void opLog('rebulk.toggle', { running: Boolean(rebulk) })
@@ -377,16 +304,6 @@ export function SettingsScreen() {
     setDevOn(isDevMode())
     void appVersion().then(async (next) => {
       setVersion(next)
-      // A downloaded bundle stops being "pending" the moment the app runs it.
-      const state = await readOtaState().catch(() => null)
-      setRunningOta(Boolean(state?.enabled && state.runningUpdate))
-      setOtaId(state?.updateId ?? null)
-      const pending = await readOtaPending()
-      if (state?.runningUpdate && pending) {
-        await writeOtaPending(false)
-        await writeOtaPendingVersion(null)
-      }
-      setOtaPending(state?.runningUpdate ? false : pending)
       void refreshUpdate(false)
     })
     try {
@@ -608,9 +525,7 @@ export function SettingsScreen() {
               icon="information-circle-outline"
               title={APP_NAME}
               subtitle={updateSubtitle()}
-              value={`v${version ?? '—'}${
-                runningOta ? t('settings.about.hotAppend', { id: otaId ?? '?' }) : ''
-              }`}
+              value={`v${version ?? '—'}`}
               valueIcon={view.kind === 'latest' ? undefined : 'arrow-up-circle'}
               busy={view.kind === 'checking'}
               onPress={onTapUpdate}

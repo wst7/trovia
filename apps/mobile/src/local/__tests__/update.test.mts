@@ -44,7 +44,5 @@ assert.ok(release?.notes.includes('同步 409'))
 assert.equal(parseRelease({ tag_name: 'v0.12.0', assets: [] }), null, '没有安装包时视为不可更新')
 assert.equal(parseRelease({}), null)
 
-// The hot-update/version merge is gone: the two channels no longer share a
-// version number (see update-state.test.mts for the row's decision table).
 
-console.log('检查更新：版本比较、热更新合并、资产选择、Release 解析全部通过 ✓')
+console.log('检查更新：版本比较、资产选择、Release 解析全部通过 ✓')

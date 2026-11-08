@@ -11,12 +11,9 @@ name: Android APK
 on:
   push:
     tags: ['v*']
+  # Manual runs are for rebuilding the APK without touching a tag (testing a
+  # build, or rebuilding after a CI failure).
   workflow_dispatch:
-    inputs:
-      publish_update:
-        description: '只发布热更新，不构建 APK'
-        type: boolean
-        default: false
 
 concurrency:
   group: android-${{ github.ref }}
@@ -26,55 +23,12 @@ permissions:
   contents: write
 
 jobs:
-  # Publish the JS of every release to the OTA channel, so the bundle waiting on a
-  # phone always matches the version its update row talks about. A failed publish
-  # must not fail the release: users can still install the APK.
-  # Also runnable by hand (workflow_dispatch + publish_update) to ship a JS-only fix.
-  hot:
-    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_update)
-    continue-on-error: true
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      EXPO_PROJECT_ID: ${{ secrets.EXPO_PROJECT_ID }}
-      EXPO_OWNER: ${{ secrets.EXPO_OWNER }}
-      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          # The tag has to be fetched: the version number comes from the latest release tag.
-          fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - name: 用最新发布标签当版本号
-        run: |
-          version="$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || true)"
-          if [ -n "$version" ]; then
-            echo "XUNJI_APP_VERSION=$version" >> "$GITHUB_ENV"
-          else
-            echo "取不到标签，用 app.config 里的兜底版本"
-          fi
-      - name: 发布热更新
-        working-directory: apps/mobile
-        run: |
-          # eas-cli honours the app config in the cwd, so in a monorepo it has to run inside apps/mobile.
-          npx eas-cli@latest channel:create production --non-interactive || true
-          npx eas-cli@latest channel:edit production --branch production --non-interactive || true
-          npx eas-cli@latest update --branch production --message "${GITHUB_SHA::7} hot" --non-interactive --auto
-
   apk:
-    if: github.event_name != 'workflow_dispatch' || !inputs.publish_update
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
       CI: '1'
       APP_VARIANT: production
-      # Bake the EAS project id into the build so the package can receive OTA updates; without it, it is an ordinary package.
-      EXPO_PROJECT_ID: ${{ secrets.EXPO_PROJECT_ID }}
-      EXPO_OWNER: ${{ secrets.EXPO_OWNER }}
 
     steps:
       - uses: actions/checkout@v4

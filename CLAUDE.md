@@ -78,40 +78,28 @@ the repo stores a release number.
 
 `node scripts/check-changelog.mjs <version>` runs the same check locally.
 
-**JavaScript-only fixes do not need a release.** Dispatch the Android workflow
-by hand with `publish_update` ticked: it publishes the bundle to the OTA channel
-and builds no APK. The version number stays where it is, and installed phones
-pick the bundle up on their next check and apply it on restart. The app asks the
-OTA channel and the GitHub releases separately — a hot fix never makes the
-"full package" row appear, and installing a package never hides a waiting
-bundle.
 
-Bump `runtimeVersion` in `app.config.ts` only when the native side changes
-(dependencies, permissions, native modules, DB schema). Anything that needs it
-cannot ship as a hot fix.
 
 There is no release-it / semantic-release here on purpose: both generate the
 notes from commit subjects, and the notes are product copy. They would also
 need a working local `git push`, which this project's contributors do not
 reliably have.
 
-### Versioning (what goes in a version number, and what does not)
+### Versioning
 
-Follows the Expo/EAS Update model, which is the platform this app ships on:
+One channel: a release is a new APK someone installs. There is no OTA, no
+channel to keep in sync and no bundle to publish, so `docs/CHANGELOG.md` plus a
+tag is the whole release.
 
-- `version` (0.14.9) and the tag exist for **native** releases: store listings,
-  crash reports, support, and the `versionCode` Android needs to allow an
-  upgrade. It changes only when the package does.
-- A hot update has **no version number**. EAS identifies it by `updateId` and
-  `createdAt`, and both are recorded at launch and shown in diagnostics. The
-  version row appends `· 热更 <id>` while a downloaded bundle is running, so a
-  screenshot identifies the exact publish.
-- Never invent a counter such as `0.14.9-3`. In semver `-3` means a
-  *pre-release*, which sorts below `0.14.9`; `parseVersion` here strips the
-  suffix (so comparisons silently ignore it) and `versionCode` would collide
-  with the plain version, blocking installs.
-- `runtimeVersion` is the compatibility contract. It changes when the native
-  side does, and a JavaScript-only fix must never need it.
+- The tag (`v0.15.0`) is the version. `android.yml` reads it into `versionName`
+  and derives `versionCode` from it, so a lower version can never be installed
+  over a higher one.
+- Shipping a fix always means bumping the version. Do not invent suffixes such
+  as `0.14.9-3`: semver reads `-3` as a pre-release that sorts below the release
+  it belongs to, `parseVersion` strips it, and `versionCode` would collide.
+- `app.config.ts` keeps `updates.enabled: false`. The expo-updates module stays
+  installed but inert; a package built from before this change may have a
+  downloaded bundle on disk, and that flag makes it ignore it.
 
 ## Comments
 

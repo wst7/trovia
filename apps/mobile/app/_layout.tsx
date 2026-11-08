@@ -65,15 +65,11 @@ function RootNavigator() {
   useEffect(() => {
     void (async () => {
       try {
-        const [{ appVersion }, { readOtaState }] = await Promise.all([
-          import('../src/local/app-version'),
-          import('../src/local/ota'),
-        ])
-        const [native, ota] = await Promise.all([appVersion(), readOtaState()])
+        const { appVersion } = await import('../src/local/app-version')
+        const Constants = await import('expo-constants')
         await opLog('app.launch', {
-          native,
-          js: ota.runningUpdate ? `ota:${ota.updateId ?? '?'}` : 'embedded',
-          created: ota.createdAt ?? null,
+          native: await appVersion(),
+          js: Constants.default.expoConfig?.version ?? '-',
         })
       } catch {
         // Logging must never stand in the way of launching.

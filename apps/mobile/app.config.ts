@@ -51,19 +51,12 @@ const config: ExpoConfig = {
           }),
     },
   },
+  // No OTA. There are no update channels to configure, keep in sync, or
+  // publish per release: a new build is a new APK someone installs. Keeping the
+  // block present and disabled means expo-updates ignores any bundle a previous
+  // build may have downloaded.
   updates: {
-    enabled: Boolean(expoProjectId),
-    ...(expoProjectId
-      ? {
-          url: `https://u.expo.dev/${expoProjectId}`,
-          // The server relies on expo-channel-name to find the branch; locally prebuilt packages don't carry it automatically.
-          requestHeaders: { 'expo-channel-name': 'production' },
-          // No automatic download: the user taps update in the Me tab, then decides when to restart once it has downloaded.
-          checkAutomatically: 'NEVER' as const,
-          // Let the user see the embedded old version first; the new bundle downloads in the background and applies on next launch.
-          fallbackToCacheTimeout: 0,
-        }
-      : {}),
+    enabled: false,
   },
   /**
    * Native runtime version: **bump it only when native dependencies, permissions, the package name or the like change**.

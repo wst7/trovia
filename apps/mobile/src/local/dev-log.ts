@@ -137,24 +137,18 @@ export async function diagnosticsSnapshot(): Promise<string> {
   } catch (error) {
     lines.push(`db: ${error instanceof Error ? error.message : String(error)}`)
   }
-  // Which code is actually running. A hot update replaces the JS without touching
-  // the installed versionName, so "the app shows an old version" can only be
-  // answered by these four lines.
+  // Which build is running. There is one delivery channel now, but the number
+  // the UI reads and the number in the package can still disagree after a
+  // manual install, so both are recorded.
   try {
-    const [{ appVersion }, { readOtaState }, Constants] = await Promise.all([
+    const [{ appVersion }, Constants] = await Promise.all([
       import('./app-version'),
-      import('./ota'),
       import('expo-constants'),
     ])
-    lines.push(`app_version_native: ${await appVersion()}`)
-    const jsVersion = Constants.default.expoConfig?.version ?? '-'
-    lines.push(`js_version: ${jsVersion}`)
-    const ota = await readOtaState()
-    lines.push(
-      `ota: enabled=${ota.enabled} running_update=${ota.runningUpdate} id=${ota.updateId ?? '-'} created=${ota.createdAt ?? '-'}`,
-    )
+    lines.push(`app_version: ${await appVersion()}`)
+    lines.push(`js_version: ${Constants.default.expoConfig?.version ?? '-'}`)
   } catch (error) {
-    lines.push(`ota: ${error instanceof Error ? error.message : String(error)}`)
+    lines.push(`version: ${error instanceof Error ? error.message : String(error)}`)
   }
   // The state of the log itself: developers read this code to decide "why the log is empty".
   try {
