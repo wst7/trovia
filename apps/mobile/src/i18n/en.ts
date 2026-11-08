@@ -337,6 +337,11 @@ export const en: Dictionary = {
   'llm.switch.semantic': 'Semantic fallback search',
   'llm.switch.semanticHint':
     'Finds near matches by meaning when the words miss. Building vectors takes a while the first time; off only affects that.',
+  'llm.provider.title': 'Provider',
+  'llm.provider.custom': 'Custom',
+  'llm.provider.getKey': 'Get an API key',
+  'llm.provider.local': 'Local server, no API key needed',
+  'llm.provider.prefilled': 'Address and default model for {provider} are filled in; paste a key and it works.',
   'llm.field.baseUrl': 'Service address',
   'llm.field.model': 'Model name',
   'llm.field.embed': 'Embedding model',

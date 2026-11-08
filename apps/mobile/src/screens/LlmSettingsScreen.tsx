@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { useFocusEffect, useRouter } from 'expo-router'
-import { KeyboardAvoidingView, Platform, ScrollView, Switch, View } from 'react-native'
+import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, Switch, View } from 'react-native'
 import { Text } from '../ui/text'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -11,6 +11,7 @@ import { Button, IconButton, TextButton } from '../ui/Button'
 import { Screen } from '../ui/Screen'
 import { TextField } from '../ui/TextField'
 import { opLog } from '../local/dev-log'
+import { LLM_PRESETS, matchPreset } from '../local/llm-presets'
 import { useT } from '../i18n'
 import { GUTTER } from '../ui/Screen'
 import { usePalette } from '../ui/palette'
@@ -43,6 +44,7 @@ export function LlmSettingsScreen() {
    * blocked — anything already on must still be switchable off.
    */
   const needsKey = !hasKey && !apiKey.trim() && !isLocalEndpoint(baseUrl)
+  const preset = matchPreset(baseUrl)
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
 
@@ -225,6 +227,65 @@ export function LlmSettingsScreen() {
           {needsKey ? (
             <Text className="mt-3 text-caption text-muted">{t('llm.needKeyToToggle')}</Text>
           ) : null}
+
+          {/* Provider first: an empty address plus a model name the user has to
+              know by heart is where this page used to lose people. */}
+          <View className="mt-6">
+            <Text className="mb-2 text-[11px] font-semibold tracking-[1px] text-muted">
+              {t('llm.provider.title')}
+            </Text>
+            <View className="flex-row flex-wrap gap-2">
+              {LLM_PRESETS.map((option) => {
+                const active = preset?.id === option.id
+                return (
+                  <Pressable
+                    key={option.id}
+                    onPress={() => {
+                      void opLog('llm.provider', { id: option.id })
+                      setBaseUrl(option.baseUrl)
+                      setModel(option.model)
+                      setEmbedModel(option.embedModel)
+                    }}
+                    hitSlop={4}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    accessibilityLabel={option.name}
+                  >
+                    <View
+                      className={
+                        active
+                          ? 'rounded-full border border-ink px-3 py-1'
+                          : 'rounded-full border border-line px-3 py-1'
+                      }
+                    >
+                      <Text className={active ? 'text-caption text-ink' : 'text-caption text-muted'}>
+                        {option.name}
+                      </Text>
+                    </View>
+                  </Pressable>
+                )
+              })}
+            </View>
+
+            {preset ? (
+              <View className="mt-2 flex-row items-center gap-3">
+                <Text className="flex-1 text-caption text-muted">
+                  {preset.keyUrl
+                    ? t('llm.provider.prefilled', { provider: preset.name })
+                    : t('llm.provider.local')}
+                </Text>
+                {preset.keyUrl ? (
+                  <Pressable
+                    onPress={() => void Linking.openURL(preset.keyUrl!).catch(() => undefined)}
+                    hitSlop={8}
+                    accessibilityRole="link"
+                  >
+                    <Text className="text-caption text-accent underline">{t('llm.provider.getKey')}</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : null}
+          </View>
 
           {/* These fields serve all three switches, so dim them only when every one is off. */}
           <View className={enabled || intent || semantic ? 'mt-6 gap-5' : 'mt-6 gap-5 opacity-45'}>

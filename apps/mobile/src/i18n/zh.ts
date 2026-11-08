@@ -339,6 +339,11 @@ export const zh: Dictionary = {
   'llm.switch.semantic': '语义补充检索',
   'llm.switch.semanticHint':
     '字面没找到时，用向量找意思相近的内容。首次要为每篇建向量，比较慢；关掉不影响字面搜索。',
+  'llm.provider.title': '服务商',
+  'llm.provider.custom': '自定义',
+  'llm.provider.getKey': '去拿 API Key',
+  'llm.provider.local': '本机服务，不需要 API Key',
+  'llm.provider.prefilled': '已填入 {provider} 的地址与默认模型，填上 Key 就能用。',
   'llm.field.baseUrl': '服务地址',
   'llm.field.model': '模型名称',
   'llm.field.embed': '向量模型',
