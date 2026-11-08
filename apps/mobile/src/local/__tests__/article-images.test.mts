@@ -58,4 +58,31 @@ assert.deepEqual(article.images, [
   'https://cdn.example.com/inline.png',
 ])
 
-console.log('✓ 图片留在原位：段落 → 图 → 段落 → 行内图，图标与 data: 图被过滤')
+
+// A video page has no body images; the cover is in the metadata. Without the
+// fallback these entries were saved with no thumbnail at all.
+{
+  const videoHtml = `<!doctype html><html><head>
+<meta property="og:title" content="某场演讲">
+<meta property="og:description" content="一场关于分布式系统的演讲">
+<meta property="og:image" content="https://i.ytimg.com/vi/abc123/hqdefault.jpg">
+<meta property="og:site_name" content="YouTube">
+</head><body><div id="player"></div></body></html>`
+  const article = extractFromHtml(videoHtml, 'https://www.youtube.com/watch?v=abc123')
+  assert.deepEqual(article.images, ['https://i.ytimg.com/vi/abc123/hqdefault.jpg'], '视频页应取封面图')
+
+  // Relative cover URLs are resolved against the page address.
+  const relativeHtml = `<html><head><meta property="og:image" content="/cover.png"></head><body><p>短</p></body></html>`
+  const relative = extractFromHtml(relativeHtml, 'https://example.com/post/1')
+  assert.deepEqual(relative.images, ['https://example.com/cover.png'])
+
+  // twitter:image is used when og:image is absent.
+  const twitterHtml = `<html><head><meta name="twitter:image" content="https://cdn.example.com/t.jpg"></head><body><p>短</p></body></html>`
+  assert.deepEqual(extractFromHtml(twitterHtml, 'https://example.com/x').images, ['https://cdn.example.com/t.jpg'])
+
+  // A data: URI is not a usable cover.
+  const dataHtml = `<html><head><meta property="og:image" content="data:image/png;base64,AAAA"></head><body><p>短</p></body></html>`
+  assert.deepEqual(extractFromHtml(dataHtml, 'https://example.com/y').images, [])
+}
+
+console.log('图片：原位保留、图标过滤、视频封面回退 全部通过 ✓')

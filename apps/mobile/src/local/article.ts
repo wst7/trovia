@@ -625,6 +625,24 @@ const IMAGE_SKIP = /(?:avatar|icon|logo|emoji|spacer|blank|pixel|tracker|qrcode|
  * Images in the body. Content on WeChat official accounts and Xiaohongshu is often “the body is just a few long images”,
  * and when no text can be extracted the image URLs are the only clue to the content (handed to OCR to supply the text).
  */
+/** The page's own cover: og:image, twitter:image, then JSON-LD thumbnailUrl. */
+function coverImageOf(meta: Map<string, string>, html: string, baseUrl: string): string[] {
+  const raw =
+    meta.get('og:image:secure_url')
+    ?? meta.get('og:image')
+    ?? meta.get('twitter:image')
+    ?? meta.get('twitter:image:src')
+    ?? firstMatch(html, /"thumbnailUrl"\s*:\s*"([^"]+)"/i)
+    ?? ''
+  if (!raw || raw.startsWith('data:')) return []
+  try {
+    const absolute = new URL(decodeEntities(raw), baseUrl).toString()
+    return /^https?:/i.test(absolute) ? [absolute] : []
+  } catch {
+    return []
+  }
+}
+
 function collectImages($: CheerioDoc, node: AnyNode, baseUrl: string): string[] {
   const out: string[] = []
   const seen = new Set<string>()
@@ -694,7 +712,11 @@ export function extractFromHtml(html: string, url: string): ExtractedArticle {
 
   imageBaseUrl = url
   const picked = pickBody($)
-  const images = collectImages($, picked.node, url)
+  // A video page (YouTube, Bilibili, most JS-shell pages) has no body images at
+  // all: the only picture on it is the cover, which lives in the metadata. Without
+  // this fallback those entries were saved with no thumbnail and no cover.
+  const bodyImages = collectImages($, picked.node, url)
+  const images = bodyImages.length > 0 ? bodyImages : coverImageOf(meta, html, url)
   stripNoise($, picked.node, picked.wechat)
   let markdown = trimMarkdownEdges(tidyMarkdown(renderMarkdown(picked.node), picked.wechat), title)
   let plainText = toPlainText(markdown)
