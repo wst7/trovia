@@ -32,9 +32,17 @@ assert.equal(deepseek?.embedModel, '')
 const openai = LLM_PRESETS.find((preset) => preset.id === 'openai')
 assert.equal(openai?.embedModel, 'text-embedding-3-small')
 
-// Ollama runs on this machine: no key page to link to.
-const ollama = LLM_PRESETS.find((preset) => preset.id === 'ollama')
-assert.equal(ollama?.keyUrl, null)
-assert.ok(matchPreset('http://localhost:11434/v1'))
+// OpenCode serves an OpenAI-compatible dialect under its own path, and its
+// console is where keys come from. No embeddings endpoint, so that field is
+// empty rather than carrying another provider's model across.
+const opencode = LLM_PRESETS.find((preset) => preset.id === 'opencode')
+assert.equal(opencode?.baseUrl, 'https://opencode.ai/inference/openai/v1')
+assert.equal(opencode?.embedModel, '')
+assert.ok(opencode?.keyUrl?.startsWith('https://opencode.ai/'))
+assert.equal(matchPreset('https://opencode.ai/inference/openai/v1')?.id, 'opencode')
+
+// A self-hosted server is still usable by typing its address, even though no
+// preset ships for one any more.
+assert.equal(matchPreset('http://localhost:11434/v1'), null)
 
 console.log(`大模型服务商：${LLM_PRESETS.length} 个预设、地址匹配与本地判断通过`)

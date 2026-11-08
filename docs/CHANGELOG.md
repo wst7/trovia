@@ -2,6 +2,12 @@
 
 每个版本发布时，GitHub Release 的正文直接取这里的对应小节；没有小节时退回自动生成。
 
+## 0.15.3
+
+- **大模型服务商：加上 OpenCode，去掉 Ollama**。OpenCode 的地址与模型取自它官方文档：OpenAI 兼容端点是 `https://opencode.ai/inference/openai/v1`，默认模型 `deepseek-v4.1-flash`（写摘要够快够便宜），密钥在 opencode.ai/console 申请。
+- OpenCode 只提供对话模型，没有 embeddings 接口，所以选中它时「向量模型」会留空——语义检索需要另外配一个带 embeddings 的服务，不影响字面检索。
+- 本机服务（如 Ollama）不再有预设，仍然可以直接在「服务地址」里填 `http://localhost:11434/v1` 使用。
+
 ## 0.15.2
 
 - **视频类条目现在有封面图了**。视频页（YouTube、B 站这类）正文里没有 `<img>`，唯一的图是封面，而封面只写在页面元数据里。原来的抓取只从正文里收集图片，于是视频条目存下来是「无图」，列表里没有缩略图，详情页也没有封面。现在正文没有图时，会回退到页面自带的封面（og:image → twitter:image → JSON-LD 的 thumbnailUrl），相对地址会按页面地址补全。

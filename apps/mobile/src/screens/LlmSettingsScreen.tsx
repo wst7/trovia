@@ -270,9 +270,7 @@ export function LlmSettingsScreen() {
             {preset ? (
               <View className="mt-2 flex-row items-center gap-3">
                 <Text className="flex-1 text-caption text-muted">
-                  {preset.keyUrl
-                    ? t('llm.provider.prefilled', { provider: preset.name })
-                    : t('llm.provider.local')}
+                  {t('llm.provider.prefilled', { provider: preset.name })}
                 </Text>
                 {preset.keyUrl ? (
                   <Pressable

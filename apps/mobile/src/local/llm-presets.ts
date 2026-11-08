@@ -72,21 +72,25 @@ export const LLM_PRESETS: LlmPreset[] = [
     keyUrl: 'https://cloud.siliconflow.cn/account/ak',
   },
   {
+    id: 'opencode',
+    name: 'OpenCode',
+    // Console speaks OpenAI's chat/completions dialect here; the same models are
+    // also served under /anthropic and /google for other SDKs.
+    baseUrl: 'https://opencode.ai/inference/openai/v1',
+    // Cheap and fast, which is what summarising a saved page needs.
+    model: 'deepseek-v4.1-flash',
+    // Console lists chat models only: no embeddings endpoint, so semantic search
+    // needs a provider that has one.
+    embedModel: '',
+    keyUrl: 'https://opencode.ai/console',
+  },
+  {
     id: 'openrouter',
     name: 'OpenRouter',
     baseUrl: 'https://openrouter.ai/api/v1',
     model: 'openai/gpt-4o-mini',
     embedModel: '',
     keyUrl: 'https://openrouter.ai/keys',
-  },
-  {
-    id: 'ollama',
-    name: 'Ollama',
-    baseUrl: 'http://localhost:11434/v1',
-    model: 'llama3.1',
-    embedModel: 'nomic-embed-text',
-    // A local server runs on this machine and needs no key.
-    keyUrl: null,
   },
 ]
 
