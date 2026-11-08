@@ -26,6 +26,12 @@ export interface ExtractedArticle {
   plainText: string
   /** Images that appeared in the body (absolute URLs, de-duplicated, icons removed). When there are many images and little text, the body may be exactly these images. */
   images: string[]
+  /**
+   * Characters recognised inside those images. Search-only: they are a clue for
+   * "I remember the number in that screenshot", not the article's own prose, so
+   * they must never reach plain_text, the summary or the reader.
+   */
+  ocrText?: string
   /** The page is only a script shell (content rendered by JS, or just a bridge that opens another app), so no body could be fetched. */
   scriptOnly: boolean
   /** The page demanded verification / login, so the body was not obtainable. */

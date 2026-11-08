@@ -395,6 +395,8 @@ function searchTextOf(fields: {
   summary: string | null
   keywords: string[]
   plainText: string
+  /** Recognised image text: appended to the search string only, never stored as body. */
+  ocrText?: string
 }): string {
   return [
     fields.title ?? '',
@@ -402,6 +404,7 @@ function searchTextOf(fields: {
     fields.summary ?? '',
     fields.keywords.join(' '),
     fields.plainText.slice(0, 8000),
+    (fields.ocrText ?? '').slice(0, 4000),
   ]
     .join('\n')
     .toLowerCase()
@@ -443,6 +446,7 @@ export async function saveParsed(
       summary,
       keywords,
       plainText: article.plainText,
+      ocrText: article.ocrText,
     }),
     now,
     now,
@@ -486,6 +490,7 @@ export async function savePartial(id: string, article: ExtractedArticle): Promis
       summary,
       keywords: [],
       plainText: article.plainText,
+      ocrText: article.ocrText,
     }),
     errorCode,
     now,

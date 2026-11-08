@@ -1,18 +1,13 @@
 /**
- * Where the characters recognized in images go.
+ * Where the characters recognised in images go.
  *
- * They go only into the plain text used for search, not into the body markdown: those characters are search clues, not article content.
- * Merging the OCR results into the body would leave the reader seeing a long "## Image text" block at the end, mixed in with this article's
- * own body text, which reads like gibberish.
+ * Search only. They answer "I remember the figure on that screenshot", but they
+ * are not the article's prose: putting them in the body or in plain_text made
+ * them show up in the reader (and in the summary written from that text), which
+ * is why they are appended to the search string alone.
  */
-export function mergeOcrText(
-  article: { markdown: string; plainText: string },
-  recognized: string,
-): { markdown: string; plainText: string } {
-  const text = recognized.trim()
-  if (!text) return article
-  return {
-    markdown: article.markdown,
-    plainText: [article.plainText, text].filter((part) => part && part.trim()).join('\n\n'),
-  }
+export function appendOcrForSearch(searchText: string, recognized: string | undefined): string {
+  const text = (recognized ?? '').trim()
+  if (!text) return searchText
+  return [searchText.trim(), text].filter(Boolean).join('\n')
 }

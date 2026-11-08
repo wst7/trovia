@@ -5,7 +5,7 @@ import { cacheImages } from './imageStore'
 import { emitChange } from './bus'
 import { summarizeWithLlm } from './llm'
 import { isOcrAvailable, ocrImages } from './ocr'
-import { mergeOcrText } from './ocr-text'
+import { appendOcrForSearch } from './ocr-text'
 import * as repo from './repo'
 import { oneLine } from './util'
 
@@ -95,11 +95,10 @@ async function processOne(id: string, url: string): Promise<void> {
     emitChange()
     const texts = await ocrImages(article.images, url)
     if (texts.length > 0) {
-      // Text recognized from images goes only into the search text (plainText), never into the body markdown:
-      // it is a search clue, not article content, and putting it in the body only makes the reader hit a block of "image text".
-      const merged = mergeOcrText(article, texts.join('\n\n'))
-      article.markdown = merged.markdown
-      article.plainText = merged.plainText
+      // Search-only. It never enters markdown, plain_text or the summary: those
+      // are the article, and a screenshot's characters are not. repo.saveParsed
+      // appends ocrText to the search string.
+      article.ocrText = appendOcrForSearch('', texts.join('\n\n'))
     }
   }
 
