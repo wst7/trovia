@@ -218,9 +218,12 @@ export function SettingsScreen() {
       case 'error':
         return t('update.state.retry')
       case 'available':
-        return t('update.state.available', { version: view.version, size: formatMb(view.sizeBytes) })
+        // The release-page fallback has no size: say the version, not "0 MB".
+        return view.sizeBytes > 0
+          ? t('update.state.available', { version: view.version, size: formatMb(view.sizeBytes) })
+          : t('update.state.available.noSize', { version: view.version })
       case 'latest':
-        return native?.error ? t('update.state.unknown') : t('update.state.latest')
+        return native?.error ? t('update.state.failed', { reason: native.error }) : t('update.state.latest')
     }
   }
 

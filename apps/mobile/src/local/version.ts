@@ -48,6 +48,12 @@ export interface GitHubRelease {
   assets?: { name?: string; browser_download_url?: string; size?: number }[]
 }
 
+/** Version from a release page URL, e.g. .../releases/tag/v0.15.6 → "0.15.6". */
+export function versionFromReleaseUrl(url: string): string | null {
+  const match = /\/releases\/tag\/v?([0-9][0-9.]*)\/?\s*$/i.exec(url.trim())
+  return match ? match[1] : null
+}
+
 /** Only Android apks count; prefer arm64 (the only kind we publish), otherwise take the first. */
 export function pickAsset(assets: GitHubRelease['assets']): ReleaseAsset | null {
   const apks = (assets ?? []).filter(

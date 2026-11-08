@@ -8,7 +8,7 @@ import assert from 'node:assert/strict'
 
 // Version helpers live in their own module: update.ts imports AsyncStorage,
 // which drags react-native in and cannot run under node.
-import { isNewer, parseRelease, parseVersion, pickAsset } from '../version.ts'
+import { isNewer, parseRelease, parseVersion, pickAsset, versionFromReleaseUrl } from '../version.ts'
 
 // Version comparison
 assert.equal(parseVersion('v0.11.2').join('.'), '0.11.2')
@@ -45,4 +45,12 @@ assert.equal(parseRelease({ tag_name: 'v0.12.0', assets: [] }), null, '没有安
 assert.equal(parseRelease({}), null)
 
 
-console.log('检查更新：版本比较、资产选择、Release 解析全部通过 ✓')
+// The release-page fallback derives the version from the redirect target, so a
+// stray query string or trailing slash must not produce a bogus version.
+assert.equal(versionFromReleaseUrl('https://github.com/wst7/trovia/releases/tag/v0.15.6'), '0.15.6')
+assert.equal(versionFromReleaseUrl('https://github.com/wst7/trovia/releases/tag/v0.15.6/'), '0.15.6')
+assert.equal(versionFromReleaseUrl('https://github.com/wst7/trovia/releases/tag/0.15.6'), '0.15.6')
+assert.equal(versionFromReleaseUrl('https://github.com/wst7/trovia/releases/latest'), null)
+assert.equal(versionFromReleaseUrl(''), null)
+
+console.log('检查更新：版本比较、资产选择、Release 解析、页面兜底解析全部通过 ✓')

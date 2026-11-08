@@ -459,6 +459,8 @@ export const zh: Dictionary = {
   'update.state.unknown': '暂时查不到新版本',
   'update.state.connecting': '准备下载…',
   'update.state.available': '新版本 v{version} · {size} · 点这里下载',
+  'update.state.available.noSize': '新版本 v{version} · 点这里下载',
+  'update.state.failed': '{reason} · 点这里重试',
   'update.state.latest': '已是最新',
   'settings.dev.title': '开发者模式',
   'settings.dev.subtitle': '记录操作日志，排查问题时用',

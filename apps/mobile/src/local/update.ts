@@ -9,10 +9,22 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import type { GitHubRelease, ReleaseInfo } from './version'
-import { isNewer, parseRelease } from './version'
+import { isNewer, parseRelease, versionFromReleaseUrl } from './version'
 
 const REPO = 'wst7/trovia'
 const API = `https://api.github.com/repos/${REPO}/releases/latest`
+/**
+ * Fallback that does not touch the API.
+ *
+ * api.github.com is the thing that fails most often on the networks this app is
+ * used on (rate limits on a shared address, or the host being unreachable),
+ * while github.com itself still works. The release page redirects to
+ * /releases/tag/vX.Y.Z, and the asset name is deterministic, so the same answer
+ * can be had without the API.
+ */
+const RELEASES_PAGE = `https://github.com/${REPO}/releases/latest`
+const ASSET_NAME = (version: string) => `trovia-${version}-arm64.apk`
+
 const CACHE_TTL_MS = 10 * 60 * 1000
 const CACHE_KEY = 'trovia.update.check.v1'
 const TTL_MS = 6 * 60 * 60 * 1000
@@ -30,6 +42,52 @@ export interface CheckResult {
 // version.ts because they need no runtime, and update.ts imports AsyncStorage.
 export type { ReleaseAsset, ReleaseInfo } from './version'
 export { isNewer, parseRelease, parseVersion, pickAsset } from './version'
+
+class UpdateFetchError extends Error {
+  constructor(message: string, readonly status?: number) {
+    super(message)
+  }
+}
+
+/** GitHub's own words, so the row can say what actually went wrong. */
+function describeApiFailure(error: unknown): string {
+  if (error instanceof UpdateFetchError) {
+    if (error.status === 403 || error.status === 429) return '被 GitHub 限流了，过一会儿再试'
+    if (error.status === 404) return '找不到发布页'
+    if (error.status) return `GitHub 返回 ${error.status}`
+    return error.message
+  }
+  return '连不上 GitHub'
+}
+
+async function fetchFromApi(signal: AbortSignal): Promise<ReleaseInfo | null> {
+  const response = await fetch(API, {
+    headers: { Accept: 'application/vnd.github+json' },
+    signal,
+  })
+  if (!response.ok) throw new UpdateFetchError('api', response.status)
+  const payload = (await response.json()) as GitHubRelease
+  return parseRelease(payload)
+}
+
+/**
+ * Same answer without the API: follow the release page redirect and rebuild the
+ * asset address from the tag. The download size is unknown on this path, which
+ * the row says out loud instead of printing "0 MB".
+ */
+async function fetchFromReleasePage(signal: AbortSignal): Promise<ReleaseInfo | null> {
+  const response = await fetch(RELEASES_PAGE, { signal, redirect: 'follow' })
+  if (!response.ok) throw new UpdateFetchError('page', response.status)
+  const version = versionFromReleaseUrl(response.url ?? '')
+  if (!version) return null
+  const name = ASSET_NAME(version)
+  return {
+    version,
+    notes: '',
+    publishedAt: '',
+    asset: { name, url: `https://github.com/${REPO}/releases/download/v${version}/${name}`, size: 0 },
+  }
+}
 
 async function readCache(): Promise<CheckResult | null> {
   try {
@@ -74,43 +132,43 @@ export async function checkForUpdate(current: string, force = false): Promise<Ch
 
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), 15_000)
+  let apiReason: string | null = null
   try {
-    const response = await fetch(API, {
-      headers: { Accept: 'application/vnd.github+json' },
-      signal: controller.signal,
-    })
-    if (!response.ok) {
-      const reason =
-        response.status === 403 || response.status === 429
-          ? '被 GitHub 限流了，过一会儿再试'
-          : response.status === 404
-            ? '找不到发布页'
-            : `GitHub 返回 ${response.status}`
-      // On failure fall back to the previous result: better an old version number than that row suddenly saying "unknown".
-      const stale = await readCache()
-      if (stale) return { ...stale, current, hasUpdate: stale.latest ? isNewer(stale.latest.version, current) : false, error: reason }
-      const result: CheckResult = { current, latest: null, hasUpdate: false, error: reason, checkedAt: new Date().toISOString() }
-      return result
+    let latest: ReleaseInfo | null = null
+    try {
+      latest = await fetchFromApi(controller.signal)
+    } catch (apiError) {
+      // Keep the API's own wording: it is what the user is troubleshooting.
+      apiReason = describeApiFailure(apiError)
+      latest = await fetchFromReleasePage(controller.signal)
     }
-    const payload = (await response.json()) as GitHubRelease
-    const latest = parseRelease(payload)
-    await opLog('update.check', { current, latest: latest?.version ?? null, manual: force })
+    if (!latest) {
+      const reason = apiReason ?? '发布页里没有可安装的安装包'
+      const stale = await readCache()
+      if (stale) {
+        return { ...stale, current, hasUpdate: stale.latest ? isNewer(stale.latest.version, current) : false, error: reason }
+      }
+      return { current, latest: null, hasUpdate: false, error: reason, checkedAt: new Date().toISOString() }
+    }
+    await opLog('update.check', { current, latest: latest.version, manual: force, via: apiReason ? 'page' : 'api' })
     const result: CheckResult = {
       current,
       latest,
-      hasUpdate: latest ? isNewer(latest.version, current) : false,
-      error: latest ? null : '发布页里没有可安装的安装包',
+      hasUpdate: isNewer(latest.version, current),
+      error: null,
       checkedAt: new Date().toISOString(),
     }
     await writeCache(result)
     return result
   } catch (error) {
     const aborted = error instanceof Error && error.name === 'AbortError'
+    const reason = aborted ? '请求超时，检查网络' : '连不上 GitHub，可能在当前网络下被挡住了'
+    await opLog('update.fail', { current, reason, api: apiReason })
     return {
       current,
       latest: null,
       hasUpdate: false,
-      error: aborted ? '请求超时，检查网络' : '连不上 GitHub，可能在当前网络下被挡住了',
+      error: reason,
       checkedAt: new Date().toISOString(),
     }
   } finally {

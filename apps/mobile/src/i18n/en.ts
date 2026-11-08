@@ -457,6 +457,8 @@ export const en: Dictionary = {
   'update.state.unknown': 'Could not reach the release page',
   'update.state.connecting': 'Getting ready…',
   'update.state.available': 'v{version} · {size} · tap to download',
+  'update.state.available.noSize': 'v{version} · tap to download',
+  'update.state.failed': '{reason} · tap to retry',
   'update.state.latest': 'Up to date',
   'settings.dev.title': 'Developer mode',
   'settings.dev.subtitle': 'Keeps an operation log for troubleshooting',
