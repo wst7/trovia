@@ -19,7 +19,7 @@ import { clearAllDocuments } from '../local/db'
 import { relativeTime } from '../local/dates'
 import { lastSyncAt } from '../local/sync-config'
 import { formatBytes, writeExport } from '../local/exporter'
-import { applyOta, checkOta, readOtaTakenVersion, recordOtaTakenVersion } from '../local/ota'
+import { applyOta, checkOta, readOtaPending, readOtaState, readOtaTakenVersion, recordOtaTakenVersion, writeOtaPending } from '../local/ota'
 import { checkForUpdate, effectiveVersion, type CheckResult } from '../local/update'
 import { downloadApk, formatMb, installApk, type DownloadProgress } from '../local/update-install'
 import { listAllForExportFidelity } from '../local/repo'
@@ -184,6 +184,8 @@ export function SettingsScreen() {
   const [updatePhase, setUpdatePhase] = useState<'idle' | 'checking' | 'downloading' | 'installing' | 'error'>('idle')
   const [progress, setProgress] = useState<DownloadProgress | null>(null)
   // The hot update is downloaded but not yet restarted into: this state stays on screen until the user taps.
+  // Kept in storage too: this screen remounts when the user switches tabs, and a
+  // restart hint that disappears on remount leaves a download button that does nothing.
   const [otaReady, setOtaReady] = useState(false)
   // A manual check came back "already latest": the subtitle has to say so, otherwise tapping looks like nothing happened.
   const [checkedJustNow, setCheckedJustNow] = useState(false)
@@ -301,6 +303,7 @@ export function SettingsScreen() {
         // Remember which release this bundle corresponds to; otherwise the row
         // keeps offering the full package for a version we already run.
         await recordOtaTakenVersion(update?.latest?.version)
+        await writeOtaPending(true)
         setOtaReady(true)
         setUpdatePhase('idle')
         return
@@ -366,11 +369,21 @@ export function SettingsScreen() {
 
   const reload = useCallback(async () => {
     setDevOn(isDevMode())
-    void appVersion().then((next) => {
+    void appVersion().then(async (next) => {
       setVersion(next)
-      void checkForUpdate(next, false)
+      // Same comparison the manual check uses. Using the raw native version here
+      // made the row resurrect "new version" on every visit after a hot update.
+      const taken = await readOtaTakenVersion()
+      const current = effectiveVersion(next, taken) ?? next
+      void checkForUpdate(current, false)
         .then(setUpdate)
         .catch(() => setUpdate(null))
+      // If the app is already running a downloaded bundle, the pending marker has
+      // served its purpose; otherwise it would say "restart to apply" forever.
+      const state = await readOtaState().catch(() => null)
+      const pending = await readOtaPending()
+      if (state?.runningUpdate && pending) await writeOtaPending(false)
+      else if (pending) setOtaReady(true)
     })
     try {
       const [nextStats, llm, configured, syncedAt] = await Promise.all([

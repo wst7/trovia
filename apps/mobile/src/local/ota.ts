@@ -10,6 +10,24 @@ let updatesModule: typeof import('expo-updates') | null = null
 
 /** The release version a hot update already delivered. Kept so the update row stops offering the same version again. */
 const OTA_TAKEN_KEY = 'update.otaTakenVersion'
+/** A bundle downloaded but not started into yet: the row must keep offering "restart", even after a remount. */
+const OTA_PENDING_KEY = 'update.otaPending'
+
+export async function readOtaPending(): Promise<boolean> {
+  try {
+    return (await readSetting(OTA_PENDING_KEY)) === '1'
+  } catch {
+    return false
+  }
+}
+
+export async function writeOtaPending(pending: boolean): Promise<void> {
+  try {
+    await writeSetting(OTA_PENDING_KEY, pending ? '1' : '0')
+  } catch {
+    // Only affects whether the restart hint survives a remount.
+  }
+}
 
 export async function readOtaTakenVersion(): Promise<string | null> {
   try {
