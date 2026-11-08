@@ -19,7 +19,17 @@ import { clearAllDocuments } from '../local/db'
 import { relativeTime } from '../local/dates'
 import { lastSyncAt } from '../local/sync-config'
 import { formatBytes, writeExport } from '../local/exporter'
-import { applyOta, checkOta, readOtaPending, readOtaState, readOtaTakenVersion, recordOtaTakenVersion, writeOtaPending } from '../local/ota'
+import {
+  applyOta,
+  checkOta,
+  readOtaPending,
+  readOtaPendingVersion,
+  readOtaState,
+  readOtaTakenVersion,
+  recordOtaTakenVersion,
+  writeOtaPending,
+  writeOtaPendingVersion,
+} from '../local/ota'
 import { checkForUpdate, effectiveVersion, type CheckResult } from '../local/update'
 import { downloadApk, formatMb, installApk, type DownloadProgress } from '../local/update-install'
 import { listAllForExportFidelity } from '../local/repo'
@@ -300,9 +310,9 @@ export function SettingsScreen() {
       const outcome = await checkOta()
       await opLog('update.ota', { kind: outcome.kind })
       if (outcome.kind === 'downloaded') {
-        // Remember which release this bundle corresponds to; otherwise the row
-        // keeps offering the full package for a version we already run.
-        await recordOtaTakenVersion(update?.latest?.version)
+        // Downloaded is not applied. Store what is waiting; promote it to "taken"
+        // only after the app restarts into it (see the mount effect above).
+        await writeOtaPendingVersion(update?.latest?.version)
         await writeOtaPending(true)
         setOtaReady(true)
         setUpdatePhase('idle')
@@ -378,12 +388,19 @@ export function SettingsScreen() {
       void checkForUpdate(current, false)
         .then(setUpdate)
         .catch(() => setUpdate(null))
-      // If the app is already running a downloaded bundle, the pending marker has
-      // served its purpose; otherwise it would say "restart to apply" forever.
+      // A downloaded bundle is only "applied" once the app is actually running it.
+      // Marking it applied at download time made the row claim the app was current while
+      // the old JavaScript was still on screen — the user updates, and nothing changes.
       const state = await readOtaState().catch(() => null)
       const pending = await readOtaPending()
-      if (state?.runningUpdate && pending) await writeOtaPending(false)
-      else if (pending) setOtaReady(true)
+      if (state?.runningUpdate && pending) {
+        const waitingVersion = await readOtaPendingVersion()
+        await recordOtaTakenVersion(waitingVersion)
+        await writeOtaPending(false)
+        await writeOtaPendingVersion(null)
+      } else if (pending) {
+        setOtaReady(true)
+      }
     })
     try {
       const [nextStats, llm, configured, syncedAt] = await Promise.all([

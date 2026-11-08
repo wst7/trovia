@@ -26,9 +26,13 @@ permissions:
   contents: write
 
 jobs:
-  # A pure-JS change does not need a new APK: trigger this once by hand and push current main out as an OTA update.
+  # Publish the JS of every release to the OTA channel, so the bundle waiting on a
+  # phone always matches the version its update row talks about. A failed publish
+  # must not fail the release: users can still install the APK.
+  # Also runnable by hand (workflow_dispatch + publish_update) to ship a JS-only fix.
   hot:
-    if: github.event_name == 'workflow_dispatch' && inputs.publish_update
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_update)
+    continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
