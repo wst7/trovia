@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Keyboard, ScrollView, View } from 'react-native'
+import { Dimensions, Keyboard, ScrollView, View } from 'react-native'
 
 import { opLog } from '../local/dev-log'
 
@@ -24,6 +24,36 @@ export function useKeepAboveKeyboard() {
   const contentRef = useRef<React.ComponentRef<typeof View>>(null)
   const activeField = useRef<React.RefObject<React.ComponentRef<typeof View> | null> | null>(null)
   const [keyboardHeight, setKeyboardHeight] = useState(0)
+  // The latest height, readable from callbacks that must not re-subscribe.
+  const heightRef = useRef(0)
+
+  /**
+   * After the scroll settles, check where the field actually landed.
+   *
+   * Keyboard height is not a constant: candidate strips appear and disappear,
+   * the user switches IME, Chinese and English keyboards differ. The reported
+   * height can therefore be stale by the time someone types. Measuring the field
+   * against the visible area and correcting by the measured overflow makes the
+   * result right regardless of what the keyboard claimed.
+   */
+  const verifyVisible = useCallback((fieldRef: React.RefObject<React.ComponentRef<typeof View> | null>) => {
+    const target = fieldRef.current
+    if (!target) return
+    const height = heightRef.current
+    try {
+      target.measureInWindow((_x, y, _w, h) => {
+        const windowHeight = Dimensions.get('window').height
+        // 24dp of breathing room so the caret is not on the boundary.
+        const limit = windowHeight - height - 24
+        const overflow = y + h - limit
+        if (!height || overflow <= 0) return
+        void opLog('keyboard.correct', { overflow: Math.round(overflow) })
+        scrollRef.current?.scrollToEnd({ animated: true })
+      })
+    } catch {
+      // Measurement is a best-effort correction; the scroll above already ran.
+    }
+  }, [])
 
   /** Scroll to the very bottom: exact for the last field, and needs no measurement. */
   const scrollToEnd = useCallback(() => {
@@ -58,6 +88,7 @@ export function useKeepAboveKeyboard() {
 
   useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', (event) => {
+      heightRef.current = event.endCoordinates.height
       setKeyboardHeight(event.endCoordinates.height)
       void opLog('keyboard.show', { height: Math.round(event.endCoordinates.height) })
       // Re-run for the field that is still focused: the first attempt happened
@@ -69,7 +100,10 @@ export function useKeepAboveKeyboard() {
         })
       }
     })
-    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0))
+    const hide = Keyboard.addListener('keyboardDidHide', () => {
+      heightRef.current = 0
+      setKeyboardHeight(0)
+    })
     return () => {
       show.remove()
       hide.remove()
@@ -92,8 +126,13 @@ export function useKeepAboveKeyboard() {
         // "scroll to the end" puts it in view without trusting any measurement.
         const run = options?.bottom ? scrollToEnd : () => scrollToField(fieldRef)
         requestAnimationFrame(run)
+        // After the keyboard and the scroll have both settled, confirm and
+        // correct — twice, because a candidate strip can slide in a moment later
+        // and make the keyboard taller than the height reported at show time.
+        setTimeout(() => verifyVisible(fieldRef), 420)
+        setTimeout(() => verifyVisible(fieldRef), 1200)
       },
-    [scrollToEnd, scrollToField],
+    [scrollToEnd, scrollToField, verifyVisible],
   )
 
   /** Attach to onBlur so a later keyboardDidShow does not scroll to a stale field. */
