@@ -3,6 +3,8 @@ import * as SecureStore from 'expo-secure-store'
 
 import { modelsEndpoint, parseModelList } from './llm-models'
 import { providerHeaders } from './llm-endpoints'
+import { applyOpenAiChunk, emptyStreamState, splitSseBuffer } from './sse'
+import { fetch as expoFetch } from 'expo/fetch'
 
 /**
  * The LLM is an “optional enhancement”, not a prerequisite for running:
@@ -177,14 +179,7 @@ export async function chat(
 
     if (!response.ok) {
       const detail = await response.text().catch(() => '')
-      const hint = response.status === 401 || response.status === 403
-        ? '密钥无效或没有权限'
-        : response.status === 404
-          ? '地址或模型名不对'
-          : response.status === 429
-            ? '请求太频繁或额度用完了'
-            : '服务返回了错误'
-      throw new Error(`${hint}（HTTP ${response.status}${detail ? `：${detail.slice(0, 120)}` : ''}）`)
+      throw new Error(errorHint(response.status, detail))
     }
 
     const payload = (await response.json()) as {
@@ -224,6 +219,100 @@ export interface ChatStep {
   /** What the model has to say; usually empty when it is calling a tool. */
   content: string | null
   toolCalls: ChatToolCall[]
+}
+
+/** One sentence a user can act on, shared by the streaming and non-streaming paths. */
+function errorHint(status: number, detail: string): string {
+  const hint =
+    status === 401 || status === 403
+      ? '密钥无效或没有权限'
+      : status === 404
+        ? '地址或模型名不对'
+        : status === 429
+          ? '请求太频繁或额度用完了'
+          : '服务返回了错误'
+  return `${hint}（HTTP ${status}${detail ? `：${detail.slice(0, 120)}` : ''}）`
+}
+
+/**
+ * One step with tools, streamed.
+ *
+ * Uses expo/fetch because React Native's own fetch does not expose a readable
+ * body. When a server ignores `stream` and answers with one JSON object (or the
+ * body cannot be read), this falls back to the non-streaming step so the answer
+ * still arrives — just at once instead of word by word.
+ */
+export async function chatStepStream(
+  config: LlmConfig,
+  key: string,
+  messages: ChatMessage[],
+  tools: ChatTool[],
+  maxTokens: number,
+  onContent?: (text: string) => void,
+  timeoutMs = 60_000,
+): Promise<ChatStep> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const response = await expoFetch(endpointOf(config.baseUrl), {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${key}`,
+        Accept: 'text/event-stream',
+        ...providerHeaders(config.baseUrl, await sessionId()),
+      },
+      body: JSON.stringify({
+        model: config.model,
+        messages,
+        temperature: 0.2,
+        max_tokens: maxTokens,
+        tools,
+        tool_choice: 'auto',
+        stream: true,
+      }),
+    })
+
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '')
+      throw new Error(errorHint(response.status, detail))
+    }
+
+    const body = response.body as ReadableStream<Uint8Array> | null
+    if (!body) return chatStep(config, key, messages, tools, maxTokens, timeoutMs)
+
+    const state = emptyStreamState()
+    const reader = body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    let sawFrame = false
+
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const { payloads, rest } = splitSseBuffer(buffer)
+      buffer = rest
+      for (const payload of payloads) {
+        sawFrame = true
+        const added = applyOpenAiChunk(state, payload)
+        if (added && onContent) onContent(state.content)
+      }
+    }
+
+    // A server that ignored `stream` answered with one JSON document.
+    if (!sawFrame) return chatStep(config, key, messages, tools, maxTokens, timeoutMs)
+
+    return {
+      content: state.content || null,
+      toolCalls: state.toolCalls
+        .filter((call) => call.name)
+        .map((call) => ({ id: call.id, type: 'function', function: { name: call.name, arguments: call.args } })),
+    }
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 /**

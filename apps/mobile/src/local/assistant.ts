@@ -33,10 +33,18 @@ export interface AssistantResult {
 }
 
 export interface AssistantDeps {
-  /** Run one model round. It is injected so this layer depends neither on expo nor the network and can run directly in tests. */
-  step: (messages: ChatMessage[]) => Promise<ChatStep>
+  /**
+   * Run one model round. It is injected so this layer depends neither on expo
+   * nor the network and can run directly in tests.
+   *
+   * `onDelta` receives the text so far whenever a round streams; a round that
+   * ends in tool calls streams its preamble, which the caller discards.
+   */
+  step: (messages: ChatMessage[], onDelta?: (textSoFar: string) => void) => Promise<ChatStep>
   run?: (name: string, args: Record<string, unknown>) => Promise<ToolRunResult>
   onStep?: (step: ToolStep) => void
+  /** Called repeatedly while the answer is being written. */
+  onAnswerDelta?: (textSoFar: string) => void
   maxRounds?: number
   maxToolCalls?: number
 }
@@ -103,7 +111,7 @@ export async function askLibrary(question: string, deps: AssistantDeps): Promise
   let calls = 0
 
   for (let round = 0; round < maxRounds; round += 1) {
-    const reply = await step(messages)
+    const reply = await step(messages, deps.onAnswerDelta)
     if (reply.toolCalls.length === 0) {
       return { answer: (reply.content ?? '').trim() || '没有找到相关内容。', citations, steps }
     }
@@ -132,6 +140,6 @@ export async function askLibrary(question: string, deps: AssistantDeps): Promise
 
   // Tool rounds ran out without converging: have it answer from the material at hand rather than leaving the user hanging.
   messages.push({ role: 'user', content: '就根据上面查到的内容给出结论，不要再调用工具。' })
-  const final = await step(messages)
+  const final = await step(messages, deps.onAnswerDelta)
   return { answer: (final.content ?? '').trim() || '没有找到相关内容。', citations, steps }
 }

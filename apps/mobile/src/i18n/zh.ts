@@ -413,6 +413,7 @@ export const zh: Dictionary = {
   'ask.backHome': '回到首页',
   'llm.state.off': '已关闭',
   'ask.title': 'AI',
+  'ask.streaming': '正在输出…',
   'ask.thinking': '正在你的收藏里找…',
   'ask.step.search': '查了「{q}」· {n} 条',
   'ask.step.read': '读了「{title}」',

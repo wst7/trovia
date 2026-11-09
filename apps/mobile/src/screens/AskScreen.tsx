@@ -15,6 +15,7 @@ import { askLibraryLive } from '../local/assistant-live'
 import type { AssistantResult, Citation, ToolStep } from '../local/assistant'
 import { Screen, GUTTER } from '../ui/Screen'
 import { Button, IconButton } from '../ui/Button'
+import { Markdown } from '../components/Markdown'
 import { Divider } from '../ui/Divider'
 import { usePalette } from '../ui/palette'
 
@@ -39,6 +40,9 @@ export function AskScreen() {
   const [steps, setSteps] = useState<ToolStep[]>([])
   const [result, setResult] = useState<AssistantResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // The answer as it is being written. Replaced per round: a round that ends in a
+  // tool call leaves text behind that was only the model thinking out loud.
+  const [streamed, setStreamed] = useState('')
 
   const run = useCallback(async () => {
     if (!question.trim()) return
@@ -46,9 +50,16 @@ export function AskScreen() {
     setError(null)
     setResult(null)
     setSteps([])
+    setStreamed('')
     try {
-      const outcome = await askLibraryLive(question, (step) =>
-        setSteps((current) => [...current, step]),
+      const outcome = await askLibraryLive(
+        question,
+        (step) => {
+          // A new round starts clean: whatever streamed before was preamble.
+          setStreamed('')
+          setSteps((current) => [...current, step])
+        },
+        (textSoFar) => setStreamed(textSoFar),
       )
       setResult(outcome)
     } catch (e) {
@@ -96,7 +107,22 @@ export function AskScreen() {
           </View>
         ) : null}
 
-        {running ? (
+        {/* Streaming: show what the model has written so far, marked as still
+            arriving. Markdown is rendered on the partial text, so formatting
+            appears as it lands rather than all at once at the end. */}
+        {running && streamed ? (
+          <View className="mt-6">
+            <Markdown source={streamed} />
+            {running ? (
+              <View className="mt-2 flex-row items-center gap-2">
+                <ActivityIndicator size="small" color={p.faint} />
+                <Text className="text-caption text-faint">{t('ask.streaming')}</Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
+        {running && !streamed ? (
           <View className="mt-6 flex-row items-center gap-2">
             <ActivityIndicator size="small" color={p.accent} />
             <Text className="text-body-sm text-muted">{t('ask.thinking')}</Text>
@@ -119,9 +145,13 @@ export function AskScreen() {
 
         {result ? (
           <>
-            <Text className="mt-6 text-[17px] leading-[28px] text-ink">
-              {result.answer || t('ask.empty')}
-            </Text>
+            <View className="mt-6">
+              {result.answer ? (
+                <Markdown source={result.answer} />
+              ) : (
+                <Text className="text-body text-ink">{t('ask.empty')}</Text>
+              )}
+            </View>
 
             {result.citations.length > 0 ? (
               <View className="mt-8">
