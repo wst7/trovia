@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'expo-router'
 import { KeyboardAvoidingView, ScrollView, View } from 'react-native'
 import { Text } from '../ui/text'
@@ -12,6 +12,7 @@ import { Button, IconButton, TextButton } from '../ui/Button'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { GUTTER, Screen } from '../ui/Screen'
 import { TextField } from '../ui/TextField'
+import { useKeepAboveKeyboard } from '../ui/use-keep-above-keyboard'
 import { useT } from '../i18n'
 
 /**
@@ -127,6 +128,12 @@ export function SyncScreen() {
     }
   }
 
+  const { scrollRef, contentRef, keepVisible, keyboardHeight } = useKeepAboveKeyboard()
+  const serverField = useRef<React.ComponentRef<typeof View>>(null)
+  const userField = useRef<React.ComponentRef<typeof View>>(null)
+  const passwordField = useRef<React.ComponentRef<typeof View>>(null)
+  const folderField = useRef<React.ComponentRef<typeof View>>(null)
+
   return (
     <Screen>
       <View className="h-14 flex-row items-center justify-between">
@@ -137,10 +144,15 @@ export function SyncScreen() {
           the keyboard, so "padding" is what keeps the focused field above it. */}
       <KeyboardAvoidingView behavior="padding" className="flex-1">
         <ScrollView
-          contentContainerStyle={{ paddingHorizontal: GUTTER, paddingBottom: insets.bottom + 40 }}
+          ref={scrollRef}
+          contentContainerStyle={{
+            paddingHorizontal: GUTTER,
+            paddingBottom: insets.bottom + 40 + (keyboardHeight > 0 ? 96 : 0),
+          }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          <View ref={contentRef} collapsable={false}>
           <Text className="text-title font-semibold text-ink">{t('settings.section.sync')}</Text>
           <Text className="mt-2 text-body-sm text-muted">{t('sync.intro')}</Text>
 
@@ -158,7 +170,9 @@ export function SyncScreen() {
           ) : null}
 
           <View className="mt-8 gap-6">
+            <View ref={serverField} collapsable={false}>
             <TextField
+              onFocus={keepVisible(serverField)}
               label={t('sync.label.server')}
               value={baseUrl}
               onChangeText={setBaseUrl}
@@ -167,7 +181,10 @@ export function SyncScreen() {
               autoCorrect={false}
               keyboardType="url"
             />
+            </View>
+            <View ref={userField} collapsable={false}>
             <TextField
+              onFocus={keepVisible(userField)}
               label={t('sync.label.username')}
               value={username}
               onChangeText={setUsername}
@@ -175,7 +192,10 @@ export function SyncScreen() {
               autoCapitalize="none"
               autoCorrect={false}
             />
+            </View>
+            <View ref={passwordField} collapsable={false}>
             <TextField
+              onFocus={keepVisible(passwordField, { fallbackToEnd: true })}
               label={t('sync.label.password')}
               value={password}
               onChangeText={setPassword}
@@ -184,7 +204,10 @@ export function SyncScreen() {
               autoCorrect={false}
               secureTextEntry
             />
+            </View>
+            <View ref={folderField} collapsable={false}>
             <TextField
+              onFocus={keepVisible(folderField, { fallbackToEnd: true })}
               label={t('sync.label.folder')}
               value={folder}
               onChangeText={setFolder}
@@ -193,6 +216,7 @@ export function SyncScreen() {
               autoCorrect={false}
               hint={t('sync.hint.folder')}
             />
+            </View>
           </View>
 
           <View className="mt-8 flex-row gap-3">
@@ -238,6 +262,7 @@ export function SyncScreen() {
               // Clearing the saved password cannot be undone from here: ask first.
               onPress={() => setConfirmingClear(true)}
             />
+          </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

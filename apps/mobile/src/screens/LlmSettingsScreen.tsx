@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { ActivityIndicator, KeyboardAvoidingView, Linking, Modal, Pressable, ScrollView, Switch, View } from 'react-native'
 import { Text } from '../ui/text'
@@ -16,6 +16,7 @@ import { opLog } from '../local/dev-log'
 import { CUSTOM_PROVIDER_ID, LLM_PRESETS, matchPreset } from '../local/llm-presets'
 import { isChatModel } from '../local/llm-models'
 import { SelectField } from '../ui/SelectField'
+import { useKeepAboveKeyboard } from '../ui/use-keep-above-keyboard'
 import { useT } from '../i18n'
 import { GUTTER } from '../ui/Screen'
 import { usePalette } from '../ui/palette'
@@ -57,6 +58,13 @@ export function LlmSettingsScreen() {
   // The list is a convenience, not a cage: a model the provider does not return
   // (a preview id, a self-hosted gateway) still has to be usable.
   const [manualModel, setManualModel] = useState(false)
+  // Android does not scroll a focused input into view on its own; each field gets
+  // a wrapper to measure and a handler that brings it above the keyboard.
+  const { scrollRef, contentRef, keepVisible, keyboardHeight } = useKeepAboveKeyboard()
+  const urlField = useRef<React.ComponentRef<typeof View>>(null)
+  const modelField = useRef<React.ComponentRef<typeof View>>(null)
+  const embedField = useRef<React.ComponentRef<typeof View>>(null)
+  const keyField = useRef<React.ComponentRef<typeof View>>(null)
 
   const openModelPicker = async () => {
     setPickerOpen(true)
@@ -196,11 +204,17 @@ export function LlmSettingsScreen() {
         </View>
 
         <ScrollView
-          contentContainerStyle={{ paddingHorizontal: GUTTER, paddingBottom: insets.bottom + 32 }}
+          ref={scrollRef}
+          contentContainerStyle={{
+            paddingHorizontal: GUTTER,
+            // Room to lift the last field above the keyboard.
+            paddingBottom: insets.bottom + 32 + (keyboardHeight > 0 ? 96 : 0),
+          }}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
+          <View ref={contentRef} collapsable={false}>
           <Text className="text-title font-semibold text-ink">{t('llm.title')}</Text>
           <Text className="mt-2 text-body-sm text-muted">{t('llm.intro')}</Text>
 
@@ -348,7 +362,9 @@ export function LlmSettingsScreen() {
 
           {/* These fields serve all three switches, so dim them only when every one is off. */}
           <View className={enabled || intent || semantic ? 'mt-6 gap-5' : 'mt-6 gap-5 opacity-45'}>
+            <View ref={urlField} collapsable={false}>
             <TextField
+              onFocus={keepVisible(urlField)}
               label={t('llm.field.baseUrl')}
               value={baseUrl}
               onChangeText={setBaseUrl}
@@ -358,8 +374,11 @@ export function LlmSettingsScreen() {
               keyboardType="url"
               accessibilityLabel={t('llm.field.baseUrl')}
             />
+            </View>
             {manualModel ? (
+              <View ref={modelField} collapsable={false}>
               <TextField
+                onFocus={keepVisible(modelField)}
                 label={t('llm.field.model')}
                 value={model}
                 onChangeText={setModel}
@@ -368,6 +387,7 @@ export function LlmSettingsScreen() {
                 autoCorrect={false}
                 accessibilityLabel={t('llm.field.model')}
               />
+              </View>
             ) : (
               <SelectField
                 label={t('llm.field.model')}
@@ -382,7 +402,9 @@ export function LlmSettingsScreen() {
               onPress={() => setManualModel((current) => !current)}
               tone="muted"
             />
+            <View ref={embedField} collapsable={false}>
             <TextField
+              onFocus={keepVisible(embedField, { fallbackToEnd: true })}
               label={t('llm.field.embed')}
               value={embedModel}
               onChangeText={setEmbedModel}
@@ -392,7 +414,10 @@ export function LlmSettingsScreen() {
               hint={t('llm.field.embedHint')}
               accessibilityLabel={t('llm.field.embed')}
             />
+            </View>
+            <View ref={keyField} collapsable={false}>
             <TextField
+              onFocus={keepVisible(keyField, { fallbackToEnd: true })}
               label="API Key"
               value={apiKey}
               onChangeText={setApiKey}
@@ -405,6 +430,7 @@ export function LlmSettingsScreen() {
               hint={t('llm.field.keyHint')}
               accessibilityLabel="API Key"
             />
+            </View>
           </View>
 
           <View className="mt-6 flex-row items-center justify-between">
@@ -439,6 +465,7 @@ export function LlmSettingsScreen() {
           <Text className="mt-8 text-caption text-faint">
             兼容任何 OpenAI 格式的 chat/completions 服务：OpenAI、DeepSeek、Moonshot、自建网关都可以。
           </Text>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
