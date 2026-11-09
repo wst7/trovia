@@ -79,10 +79,10 @@ jobs:
         run: |
           mkdir -p ~/.gradle/init.d
           cat > ~/.gradle/init.d/mirror.gradle <<'EOF'
-          # A repository that answers 5xx gets disabled for the rest of the
-          # build and Gradle moves on, so order matters: official first, mirrors
-          # as the fallback. The other way around makes a mirror outage fatal
-          # before the official repositories are ever tried.
+          // A repository that answers 5xx gets disabled for the rest of the
+          // build and Gradle moves on, so order matters: official first, mirrors
+          // as the fallback. The other way around makes a mirror outage fatal
+          // before the official repositories are ever tried.
           def officials = [
             'https://dl.google.com/dl/android/maven2',
             'https://repo.maven.apache.org/maven2',
