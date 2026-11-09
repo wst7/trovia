@@ -79,31 +79,34 @@ jobs:
         run: |
           mkdir -p ~/.gradle/init.d
           cat > ~/.gradle/init.d/mirror.gradle <<'EOF'
-          def mirrors = [
-            'https://maven.aliyun.com/repository/public',
-            'https://maven.aliyun.com/repository/google',
-            'https://maven.aliyun.com/repository/gradle-plugin',
-          ]
+          # A repository that answers 5xx gets disabled for the rest of the
+          # build and Gradle moves on, so order matters: official first, mirrors
+          # as the fallback. The other way around makes a mirror outage fatal
+          # before the official repositories are ever tried.
           def officials = [
             'https://dl.google.com/dl/android/maven2',
             'https://repo.maven.apache.org/maven2',
             'https://plugins.gradle.org/m2',
+          ]
+          def mirrors = [
+            'https://maven.aliyun.com/repository/google',
+            'https://maven.aliyun.com/repository/public',
             'https://www.jitpack.io',
           ]
 
           beforeSettings { settings ->
             [settings.pluginManagement, settings.dependencyResolutionManagement].each { handler ->
               handler.repositories {
-                mirrors.each { m -> maven { url m } }
                 officials.each { o -> maven { url o } }
+                mirrors.each { m -> maven { url m } }
               }
             }
           }
 
           allprojects { project ->
             [project.buildscript.repositories, project.repositories].each { repos ->
-              mirrors.each { m -> repos.maven { url m } }
               officials.each { o -> repos.maven { url o } }
+              mirrors.each { m -> repos.maven { url m } }
             }
           }
           EOF
@@ -129,7 +132,19 @@ jobs:
         working-directory: apps/mobile/android
         # Build for arm64-v8a only: that covers the vast majority of Android phones on sale, builds faster and yields a smaller package.
         # Drop this argument when 32-bit or the emulator is needed (or change it to arm64-v8a,x86_64).
-        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
+        # Maven hosts fail transiently often enough that one bad minute should
+        # not cost a release. Three attempts, then give up loudly.
+        run: |
+          for attempt in 1 2 3; do
+            echo "=== 构建尝试 $attempt ==="
+            if ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon; then
+              exit 0
+            fi
+            echo "第 $attempt 次失败，30 秒后重试"
+            sleep 30
+          done
+          echo "三次构建都失败了"
+          exit 1
 
       - name: 重命名产物
         run: |

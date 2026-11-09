@@ -2,11 +2,6 @@
 
 buildscript {
   repositories {
-    // Maven Central intermittently answers with a redirect to GitHub's release
-    // CDN, which has been returning 504 and failing whole builds. The mirror
-    // serves the same artifacts directly; the official repositories stay as the
-    // fallback for anything it does not carry.
-    maven { url 'https://maven.aliyun.com/repository/public' }
     google()
     mavenCentral()
   }
@@ -20,11 +15,6 @@ buildscript {
 
 allprojects {
   repositories {
-    // Maven Central intermittently answers with a redirect to GitHub's release
-    // CDN, which has been returning 504 and failing whole builds. The mirror
-    // serves the same artifacts directly; the official repositories stay as the
-    // fallback for anything it does not carry.
-    maven { url 'https://maven.aliyun.com/repository/public' }
     google()
     mavenCentral()
     maven { url 'https://www.jitpack.io' }
