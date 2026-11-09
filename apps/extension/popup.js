@@ -32,6 +32,22 @@ async function main() {
   const configured = Boolean(stored['trovia.config']?.base)
   if (!configured) showStatus(MESSAGES['not-configured'], 'error')
 
+  // "Did I already save this one?" is the question the popup should answer
+  // before the user saves the same page for the third time.
+  if (saveable) {
+    try {
+      const state = await chrome.runtime.sendMessage({ type: 'saved-state', url })
+      if (state?.entry) {
+        const when = new Date(state.entry.at)
+        const stamp = `${when.getMonth() + 1}月${when.getDate()}日`
+        showStatus(`这个页面 ${stamp} 已经存过了，再存会更新标题和时间。`)
+        el('save').textContent = '再存一次'
+      }
+    } catch {
+      // worker asleep: no need to tell the user
+    }
+  }
+
   el('settings').addEventListener('click', (event) => {
     event.preventDefault()
     chrome.runtime.openOptionsPage()

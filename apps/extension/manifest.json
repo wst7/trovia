@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Trovia",
-  "version": "0.1.0",
+  "version": "0.15.9",
   "description": "把当前网页存进 Trovia，稍后在手机里用一句话找回。",
   "icons": {
     "16": "icons/icon16.png",

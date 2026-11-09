@@ -32,6 +32,8 @@
     "preview": "npm run preview -w @trovia/web",
     "preview:landing": "npm run preview -w @trovia/landing",
     "postinstall": "patch-package",
-    "lint:comments": "node scripts/check-comments.mjs"
+    "lint:comments": "node scripts/check-comments.mjs",
+    "extension:test": "npm test -w @trovia/extension",
+    "extension:pack": "npm run pack -w @trovia/extension"
   }
 }

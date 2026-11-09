@@ -1,0 +1,36 @@
+name: Extension
+
+# The extension is a separate install path from the APK, so it gets its own
+# check: its tests and its package never went through CI before, which is how a
+# queue bug could reach users unnoticed.
+on:
+  push:
+    paths:
+      - 'apps/extension/**'
+      - '.github/workflows/extension.yml'
+  pull_request:
+    paths:
+      - 'apps/extension/**'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 单元测试
+        working-directory: apps/extension
+        run: npm test
+      - name: 打包（验证 manifest 与资源齐全）
+        working-directory: apps/extension
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y zip
+          npm run pack
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trovia-extension
+          path: apps/extension/dist/trovia-extension.zip
+          if-no-files-found: error

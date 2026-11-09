@@ -4,13 +4,44 @@
  * MV3 service workers can be reclaimed at any time, so no state is kept in memory here:
  * the outbox lives in chrome.storage.local and retries are driven by alarms, so a cold start picks up where it left off.
  */
-import { buildRecord } from './src/record.js'
+import { buildRecord, docId } from './src/record.js'
 import { check, getRecord, putRecord } from './src/webdav.js'
+import { badgeFor, enqueue, pendingCount, rememberSaved } from './src/queue.js'
 
 const CONFIG_KEY = 'trovia.config'
 const QUEUE_KEY = 'trovia.queue'
 const LOG_KEY = 'trovia.log'
 const RETRY_ALARM = 'trovia-retry'
+const SAVED_KEY = 'trovia.saved'
+const BADGE_CLEAR_MS = 4000
+
+/**
+ * Toolbar feedback.
+ *
+ * A save from the keyboard shortcut or the context menu never opens the popup,
+ * so without this the user could not tell a success from a failure — the whole
+ * reason this exists.
+ */
+async function paintBadge(state) {
+  const { text, color } = badgeFor(state)
+  await chrome.action.setBadgeText({ text })
+  if (text) await chrome.action.setBadgeBackgroundColor({ color })
+}
+
+/** Show the outcome briefly, then fall back to the pending count. */
+async function flashBadge(ok) {
+  await paintBadge(ok ? { justSaved: true } : { justFailed: true })
+  setTimeout(() => {
+    readQueue()
+      .then((queue) => paintBadge({ pending: pendingCount(queue) }))
+      .catch(() => undefined)
+  }, BADGE_CLEAR_MS)
+}
+
+async function refreshBadge() {
+  const queue = await readQueue()
+  await paintBadge({ pending: pendingCount(queue) })
+}
 
 async function readConfig() {
   const stored = await chrome.storage.local.get(CONFIG_KEY)
@@ -35,6 +66,12 @@ async function log(line) {
   await chrome.storage.local.set({ [LOG_KEY]: lines.slice(0, 20) })
 }
 
+/** Keep a small local index so the popup can say "this page was already saved". */
+async function remember(record) {
+  const stored = await chrome.storage.local.get(SAVED_KEY)
+  await chrome.storage.local.set({ [SAVED_KEY]: rememberSaved(stored[SAVED_KEY], record) })
+}
+
 /** Save one link; on failure it goes into the queue, and the popup always gets back either "queued" or "saved". */
 export async function saveUrl({ url, title }) {
   const config = await readConfig()
@@ -51,13 +88,15 @@ export async function saveUrl({ url, title }) {
       record.payload.saved_at = existing.payload?.saved_at ?? record.payload.saved_at
     }
     await putRecord(config, record)
+    await remember(record)
     await log(`saved ${record.id} ${record.payload.url}`)
+    await flashBadge(true)
     return { ok: true, id: record.id }
   } catch (error) {
-    const queue = await readQueue()
-    queue.push({ record, at: Date.now() })
+    const queue = enqueue(await readQueue(), record)
     await writeQueue(queue)
     await log(`queued ${record.id} (${error?.message ?? error})`)
+    await flashBadge(false)
     await chrome.alarms.create(RETRY_ALARM, { delayInMinutes: 5 })
     return { ok: false, reason: 'queued', id: record.id }
   }
@@ -73,7 +112,15 @@ export async function flushQueue() {
   let sent = 0
   for (const item of queue) {
     try {
+      // The phone may have written this record while it sat in the outbox; the
+      // rev has to come from the cloud or the PUT is rejected as stale.
+      const fresh = await getRecord(config, item.record.id).catch(() => null)
+      if (fresh?.rev) {
+        item.record.rev = Number(fresh.rev) + 1
+        item.record.payload.saved_at = fresh.payload?.saved_at ?? item.record.payload.saved_at
+      }
       await putRecord(config, item.record)
+      await remember(item.record)
       sent += 1
     } catch (error) {
       left.push(item)
@@ -82,6 +129,7 @@ export async function flushQueue() {
   }
   await writeQueue(left)
   if (left.length > 0) await chrome.alarms.create(RETRY_ALARM, { delayInMinutes: 5 })
+  await paintBadge({ pending: pendingCount(left) })
   return { sent, left: left.length }
 }
 
@@ -104,6 +152,7 @@ async function saveActiveTab() {
 }
 
 chrome.runtime.onInstalled.addListener(() => {
+  refreshBadge().catch(() => undefined)
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({ id: 'save-page', title: '存进 Trovia', contexts: ['page'] })
     chrome.contextMenus.create({ id: 'save-link', title: '存这个链接进 Trovia', contexts: ['link'] })
@@ -123,6 +172,10 @@ chrome.commands.onCommand.addListener((command) => {
   if (command === 'save-page') saveActiveTab()
 })
 
+chrome.runtime.onStartup?.addListener(() => {
+  refreshBadge().catch(() => undefined)
+})
+
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === RETRY_ALARM) flushQueue()
 })
@@ -138,6 +191,14 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
   if (message?.type === 'flush') {
     flushQueue().then(sendResponse)
+    return true
+  }
+  if (message?.type === 'saved-state') {
+    const id = docId(message.url)
+    chrome.storage.local.get(SAVED_KEY).then((stored) => {
+      const list = Array.isArray(stored[SAVED_KEY]) ? stored[SAVED_KEY] : []
+      sendResponse({ id, entry: list.find((item) => item.id === id) ?? null })
+    })
     return true
   }
   if (message?.type === 'test') {
