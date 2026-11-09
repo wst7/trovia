@@ -42,6 +42,8 @@ export interface AssistantDeps {
    */
   step: (messages: ChatMessage[], onDelta?: (textSoFar: string) => void) => Promise<ChatStep>
   run?: (name: string, args: Record<string, unknown>) => Promise<ToolRunResult>
+  /** Earlier turns of the same conversation, oldest first. */
+  history?: { question: string; answer: string }[]
   onStep?: (step: ToolStep) => void
   /** Called repeatedly while the answer is being written. */
   onAnswerDelta?: (textSoFar: string) => void
@@ -101,10 +103,15 @@ export async function askLibrary(question: string, deps: AssistantDeps): Promise
   const maxRounds = deps.maxRounds ?? 4
   const maxToolCalls = deps.maxToolCalls ?? 8
 
-  const messages: ChatMessage[] = [
-    { role: 'system', content: SYSTEM_PROMPT },
-    { role: 'user', content: trimmed },
-  ]
+  // Earlier turns go in as ordinary user/assistant pairs: a follow-up like
+  // A bare follow-up is meaningless unless the model can see what came before.
+  const messages: ChatMessage[] = [{ role: 'system', content: SYSTEM_PROMPT }]
+  for (const turn of deps.history ?? []) {
+    if (!turn.question.trim() || !turn.answer.trim()) continue
+    messages.push({ role: 'user', content: turn.question })
+    messages.push({ role: 'assistant', content: turn.answer })
+  }
+  messages.push({ role: 'user', content: trimmed })
 
   let citations: Citation[] = []
   const steps: ToolStep[] = []

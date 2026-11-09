@@ -16,7 +16,7 @@ test('排队：同一个链接重复失败只留一条', () => {
   queue = enqueue(queue, record('w1'), 1)
   queue = enqueue(queue, record('w1'), 2)
   assert.equal(queue.length, 1)
-  // 新的一次覆盖旧的一次：用户刚看到的标题才是要保存的
+  // The newest entry wins: the title the user just saw is the one to save.
   assert.equal(queue[0].at, 2)
 })
 
@@ -47,7 +47,7 @@ test('角标：成功打勾、失败打叹号、平时显示待发送数量', ()
   assert.equal(badgeFor({ justFailed: true }).text, '!')
   assert.equal(badgeFor({ pending: 3 }).text, '3')
   assert.equal(badgeFor({}).text, '')
-  // 失败优先于数量：先让用户知道刚才那次没成
+  // Failure outranks the count: tell the user the last save did not land.
   assert.equal(badgeFor({ justFailed: true, pending: 3 }).text, '!')
 })
 

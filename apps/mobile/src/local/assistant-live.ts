@@ -13,6 +13,7 @@ export async function askLibraryLive(
   question: string,
   onStep?: (step: ToolStep) => void,
   onAnswer?: (textSoFar: string) => void,
+  history?: { question: string; answer: string }[],
 ): Promise<AssistantResult> {
   const state = await loadLlmState()
   if (!state.enabled) throw new Error('设置里还没打开大模型')
@@ -20,6 +21,7 @@ export async function askLibraryLive(
   if (!key && !isLocalEndpoint(state.baseUrl)) throw new Error('还没有填 API Key')
 
   return askLibrary(question, {
+    history,
     onStep,
     onAnswerDelta: onAnswer,
     run: runTool,

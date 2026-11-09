@@ -412,6 +412,8 @@ export const en: Dictionary = {
   'llm.state.off': 'Off',
   'ask.title': 'AI',
   'ask.streaming': 'Writing…',
+  'ask.followUp': 'Ask a follow-up…',
+  'ask.send': 'Send',
   'ask.thinking': 'Looking through your library…',
   'ask.step.search': 'Searched “{q}” · {n} hits',
   'ask.step.read': 'Read “{title}”',

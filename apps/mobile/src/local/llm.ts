@@ -186,7 +186,16 @@ export async function chat(
       choices?: { message?: { content?: string } }[]
     }
     const content = payload.choices?.[0]?.message?.content
-    if (!content || !content.trim()) throw new Error('服务没有返回内容')
+    if (!content || !content.trim()) {
+      // Reasoning models can burn the whole budget before writing anything, and
+      // some gateways return an empty choice on a content filter. Say which.
+      const finish = (payload as { choices?: { finish_reason?: string }[] }).choices?.[0]?.finish_reason
+      throw new Error(
+        finish === 'length'
+          ? '模型还没开始回答就用完了输出额度（推理型模型会把额度花在思考上），换个模型或调大额度'
+          : '服务连上了，但模型没有返回文字',
+      )
+    }
     return content
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') throw new Error('请求超时')
@@ -481,6 +490,8 @@ export async function testLlmConnection(config: LlmConfig, apiKey: string): Prom
   if (!key) throw new Error('还没有填写 API Key')
   if (!config.baseUrl.trim()) throw new Error('还没有填写服务地址')
   if (!config.model.trim()) throw new Error('还没有填写模型名')
-  const reply = await chat(config, key, [{ role: 'user', content: '只回复两个字：可用' }], 16)
+  // 512 rather than a few: reasoning-style models spend the budget thinking and
+  // answer with empty content at 16, which read as "the service returned nothing".
+  const reply = await chat(config, key, [{ role: 'user', content: '只回复两个字：可用' }], 512)
   return reply.trim().slice(0, 40)
 }

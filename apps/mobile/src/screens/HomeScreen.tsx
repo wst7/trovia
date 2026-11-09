@@ -16,6 +16,7 @@ import { RecentRow, ResultRow } from '../components/RecordRow'
 import { loadLlmState } from '../local/llm'
 import { processPendingQueue } from '../local/pipeline'
 import * as repo from '../local/repo'
+import { loadAskMode, saveAskMode } from '../local/ui-prefs'
 import { useLocalRevision } from '../local/useLocalRevision'
 import { opLog } from '../local/dev-log'
 import { useToast } from '../providers/ToastProvider'
@@ -52,6 +53,10 @@ export function HomeScreen() {
   const [writing, setWriting] = useState(false)
   // The "ask the model" switch: off by default, left for the user to turn on explicitly (an LLM is optional).
   const [askMode, setAskMode] = useState(false)
+  // Remembered across launches: switching to AI every time you open the app is friction.
+  useEffect(() => {
+    void loadAskMode().then((on) => setAskMode(on))
+  }, [])
   const [llmReady, setLlmReady] = useState(false)
 
   const inResults = lastQuery.length > 0
@@ -201,7 +206,10 @@ export function HomeScreen() {
       onSearch={() => void runSearch()}
       ask={askMode}
       askAvailable={llmReady}
-      onSelectMode={(mode) => setAskMode(mode === 'ai')}
+      onSelectMode={(mode) => {
+        setAskMode(mode === 'ai')
+        void saveAskMode(mode === 'ai')
+      }}
       onAskNeedsSetup={() =>
         toast(t('ask.off'), {
           action: { label: t('ask.openSettings'), onPress: () => router.push('/settings/llm') },
