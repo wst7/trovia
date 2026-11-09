@@ -12,7 +12,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Pressable,
   ScrollView,
   TextInput,
@@ -30,6 +29,7 @@ import { Divider } from '../ui/Divider'
 import { Markdown } from '../components/Markdown'
 import { usePalette } from '../ui/palette'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useKeepAboveKeyboard } from '../ui/use-keep-above-keyboard'
 
 function stepLabel(step: ToolStep, t: ReturnType<typeof useT>): string {
   if (step.name === 'search_library') {
@@ -53,6 +53,10 @@ export function AskScreen() {
   const router = useRouter()
   const p = usePalette()
   const insets = useSafeAreaInsets()
+  // The pinned input has to sit exactly on top of the keyboard. KeyboardAvoidingView
+  // resizes the area but the reported height is not what the bar needs on Android,
+  // which left the input half covered; the measured height is.
+  const { keyboardHeight } = useKeepAboveKeyboard()
   const params = useLocalSearchParams<{ q?: string }>()
   const firstQuestion = typeof params.q === 'string' ? params.q : ''
 
@@ -160,9 +164,10 @@ export function AskScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <KeyboardAvoidingView className="flex-1" behavior="padding">
+      <View className="flex-1">
         <ScrollView
           ref={scrollRef}
+          className="flex-1"
           contentContainerStyle={{ paddingHorizontal: GUTTER, paddingBottom: 32 }}
           keyboardShouldPersistTaps="handled"
         >
@@ -251,7 +256,7 @@ export function AskScreen() {
         {turns.length > 0 ? (
           <View
             className="flex-row items-end gap-3 border-t border-line px-[22px] pt-3"
-            style={{ paddingBottom: insets.bottom + 12 }}
+            style={{ paddingBottom: (keyboardHeight > 0 ? keyboardHeight : insets.bottom) + 12 }}
           >
             <TextInput
               value={draft}
@@ -278,7 +283,7 @@ export function AskScreen() {
             </Pressable>
           </View>
         ) : null}
-      </KeyboardAvoidingView>
+      </View>
     </Screen>
   )
 }
