@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'expo-router'
-import { KeyboardAvoidingView, ScrollView, View } from 'react-native'
+import { ScrollView, View } from 'react-native'
 import { Text } from '../ui/text'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -128,7 +128,7 @@ export function SyncScreen() {
     }
   }
 
-  const { scrollRef, contentRef, keepVisible, keyboardHeight } = useKeepAboveKeyboard()
+  const { scrollRef, contentRef, keepVisible, releaseFocus, keyboardHeight } = useKeepAboveKeyboard()
   const serverField = useRef<React.ComponentRef<typeof View>>(null)
   const userField = useRef<React.ComponentRef<typeof View>>(null)
   const passwordField = useRef<React.ComponentRef<typeof View>>(null)
@@ -140,14 +140,16 @@ export function SyncScreen() {
         <IconButton name="chevron-back" onPress={goBack} accessibilityLabel={t('detail.back')} />
       </View>
 
-      {/* Android needs this too: with edge-to-edge the window no longer resizes for
-          the keyboard, so "padding" is what keeps the focused field above it. */}
-      <KeyboardAvoidingView behavior="padding" className="flex-1">
+      {/* Keyboard handling lives in useKeepAboveKeyboard: measured height plus a
+          re-scroll once the keyboard has finished opening. */}
+      <View className="flex-1">
         <ScrollView
           ref={scrollRef}
+          className="flex-1"
           contentContainerStyle={{
             paddingHorizontal: GUTTER,
-            paddingBottom: insets.bottom + 40 + (keyboardHeight > 0 ? 96 : 0),
+            // Room for the keyboard: without it the last field has nowhere to go.
+            paddingBottom: insets.bottom + 40 + keyboardHeight,
           }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -173,6 +175,7 @@ export function SyncScreen() {
             <View ref={serverField} collapsable={false}>
             <TextField
               onFocus={keepVisible(serverField)}
+              onBlur={releaseFocus}
               label={t('sync.label.server')}
               value={baseUrl}
               onChangeText={setBaseUrl}
@@ -185,6 +188,7 @@ export function SyncScreen() {
             <View ref={userField} collapsable={false}>
             <TextField
               onFocus={keepVisible(userField)}
+              onBlur={releaseFocus}
               label={t('sync.label.username')}
               value={username}
               onChangeText={setUsername}
@@ -195,7 +199,8 @@ export function SyncScreen() {
             </View>
             <View ref={passwordField} collapsable={false}>
             <TextField
-              onFocus={keepVisible(passwordField, { fallbackToEnd: true })}
+              onFocus={keepVisible(passwordField)}
+              onBlur={releaseFocus}
               label={t('sync.label.password')}
               value={password}
               onChangeText={setPassword}
@@ -207,7 +212,8 @@ export function SyncScreen() {
             </View>
             <View ref={folderField} collapsable={false}>
             <TextField
-              onFocus={keepVisible(folderField, { fallbackToEnd: true })}
+              onFocus={keepVisible(folderField, { bottom: true })}
+              onBlur={releaseFocus}
               label={t('sync.label.folder')}
               value={folder}
               onChangeText={setFolder}
@@ -265,7 +271,7 @@ export function SyncScreen() {
           </View>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
 
       <ConfirmDialog
         visible={confirmingClear}

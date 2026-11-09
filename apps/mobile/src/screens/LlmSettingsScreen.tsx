@@ -60,7 +60,7 @@ export function LlmSettingsScreen() {
   const [manualModel, setManualModel] = useState(false)
   // Android does not scroll a focused input into view on its own; each field gets
   // a wrapper to measure and a handler that brings it above the keyboard.
-  const { scrollRef, contentRef, keepVisible, keyboardHeight } = useKeepAboveKeyboard()
+  const { scrollRef, contentRef, keepVisible, releaseFocus, keyboardHeight } = useKeepAboveKeyboard()
   const urlField = useRef<React.ComponentRef<typeof View>>(null)
   const modelField = useRef<React.ComponentRef<typeof View>>(null)
   const embedField = useRef<React.ComponentRef<typeof View>>(null)
@@ -208,7 +208,9 @@ export function LlmSettingsScreen() {
           contentContainerStyle={{
             paddingHorizontal: GUTTER,
             // Room to lift the last field above the keyboard.
-            paddingBottom: insets.bottom + 32 + (keyboardHeight > 0 ? 96 : 0),
+            // The keyboard overlays the window, so the content needs room equal
+            // to its height before the last field can be scrolled above it.
+            paddingBottom: insets.bottom + 32 + keyboardHeight,
           }}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
@@ -365,6 +367,7 @@ export function LlmSettingsScreen() {
             <View ref={urlField} collapsable={false}>
             <TextField
               onFocus={keepVisible(urlField)}
+              onBlur={releaseFocus}
               label={t('llm.field.baseUrl')}
               value={baseUrl}
               onChangeText={setBaseUrl}
@@ -379,6 +382,7 @@ export function LlmSettingsScreen() {
               <View ref={modelField} collapsable={false}>
               <TextField
                 onFocus={keepVisible(modelField)}
+                onBlur={releaseFocus}
                 label={t('llm.field.model')}
                 value={model}
                 onChangeText={setModel}
@@ -404,7 +408,8 @@ export function LlmSettingsScreen() {
             />
             <View ref={embedField} collapsable={false}>
             <TextField
-              onFocus={keepVisible(embedField, { fallbackToEnd: true })}
+              onFocus={keepVisible(embedField)}
+              onBlur={releaseFocus}
               label={t('llm.field.embed')}
               value={embedModel}
               onChangeText={setEmbedModel}
@@ -417,7 +422,8 @@ export function LlmSettingsScreen() {
             </View>
             <View ref={keyField} collapsable={false}>
             <TextField
-              onFocus={keepVisible(keyField, { fallbackToEnd: true })}
+              onFocus={keepVisible(keyField, { bottom: true })}
+              onBlur={releaseFocus}
               label="API Key"
               value={apiKey}
               onChangeText={setApiKey}
