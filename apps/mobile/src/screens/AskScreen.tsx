@@ -297,7 +297,7 @@ export function AskScreen() {
         {turns.length > 0 || running || error ? (
           <View
             className="flex-row items-end gap-2 border-t border-line px-[22px] pt-3"
-            style={{ paddingBottom: (keyboardHeight > 0 ? keyboardHeight : insets.bottom) + 12 }}
+            style={{ paddingBottom: (keyboardHeight > 0 ? keyboardHeight + 24 : insets.bottom) + 12 }}
           >
             <TextInput
               value={draft}
