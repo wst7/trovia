@@ -294,7 +294,7 @@ export function AskScreen() {
 
         {/* Follow-up input: the whole point of turning this into a conversation is
             that a second question does not mean going back and starting over. */}
-        {turns.length > 0 ? (
+        {turns.length > 0 || running || error ? (
           <View
             className="flex-row items-end gap-2 border-t border-line px-[22px] pt-3"
             style={{ paddingBottom: (keyboardHeight > 0 ? keyboardHeight : insets.bottom) + 12 }}
