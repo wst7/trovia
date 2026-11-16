@@ -6,6 +6,8 @@ import { providerHeaders } from './llm-endpoints'
 import { applyOpenAiChunk, emptyStreamState, splitSseBuffer } from './sse'
 import { fetch as expoFetch } from 'expo/fetch'
 
+import { t } from '../i18n'
+
 /**
  * The LLM is an “optional enhancement”, not a prerequisite for running:
  * with nothing configured it uses extractive summaries (sentences taken from the original text); only when configured does it call the user's own
@@ -198,8 +200,7 @@ export async function chat(
     }
     return content
   } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') throw new Error('请求超时')
-    throw error
+    throw friendlyFetchError(error)
   } finally {
     clearTimeout(timer)
   }
@@ -228,6 +229,23 @@ export interface ChatStep {
   /** What the model has to say; usually empty when it is calling a tool. */
   content: string | null
   toolCalls: ChatToolCall[]
+}
+
+/** Turn transport/parse failures into copy a user can act on. */
+function friendlyFetchError(error: unknown): Error {
+  if (error instanceof Error) {
+    if (error.name === 'AbortError') return new Error(t('llm.error.timeout'))
+    if (error instanceof SyntaxError) return new Error(t('llm.error.badResponse'))
+    if (
+      /fetch failed|Network request failed|IOException|unexpected end of stream|ECONNREFUSED|ENOTFOUND|ETIMEDOUT/i.test(
+        error.message,
+      )
+    ) {
+      return new Error(t('llm.error.network'))
+    }
+    return error
+  }
+  return new Error(String(error))
 }
 
 /** One sentence a user can act on, shared by the streaming and non-streaming paths. */
@@ -338,7 +356,7 @@ export async function chatStepStream(
       aborted.name = 'AbortError'
       throw aborted
     }
-    throw error
+    throw friendlyFetchError(error)
   } finally {
     clearTimeout(timer)
     signal?.removeEventListener('abort', abortFromExternal)
@@ -407,8 +425,7 @@ export async function chatStep(
       aborted.name = 'AbortError'
       throw aborted
     }
-    if (error instanceof Error && error.name === 'AbortError') throw new Error('请求超时')
-    throw error
+    throw friendlyFetchError(error)
   } finally {
     clearTimeout(timer)
     signal?.removeEventListener('abort', abortFromExternal)
