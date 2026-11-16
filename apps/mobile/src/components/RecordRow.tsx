@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useIsDark, usePalette } from '../ui/palette'
 import { LiveStatusMark } from './LiveStatusMark'
 import { useT } from '../i18n'
+import { useTapGuard } from '../hooks/useTapGuard'
 
 /**
  * How to show a save with no title without it looking odd:
@@ -85,6 +86,7 @@ export function RecentRow({
 }) {
   const p = usePalette()
   const dark = useIsDark()
+  const tap = useTapGuard()
   const t = useT()
   // On some sites the favicon URL opens but the content is empty (0 bytes / transparent image), leaving an empty box behind.
   // On load failure fall back to the first letter, so the left column at least still has something in it.
@@ -94,8 +96,14 @@ export function RecentRow({
   const thumbnail = (item.image_files ?? []).find((file) => Boolean(file)) ?? (item.images ?? [])[0]
   return (
     <Pressable
-      onPress={onPress}
-      onLongPress={onLongPress}
+      onPressIn={tap.onPressIn}
+      onPress={(event) => {
+        if (tap.shouldPress(event)) onPress()
+      }}
+      onLongPress={() => {
+        tap.markLongPress()
+        onLongPress?.()
+      }}
       delayLongPress={320}
       accessibilityRole="button"
       accessibilityState={selecting ? { selected: Boolean(selected) } : undefined}
@@ -210,12 +218,18 @@ export function ResultRow({
   terms?: string[]
 }) {
   const t = useT()
+  const tap = useTapGuard()
   // Match kind first, title second: this screen has to answer "is it this one",
   // and the evidence is the sentence that matched, not whether the title looks similar.
   const kind = item.match_kind === 'semantic' ? t('result.kind.semantic') : t('result.kind.literal')
   return (
     <Pressable
-      onPress={onPress}
+      onPressIn={tap.onPressIn}
+      onPress={(event) => {
+        if (tap.shouldPress(event)) onPress()
+      }}
+      onLongPress={() => tap.markLongPress()}
+      delayLongPress={320}
       accessibilityRole="button"
       accessibilityLabel={item.title || item.url}
       className="py-4"

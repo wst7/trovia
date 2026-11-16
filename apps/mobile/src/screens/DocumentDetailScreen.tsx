@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ActivityIndicator, Image, Linking, Pressable, ScrollView, View } from 'react-native'
+import { ActivityIndicator, Image, Linking, Pressable, ScrollView, Share, View } from 'react-native'
 import { Text } from '../ui/text'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -13,6 +13,7 @@ import { ImageViewer } from '../components/ImageViewer'
 import { removeImages } from '../local/imageStore'
 import { LiveStatusMark } from '../components/LiveStatusMark'
 import { Markdown } from '../components/Markdown'
+import { useTapGuard } from '../hooks/useTapGuard'
 import { processPendingQueue } from '../local/pipeline'
 import * as repo from '../local/repo'
 import { useToast } from '../providers/ToastProvider'
@@ -29,6 +30,26 @@ function bodyFallback(code: string | null, t: (key: string) => string): string {
   const known = ['APP_ONLY_LINK', 'FETCH_BLOCKED', 'FETCH_FAILED', 'CONTENT_SCRIPT_ONLY', 'PARSE_INCOMPLETE']
   if (code && known.includes(code)) return t(`body.${code}`)
   return t('body.default')
+}
+
+function RelatedRow({ item, onPress }: { item: RelatedItem; onPress: () => void }) {
+  const tap = useTapGuard()
+  return (
+    <Pressable
+      onPressIn={tap.onPressIn}
+      onPress={(event) => {
+        if (tap.shouldPress(event)) onPress()
+      }}
+      onLongPress={() => tap.markLongPress()}
+      delayLongPress={320}
+      accessibilityRole="button"
+      accessibilityLabel={item.title || item.url}
+    >
+      <Text className="py-3 text-body-sm text-ink" numberOfLines={1}>
+        {item.title || item.url}
+      </Text>
+    </Pressable>
+  )
 }
 
 export function DocumentDetailScreen() {
@@ -133,6 +154,18 @@ export function DocumentDetailScreen() {
     }
   }
 
+  async function shareOriginal() {
+    if (!doc) return
+    try {
+      await Share.share({
+        message: doc.url,
+        ...(doc.title ? { title: doc.title } : {}),
+      })
+    } catch {
+      // The user dismissed the sheet or there is no share target; do not interrupt reading.
+    }
+  }
+
   const header = (
     <View className="h-14 flex-row items-center justify-between">
       <IconButton
@@ -142,14 +175,23 @@ export function DocumentDetailScreen() {
         onPress={goBack}
       />
       {doc ? (
-        <IconButton
-          name="trash-outline"
-          size={19}
-          tone="muted"
-          accessibilityLabel={t('detail.deleteA11y')}
-          disabled={deleting}
-          onPress={() => setConfirmingDelete(true)}
-        />
+        <View className="flex-row items-center">
+          <IconButton
+            name="share-outline"
+            size={20}
+            tone="muted"
+            accessibilityLabel={t('detail.share')}
+            onPress={() => void shareOriginal()}
+          />
+          <IconButton
+            name="trash-outline"
+            size={19}
+            tone="muted"
+            accessibilityLabel={t('detail.deleteA11y')}
+            disabled={deleting}
+            onPress={() => setConfirmingDelete(true)}
+          />
+        </View>
       ) : null}
     </View>
   )
@@ -467,13 +509,10 @@ export function DocumentDetailScreen() {
             <View className="mt-1">
               {related.map((item, index) => (
                 <View key={item.document_id}>
-                  <Text
-                    className="py-3 text-body-sm text-ink"
-                    numberOfLines={1}
+                  <RelatedRow
+                    item={item}
                     onPress={() => router.push(`/documents/${item.document_id}`)}
-                  >
-                    {item.title || item.url}
-                  </Text>
+                  />
                   {index < related.length - 1 ? <Divider /> : null}
                 </View>
               ))}

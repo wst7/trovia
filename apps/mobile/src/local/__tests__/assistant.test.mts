@@ -10,7 +10,7 @@
  */
 import assert from 'node:assert/strict'
 
-import { askLibrary, citationsFrom } from '../assistant.ts'
+import { askLibrary, citationsFrom, citedCitations } from '../assistant.ts'
 import type { ChatMessage, ChatStep } from '../llm.ts'
 import { parseToolArguments } from '../tool-args.ts'
 import type { ToolRunResult } from '../assistant-tools.ts'
@@ -60,13 +60,22 @@ const fakeRun = async (name: string, args: Record<string, unknown>): Promise<Too
 }
 
 const steps: string[] = []
+const stepSubjects: (string | undefined)[] = []
 const result = await askLibrary('我存过讲画风的文章吗？', {
   step: scriptedModel(),
   run: fakeRun,
-  onStep: (step) => steps.push(step.name),
+  onStep: (step) => {
+    steps.push(step.name)
+    stepSubjects.push(step.subject)
+  },
 })
 
 assert.equal(steps.join(','), 'search_library,read_document', '两步工具都该执行')
+assert.equal(
+  stepSubjects[1],
+  '画风 skill：19 套手绘画风',
+  '读正文的步骤要显示标题，不能把 id 漏到界面上',
+)
 assert.ok(result.answer.includes('[1]'), '回答要保留引用标记')
 assert.equal(result.citations.length, 1, '同一篇不该重复占两行')
 assert.equal(result.citations[0].id, 'doc-a')
@@ -100,6 +109,56 @@ assert.equal(
   1,
   '同一 id 只留一条',
 )
+
+// Sources list only what the answer cites; ref numbers are stable across tool calls.
+const candidates = citationsFrom(
+  JSON.stringify([{ id: 'a', title: 'A' }, { id: 'b', title: 'B' }, { id: 'c', title: 'C' }]),
+  [],
+)
+assert.deepEqual(candidates.map((item) => item.ref), [1, 2, 3])
+assert.deepEqual(citedCitations('结论在 [2]。', candidates).map((item) => item.id), ['b'])
+assert.equal(citedCitations('没有写编号。', candidates).length, 3)
+assert.equal(citedCitations('引用了不存在的 [9]。', candidates).length, 3)
+
+let seen: ChatMessage[] = []
+await askLibrary('那第二篇呢？', {
+  step: async (messages) => {
+    seen = messages
+    return { content: '第二篇讲重试。', toolCalls: [] }
+  },
+  history: [
+    {
+      question: '延时队列怎么选？',
+      answer: '先看 [1][2]。',
+      citations: [{ id: 'doc-b', title: '重试与幂等', site: 'example.com', savedAt: null, ref: 1 }],
+    },
+  ],
+})
+assert.ok(
+  seen.some((message) => message.role === 'assistant' && String(message.content).includes('重试与幂等')),
+  '上一轮出处要进上下文',
+)
+assert.ok(
+  !seen.some((message) => message.role === 'assistant' && String(message.content).includes('[1]')),
+  '历史回答里的旧编号要清掉',
+)
+
+// Stop: an already aborted signal must not call the model.
+let calledAfterAbort = false
+const aborted = new AbortController()
+aborted.abort()
+await assert.rejects(
+  () =>
+    askLibrary('不该问', {
+      step: async () => {
+        calledAfterAbort = true
+        return { content: 'x', toolCalls: [] }
+      },
+      signal: aborted.signal,
+    }),
+  /Aborted/,
+)
+assert.equal(calledAfterAbort, false)
 
 // Tool arguments: small models hand back JSON with a preamble/trailing comma
 assert.deepEqual(parseToolArguments('{"query":"画风",}'), { query: '画风' })

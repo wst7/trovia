@@ -259,9 +259,13 @@ export async function chatStepStream(
   maxTokens: number,
   onContent?: (text: string) => void,
   timeoutMs = 60_000,
+  signal?: AbortSignal,
 ): Promise<ChatStep> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
+  const abortFromExternal = () => controller.abort()
+  signal?.addEventListener('abort', abortFromExternal)
+  if (signal?.aborted) controller.abort()
   try {
     const response = await expoFetch(endpointOf(config.baseUrl), {
       method: 'POST',
@@ -289,13 +293,14 @@ export async function chatStepStream(
     }
 
     const body = response.body as ReadableStream<Uint8Array> | null
-    if (!body) return chatStep(config, key, messages, tools, maxTokens, timeoutMs)
+    if (!body) return chatStep(config, key, messages, tools, maxTokens, timeoutMs, signal)
 
     const state = emptyStreamState()
     const reader = body.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
     let sawFrame = false
+    let streamDone = false
 
     for (;;) {
       const { done, value } = await reader.read()
@@ -304,14 +309,22 @@ export async function chatStepStream(
       const { payloads, rest } = splitSseBuffer(buffer)
       buffer = rest
       for (const payload of payloads) {
+        if (payload === '[DONE]') {
+          streamDone = true
+          break
+        }
         sawFrame = true
         const added = applyOpenAiChunk(state, payload)
         if (added && onContent) onContent(state.content)
       }
+      if (streamDone) {
+        await reader.cancel().catch(() => undefined)
+        break
+      }
     }
 
     // A server that ignored `stream` answered with one JSON document.
-    if (!sawFrame) return chatStep(config, key, messages, tools, maxTokens, timeoutMs)
+    if (!sawFrame) return chatStep(config, key, messages, tools, maxTokens, timeoutMs, signal)
 
     return {
       content: state.content || null,
@@ -319,8 +332,16 @@ export async function chatStepStream(
         .filter((call) => call.name)
         .map((call) => ({ id: call.id, type: 'function', function: { name: call.name, arguments: call.args } })),
     }
+  } catch (error) {
+    if (signal?.aborted) {
+      const aborted = new Error('Aborted')
+      aborted.name = 'AbortError'
+      throw aborted
+    }
+    throw error
   } finally {
     clearTimeout(timer)
+    signal?.removeEventListener('abort', abortFromExternal)
   }
 }
 
@@ -335,9 +356,13 @@ export async function chatStep(
   tools: ChatTool[],
   maxTokens: number,
   timeoutMs = 60_000,
+  signal?: AbortSignal,
 ): Promise<ChatStep> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
+  const abortFromExternal = () => controller.abort()
+  signal?.addEventListener('abort', abortFromExternal)
+  if (signal?.aborted) controller.abort()
   try {
     const response = await fetch(endpointOf(config.baseUrl), {
       method: 'POST',
@@ -377,10 +402,16 @@ export async function chatStep(
     const calls = Array.isArray(message?.tool_calls) ? message!.tool_calls.filter((c) => c?.function?.name) : []
     return { content: message?.content ?? null, toolCalls: calls }
   } catch (error) {
+    if (signal?.aborted) {
+      const aborted = new Error('Aborted')
+      aborted.name = 'AbortError'
+      throw aborted
+    }
     if (error instanceof Error && error.name === 'AbortError') throw new Error('请求超时')
     throw error
   } finally {
     clearTimeout(timer)
+    signal?.removeEventListener('abort', abortFromExternal)
   }
 }
 

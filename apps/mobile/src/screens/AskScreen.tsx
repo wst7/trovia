@@ -28,6 +28,7 @@ import { Button, IconButton } from '../ui/Button'
 import { Divider } from '../ui/Divider'
 import { Markdown } from '../components/Markdown'
 import { usePalette } from '../ui/palette'
+import { useTapGuard } from '../hooks/useTapGuard'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useKeepAboveKeyboard } from '../ui/use-keep-above-keyboard'
 
@@ -36,7 +37,9 @@ function stepLabel(step: ToolStep, t: ReturnType<typeof useT>): string {
     const q = typeof step.args.query === 'string' ? step.args.query : ''
     return t('ask.step.search', { q, n: step.hits })
   }
-  if (step.name === 'read_document') return t('ask.step.read', { title: String(step.args.id ?? '').slice(0, 18) })
+  if (step.name === 'read_document') {
+    return step.subject ? t('ask.step.read', { title: step.subject }) : t('ask.step.readUntitled')
+  }
   if (step.name === 'list_recent') return t('ask.step.recent', { days: String(step.args.days ?? 7) })
   return t('ask.step.stats')
 }
@@ -46,6 +49,29 @@ interface Turn {
   answer: string
   citations: Citation[]
   steps: ToolStep[]
+}
+
+function CitationRow({ item, last, onOpen }: { item: Citation; last: boolean; onOpen: (id: string) => void }) {
+  const tap = useTapGuard()
+  return (
+    <Pressable
+      onPressIn={tap.onPressIn}
+      onPress={(event) => {
+        if (tap.shouldPress(event)) onOpen(item.id)
+      }}
+      onLongPress={() => tap.markLongPress()}
+      delayLongPress={320}
+      accessibilityRole="button"
+      className={last ? 'py-3' : 'border-b border-line py-3'}
+    >
+      <Text className="text-body text-ink" numberOfLines={2}>
+        {item.ref ?? 1}. {item.title ?? item.id}
+      </Text>
+      <Text className="mt-1 text-caption text-muted">
+        {[item.site, item.savedAt].filter(Boolean).join(' · ')}
+      </Text>
+    </Pressable>
+  )
 }
 
 export function AskScreen() {
@@ -69,6 +95,7 @@ export function AskScreen() {
   // What is being asked right now: the first question, or a follow-up typed below.
   const [asking, setAsking] = useState('')
   const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null)
+  const abortRef = useRef<AbortController | null>(null)
   const startedRef = useRef(false)
 
   const ask = useCallback(
@@ -80,6 +107,8 @@ export function AskScreen() {
       setError(null)
       setSteps([])
       setStreamed('')
+      const controller = new AbortController()
+      abortRef.current = controller
       try {
         const outcome = await askLibraryLive(
           trimmed,
@@ -94,19 +123,37 @@ export function AskScreen() {
           },
           // Follow-ups carry the earlier turns, so a bare "what about that one"
           // still has a referent.
-          history.map((turn) => ({ question: turn.question, answer: turn.answer })),
+          history.map((turn) => ({
+            question: turn.question,
+            answer: turn.answer,
+            citations: turn.citations,
+          })),
+          controller.signal,
         )
-        appendTurn(trimmed, outcome)
+        if (controller.signal.aborted) {
+          setError(t('ask.stopped'))
+        } else {
+          appendTurn(trimmed, outcome)
+        }
       } catch (e) {
-        const reason = e instanceof Error ? e.message : String(e)
-        setError(t('ask.failed', { reason }))
+        if (controller.signal.aborted) {
+          setError(t('ask.stopped'))
+        } else {
+          const reason = e instanceof Error ? e.message : String(e)
+          setError(t('ask.failed', { reason }))
+        }
       } finally {
+        if (abortRef.current === controller) abortRef.current = null
         setRunning(false)
         setStreamed('')
       }
     },
     [running, t],
   )
+
+  const stop = () => abortRef.current?.abort()
+
+  useEffect(() => () => abortRef.current?.abort(), [])
 
   const appendTurn = (question: string, outcome: AssistantResult) => {
     setTurns((current) => [
@@ -137,18 +184,12 @@ export function AskScreen() {
         <Text className="text-caption tracking-[0.14em] text-faint">{t('ask.citations')}</Text>
         <Divider className="mt-2" />
         {citations.map((item: Citation, index) => (
-          <Pressable
+          <CitationRow
             key={item.id}
-            onPress={() => router.push(`/documents/${item.id}`)}
-            className="border-b border-line py-3"
-          >
-            <Text className="text-body text-ink" numberOfLines={2}>
-              {index + 1}. {item.title ?? item.id}
-            </Text>
-            <Text className="mt-1 text-caption text-muted">
-              {[item.site, item.savedAt].filter(Boolean).join(' · ')}
-            </Text>
-          </Pressable>
+            item={item}
+            last={index === citations.length - 1}
+            onOpen={(id) => router.push(`/documents/${id}`)}
+          />
         ))}
       </View>
     )
@@ -255,7 +296,7 @@ export function AskScreen() {
             that a second question does not mean going back and starting over. */}
         {turns.length > 0 ? (
           <View
-            className="flex-row items-end gap-3 border-t border-line px-[22px] pt-3"
+            className="flex-row items-end gap-2 border-t border-line px-[22px] pt-3"
             style={{ paddingBottom: (keyboardHeight > 0 ? keyboardHeight : insets.bottom) + 12 }}
           >
             <TextInput
@@ -265,21 +306,45 @@ export function AskScreen() {
               placeholderTextColor={p.faint}
               selectionColor={p.accent}
               cursorColor={p.accent}
-              className="max-h-24 flex-1 text-body text-ink"
+              className="max-h-24 flex-1 py-2 text-body text-ink"
               multiline
               onSubmitEditing={sendFollowUp}
               returnKeyType="send"
               accessibilityLabel={t('ask.followUp')}
             />
+            {draft.length > 0 ? (
+              <Pressable
+                onPress={() => setDraft('')}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={t('ask.clear')}
+              >
+                <Ionicons name="close-circle" size={20} color={p.faint} />
+              </Pressable>
+            ) : null}
             <Pressable
-              onPress={sendFollowUp}
-              disabled={running || !draft.trim()}
-              hitSlop={8}
+              onPress={running ? stop : sendFollowUp}
+              disabled={!running && !draft.trim()}
+              hitSlop={6}
               accessibilityRole="button"
-              accessibilityLabel={t('ask.send')}
-              style={{ opacity: running || !draft.trim() ? 0.4 : 1 }}
+              accessibilityLabel={running ? t('ask.stop') : t('ask.send')}
+              accessibilityState={{ disabled: !running && !draft.trim() }}
             >
-              <Ionicons name="arrow-up-circle" size={30} color={p.accent} />
+              <View
+                className={
+                  running
+                    ? 'h-11 w-11 items-center justify-center rounded-full bg-ink'
+                    : draft.trim()
+                      ? 'h-11 w-11 items-center justify-center rounded-full bg-accent'
+                      : 'h-11 w-11 items-center justify-center rounded-full bg-sunken'
+                }
+              >
+                <Ionicons
+                  name={running ? 'stop' : 'arrow-up'}
+                  size={17}
+                  color={running ? p.canvas : draft.trim() ? p.onAccent : p.faint}
+                />
+              </View>
             </Pressable>
           </View>
         ) : null}

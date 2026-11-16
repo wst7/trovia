@@ -691,6 +691,89 @@ export async function documentStats(): Promise<DocumentStats> {
   }
 }
 
+/**
+ * "You might look for": pick concrete terms from the keywords of recent saves,
+ * then fall back to phrase slices of their titles. One phrase per title per
+ * pass, so a single article cannot take all three slots.
+ */
+const SUGGESTION_NOISE: Record<string, true> = {
+  ai: true,
+  '人工智能': true,
+  '工具': true,
+  '文章': true,
+  '分享': true,
+  '教程': true,
+  '技术': true,
+  '编程': true,
+  '效率': true,
+  '方法': true,
+  '产品': true,
+  '设计': true,
+  '思考': true,
+  '笔记': true,
+}
+
+/** Title phrases: split on structural particles so two-character fragments do not become suggestions. */
+function titlePhrases(title: string): string[] {
+  const cleaned = title.replace(
+    /[【】\[\]（）()《》<>“”"'’‘|｜/\\·,，。.!！?？:：;；\-—_+*#]/g,
+    ' ',
+  )
+  const parts = cleaned.split(/\s+|(?:的|与|和|及|或|之|在|为|是|把|让|从|对|关于|如何|怎么|什么)/)
+  const terms: string[] = []
+  for (const part of parts) {
+    const term = part.trim()
+    if (term.length >= 2 && term.length <= 16 && !/^\d+$/.test(term)) terms.push(term)
+  }
+  for (const word of title.match(/[a-zA-Z][a-zA-Z0-9.+#_-]{2,}/g) ?? []) terms.push(word)
+  return [...new Set(terms)]
+}
+
+export async function suggestSearchTerms(limit = 3): Promise<string[]> {
+  const db = await getDb()
+  const rows = await db.getAllAsync<{ keywords: string; title: string | null }>(
+    `SELECT keywords, title FROM documents
+     WHERE deleted_at IS NULL AND parse_status IN ('completed', 'partial')
+     ORDER BY saved_at DESC LIMIT 20`,
+  )
+
+  const counts = new Map<string, number>()
+  const display = new Map<string, string>()
+  const firstSeen = new Map<string, number>()
+  let order = 0
+
+  const add = (raw: string) => {
+    const term = raw.trim()
+    if (term.length < 2 || term.length > 24) return
+    if (/^\d+$/.test(term) || SUGGESTION_NOISE[term.toLowerCase()]) return
+    const key = term.toLowerCase()
+    counts.set(key, (counts.get(key) ?? 0) + 1)
+    display.set(key, term)
+    if (!firstSeen.has(key)) firstSeen.set(key, order++)
+  }
+
+  for (const row of rows) {
+    for (const term of parseJsonArray(row.keywords)) add(term)
+  }
+
+  if (counts.size < limit) {
+    const phraseSets = rows.map((row) => titlePhrases(row.title ?? ''))
+    for (let depth = 0; counts.size < limit; depth += 1) {
+      const before = counts.size
+      for (const phrases of phraseSets) {
+        if (counts.size >= limit) break
+        if (phrases[depth]) add(phrases[depth])
+      }
+      if (counts.size === before) break
+    }
+  }
+
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || (firstSeen.get(a[0]) ?? 0) - (firstSeen.get(b[0]) ?? 0))
+    .slice(0, limit)
+    .map(([key]) => display.get(key) ?? key)
+}
+
 // ---------------------------------------------------------------------------
 // Local search
 // ---------------------------------------------------------------------------
@@ -813,9 +896,21 @@ async function semanticMatches(text: string, exclude: Set<string>, limit: number
   }
 }
 
-export async function searchDocuments(query: string, limit = 20): Promise<SearchOutcome> {
+/** Callers can turn off a stage: the ask tools already understand the question. */
+export interface SearchOptions {
+  /** Default on: for a configured model, turn the whole sentence into keywords and a date range. */
+  intent?: boolean
+  /** Default on: when fewer than three literal hits, top up with semantically close items. */
+  semantic?: boolean
+}
+
+export async function searchDocuments(
+  query: string,
+  limit = 20,
+  options: SearchOptions = {},
+): Promise<SearchOutcome> {
   const startedAt = Date.now()
-  const outcome = await searchDocumentsInner(query, limit)
+  const outcome = await searchDocumentsInner(query, limit, options)
   await opLog('search', {
     q: query,
     hits: outcome.results.length,
@@ -825,8 +920,13 @@ export async function searchDocuments(query: string, limit = 20): Promise<Search
   return outcome
 }
 
-async function searchDocumentsInner(query: string, limit = 20): Promise<SearchOutcome> {
-  const parsed = await resolveIntent(query, { complete: await intentCompleter() })
+async function searchDocumentsInner(
+  query: string,
+  limit = 20,
+  options: SearchOptions = {},
+): Promise<SearchOutcome> {
+  const complete = options.intent === false ? null : await intentCompleter()
+  const parsed = await resolveIntent(query, { complete })
   const terms = queryTerms(parsed.text)
   // "Find yesterday's" has no keywords and must still return results — so an empty terms list must not short-circuit.
   if (terms.length === 0 && parsed.ranges.length === 0) return { results: [], interpretation: null }
@@ -939,7 +1039,12 @@ async function searchDocumentsInner(query: string, limit = 20): Promise<SearchOu
   // Only top up with semantics when literal results are thin; a time condition is a hard filter, and searching semantically within one day means nothing.
   // Also, no semantic fallback when the sentence has no content words: otherwise "zzzz no such thing" would also get a few "roughly similar" hits.
   let extra: SearchResult[] = []
-  if (!dateOnly && hasContentTerm(parsed.text) && results.length < LITERAL_ENOUGH) {
+  if (
+    options.semantic !== false &&
+    !dateOnly &&
+    hasContentTerm(parsed.text) &&
+    results.length < LITERAL_ENOUGH
+  ) {
     const shown = new Set(results.map((item) => item.document_id))
     extra = await semanticMatches(parsed.text || query, shown, SEMANTIC_LIMIT)
   }

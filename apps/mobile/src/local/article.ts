@@ -186,6 +186,72 @@ function parseJsonLoose(raw: string): unknown {
   }
 }
 
+/** Decode a JavaScript string literal; WeChat writes newlines as \\x0a. */
+function decodeJsEscapes(raw: string): string {
+  return raw.replace(
+    /\\(x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|u\{[0-9a-fA-F]+\}|[nrtbfv0'"\\])/g,
+    (whole, escape: string) => {
+      if (escape.startsWith('x')) return String.fromCharCode(Number.parseInt(escape.slice(1), 16))
+      if (escape.startsWith('u{')) {
+        const code = Number.parseInt(escape.slice(2, -1), 16)
+        return Number.isFinite(code) ? String.fromCodePoint(code) : whole
+      }
+      if (escape.startsWith('u')) return String.fromCharCode(Number.parseInt(escape.slice(1), 16))
+      switch (escape) {
+        case 'n':
+          return '\n'
+        case 'r':
+          return '\r'
+        case 't':
+          return '\t'
+        case 'b':
+          return '\b'
+        case 'f':
+          return '\f'
+        case 'v':
+          return '\v'
+        case '0':
+          return '\0'
+        default:
+          return escape
+      }
+    },
+  )
+}
+
+/** Read one string field from a page script; supports single and double quotes plus escapes. */
+function jsStringField(html: string, key: string): string | null {
+  const pattern = new RegExp(
+    `${key}\\s*:\\s*(?:'((?:\\\\.|[^'\\\\])*)'|"((?:\\\\.|[^"\\\\])*)")`,
+  )
+  const match = pattern.exec(html)
+  if (!match) return null
+  const raw = match[1] ?? match[2]
+  return raw ? decodeJsEscapes(raw) : null
+}
+
+/**
+ * New WeChat article pages no longer put the body in #js_content; it lives in
+ * the `content_noencode` field of a script object (the HTML is only a shell).
+ * Reading the DOM alone therefore looks like "only part of the article".
+ */
+function wechatScriptBody(html: string): string | null {
+  const raw = jsStringField(html, 'content_noencode')
+  if (!raw) return null
+  const text = decodeEntities(raw).replace(/\r\n?/g, '\n').trim()
+  if (text.length < 20) return null
+  if (/<[a-z][^>]*>/i.test(text)) {
+    const inner = load(text)
+    const node = inner('body').first()[0] ?? inner.root()[0]
+    return tidyMarkdown(renderMarkdown(node), true)
+  }
+  return text
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+    .join('\n\n')
+}
+
 function embeddedArticleData(html: string): EmbeddedArticleData {
   const result: EmbeddedArticleData = { title: null, author: null, description: null, body: null }
 
@@ -746,6 +812,14 @@ export function extractFromHtml(html: string, url: string): ExtractedArticle {
       markdown = candidate
       plainText = candidateText
     }
+  }
+
+  // New WeChat pages keep the body in a script field instead of the DOM. Do not gate this on the host:
+  // mirrored pages and local snapshots should take the same path.
+  const wechatBody = wechatScriptBody(html)
+  if (wechatBody && wechatBody.length > plainText.length + 20) {
+    markdown = wechatBody
+    plainText = toPlainText(markdown)
   }
 
   // When only the summary is obtainable, store it anyway so at least this saved item can be found by search and roughly understood.

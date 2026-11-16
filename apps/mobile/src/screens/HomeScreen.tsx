@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
-import { ActivityIndicator, KeyboardAvoidingView, ScrollView, View } from 'react-native'
+import { ActivityIndicator, KeyboardAvoidingView, Pressable, ScrollView, View } from 'react-native'
 import { Text } from '../ui/text'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { DocumentSummary, ParseStatus, SearchResult } from '@trovia/shared'
@@ -50,6 +50,7 @@ export function HomeScreen() {
   const highlightTerms = useMemo(() => queryTerms(lastQuery), [lastQuery])
   const [recent, setRecent] = useState<DocumentSummary[]>([])
   const [stats, setStats] = useState<repo.DocumentStats | null>(null)
+  const [suggestions, setSuggestions] = useState<string[]>([])
   const [writing, setWriting] = useState(false)
   // The "ask the model" switch: off by default, left for the user to turn on explicitly (an LLM is optional).
   const [askMode, setAskMode] = useState(false)
@@ -82,11 +83,13 @@ export function HomeScreen() {
     void Promise.all([
       repo.listDocuments({ page: 1, pageSize: RECENT_LIMIT, keyword: '' }),
       repo.documentStats(),
+      repo.suggestSearchTerms(),
     ])
-      .then(([res, nextStats]) => {
+      .then(([res, nextStats, nextSuggestions]) => {
         if (cancelled) return
         setRecent(res.items)
         setStats(nextStats)
+        setSuggestions(nextSuggestions)
       })
       .catch(() => undefined)
     return () => {
@@ -368,6 +371,31 @@ export function HomeScreen() {
                       {t('home.stats.failed', { count: stats.failed })}
                     </Text>
                   ) : null}
+                </View>
+              ) : null}
+
+              {suggestions.length > 0 ? (
+                <View className="mt-8">
+                  <Text className="text-[11px] font-semibold tracking-[1px] text-faint">
+                    {t('home.suggestions')}
+                  </Text>
+                  <View className="mt-1 flex-row flex-wrap items-center">
+                    {suggestions.map((term) => (
+                      <Pressable
+                        key={term}
+                        onPress={() => {
+                          setQuery(term)
+                          void runSearch(term)
+                        }}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('home.suggestionA11y', { term })}
+                        className="mr-4 py-1"
+                      >
+                        <Text className="text-body-sm text-muted underline">{term}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
                 </View>
               ) : null}
 

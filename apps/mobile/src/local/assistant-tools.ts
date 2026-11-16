@@ -7,6 +7,7 @@
 import type { ChatTool } from './llm'
 import { parseToolArguments } from './tool-args'
 import { getDb } from './db'
+import { searchDocuments } from './repo'
 
 export { parseToolArguments }
 
@@ -39,31 +40,23 @@ async function searchLibrary(args: Record<string, unknown>): Promise<ToolRunResu
   const limit = Math.min(Math.max(Number(args.limit) || 8, 1), 20)
   if (!query) return { content: '{"error":"query 不能为空"}', ids: [] }
 
-  const db = await getDb()
-  const like = `%${query}%`
-  const rows = await db.getAllAsync<SearchRow>(
-    `SELECT id, title, site_name, saved_at, summary_short, search_text, parse_status
-     FROM documents
-     WHERE deleted_at IS NULL
-       AND (title LIKE ? OR summary_short LIKE ? OR search_text LIKE ?)
-     ORDER BY saved_at DESC
-     LIMIT ?`,
-    like,
-    like,
-    like,
-    limit,
-  )
-  if (rows.length === 0) return { content: `[]（没有匹配「${query}」的收藏）`, ids: [] }
+  // Reuse the home screen's retrieval path: filler removal, Chinese bigrams,
+  // field weights, coverage, and the optional semantic fallback. Intent parsing
+  // is off because the model has already understood the user's question.
+  const outcome = await searchDocuments(query, limit, { intent: false })
+  const results = outcome.results.slice(0, limit)
+  if (results.length === 0) return { content: `[]（没有匹配「${query}」的收藏）`, ids: [] }
 
-  const items = rows.map((row) => ({
-    id: row.id,
+  const items = results.map((row) => ({
+    id: row.document_id,
     title: row.title,
     site: row.site_name,
     saved_at: row.saved_at.slice(0, 10),
     status: row.parse_status,
-    snippet: snippet(row.search_text ?? row.summary_short, query),
+    match: row.match_reason,
+    snippet: (row.matched_excerpt ?? row.summary ?? '').replace(/\s+/g, ' ').trim().slice(0, 180),
   }))
-  return { content: JSON.stringify(items), ids: rows.map((row) => row.id) }
+  return { content: JSON.stringify(items), ids: results.map((row) => row.document_id) }
 }
 
 async function readDocument(args: Record<string, unknown>): Promise<ToolRunResult> {

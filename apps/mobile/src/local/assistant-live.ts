@@ -7,13 +7,14 @@
 import { chatStep, chatStepStream, isLocalEndpoint, loadLlmKey, loadLlmState } from './llm'
 import { runTool, toolSchemas } from './assistant-tools'
 import { askLibrary } from './assistant'
-import type { AssistantResult, ToolStep } from './assistant'
+import type { AssistantResult, AssistantTurn, ToolStep } from './assistant'
 
 export async function askLibraryLive(
   question: string,
   onStep?: (step: ToolStep) => void,
   onAnswer?: (textSoFar: string) => void,
-  history?: { question: string; answer: string }[],
+  history?: AssistantTurn[],
+  signal?: AbortSignal,
 ): Promise<AssistantResult> {
   const state = await loadLlmState()
   if (!state.enabled) throw new Error('设置里还没打开大模型')
@@ -24,12 +25,13 @@ export async function askLibraryLive(
     history,
     onStep,
     onAnswerDelta: onAnswer,
+    signal,
     run: runTool,
     // Stream only when the screen is listening: the pipeline calls the same
     // helpers without a UI and has no reason to pay for the event stream.
     step: (messages, onDelta) =>
       onDelta
-        ? chatStepStream(state, key ?? '', messages, toolSchemas(), 900, onDelta)
-        : chatStep(state, key ?? '', messages, toolSchemas(), 900),
+        ? chatStepStream(state, key ?? '', messages, toolSchemas(), 900, onDelta, 60_000, signal)
+        : chatStep(state, key ?? '', messages, toolSchemas(), 900, 60_000, signal),
   })
 }
