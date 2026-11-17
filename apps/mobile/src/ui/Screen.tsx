@@ -14,5 +14,5 @@ export function Screen({ children }: { children: ReactNode }) {
   )
 }
 
-/** Page left/right gutter: 16dp. */
-export const GUTTER = 22
+/** Page left/right gutter: 20dp. */
+export const GUTTER = 20

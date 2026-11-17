@@ -8,38 +8,48 @@ import { useColorScheme } from 'react-native'
  */
 export const palette = {
   light: {
-    canvas: '#f6f5f1',
+    canvas: '#fafaf7',
     surface: '#ffffff',
-    sunken: '#f4f3ef',
-    line: '#e8e6e1',
-    lineStrong: '#d6d3cc',
-    ink: '#1a1917',
-    muted: '#6e6c67',
-    faint: '#a3a099',
-    accent: '#b23a26',
-    accentQuiet: '#f7eae6',
-    danger: '#b3352b',
+    sunken: '#f2f1eb',
+    line: '#e4e2d9',
+    lineStrong: '#d2cfc4',
+    ink: '#14130f',
+    muted: '#56524a',
+    faint: '#6f6a60',
+    accent: '#c1371c',
+    accentQuiet: '#fcede7',
+    danger: '#b3261e',
     warn: '#8a5a20',
-    ok: '#2f6b47',
+    ok: '#1f6b45',
     onAccent: '#ffffff',
   },
   dark: {
-    canvas: '#10100f',
-    surface: '#1b1b19',
-    sunken: '#0c0c0b',
-    line: '#2b2b28',
-    lineStrong: '#3b3b37',
-    ink: '#edeae4',
-    muted: '#9b9891',
-    faint: '#8a877f',
-    accent: '#e4715b',
-    accentQuiet: '#2e1d18',
-    danger: '#e4685c',
-    warn: '#d9a15b',
-    ok: '#6fbe8e',
-    onAccent: '#121211',
+    canvas: '#0d0c0a',
+    surface: '#171614',
+    sunken: '#201f1b',
+    line: '#2c2a25',
+    lineStrong: '#3c3931',
+    ink: '#f6f2e9',
+    muted: '#b7b2a6',
+    faint: '#9a9488',
+    accent: '#ff6c4c',
+    accentQuiet: '#2b1913',
+    danger: '#f07362',
+    warn: '#d8a35f',
+    ok: '#63b98a',
+    onAccent: '#171006',
   },
 } as const
+
+/** Six quiet cover tints from v3; used when an article has no image. */
+const TILE_LIGHT = ['#2f4858', '#4f5b45', '#8e4a33', '#23211c', '#6b6459', '#a8785a']
+const TILE_DARK = ['#334b5c', '#525d47', '#8f4b34', '#1c1a16', '#5f594e', '#9d7053']
+
+export function tileFor(seed: string, dark: boolean): string {
+  let hash = 0
+  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) | 0
+  return (dark ? TILE_DARK : TILE_LIGHT)[Math.abs(hash) % 6]
+}
 
 export type Palette = {
   [K in keyof (typeof palette)['light']]: string

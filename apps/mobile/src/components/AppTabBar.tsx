@@ -58,7 +58,7 @@ export function AppTabBar() {
       className="absolute inset-x-0 bottom-0 border-t border-line bg-canvas"
       style={{ paddingBottom: insets.bottom }}
     >
-      <View className="h-14 flex-row">
+      <View className="h-[50px] flex-row">
         {TABS.map((tab) => {
           const selected = tab.key === active
           return (
@@ -76,7 +76,7 @@ export function AppTabBar() {
                 <View className="items-center gap-1" style={{ opacity: pressed ? 0.5 : 1 }}>
                   <Ionicons
                     name={selected ? tab.activeIcon : tab.icon}
-                    size={21}
+                    size={23}
                     color={selected ? p.ink : p.faint}
                   />
                   <Text
@@ -99,4 +99,4 @@ export function AppTabBar() {
 }
 
 /** The total height the bottom navigation occupies (excluding the safe area); lists use it to leave clear space. */
-export const TAB_BAR_HEIGHT = 56
+export const TAB_BAR_HEIGHT = 58

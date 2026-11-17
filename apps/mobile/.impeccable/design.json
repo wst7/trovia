@@ -1,150 +1,157 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-01T04:53:09Z",
+  "generatedAt": "2026-11-17T00:00:00Z",
   "title": "Trovia Mobile",
   "extensions": {
     "colorMeta": {
       "canvas": {
         "role": "canvas",
         "displayName": "纸白 Paper",
-        "canonical": "#fbfaf7",
-        "dark": "#121211",
+        "canonical": "#fafaf7",
+        "dark": "#0d0c0a",
         "note": "页面底与导航栏底。"
       },
       "surface": {
         "role": "surface",
         "displayName": "抬起的表面 Surface",
         "canonical": "#ffffff",
-        "dark": "#1b1b19",
-        "note": "输入框、对话框；暗色下比 canvas 亮一档。"
+        "dark": "#171614",
+        "note": "抬起的表面：搜索框、答案卡、设置组。"
       },
       "sunken": {
         "role": "sunken",
         "displayName": "下沉表面 Sunken",
-        "canonical": "#f4f3ef",
-        "dark": "#0c0c0b",
-        "note": "摘要块、代码块；比 canvas 暗一档。"
+        "canonical": "#f2f1eb",
+        "dark": "#201f1b",
+        "note": "浅灰气泡、引用块、未就绪按钮、图标底。"
       },
       "line": {
         "role": "line",
         "displayName": "发丝线 Hairline",
-        "canonical": "#e8e6e1",
-        "dark": "#2b2b28",
-        "note": "1dp 分隔与静息描边。层次只靠它和留白。"
+        "canonical": "#e4e2d9",
+        "dark": "#2c2a25",
+        "note": "1px 分隔与静息描边。"
       },
       "line-strong": {
         "role": "line-strong",
         "displayName": "可交互描边 Strong line",
-        "canonical": "#d6d3cc",
-        "dark": "#3b3b37",
-        "note": "次级按钮描边、输入框聚焦描边。"
+        "canonical": "#d2cfc4",
+        "dark": "#3c3931",
+        "note": "聚焦描边、可交互描边。"
       },
       "ink": {
         "role": "ink",
         "displayName": "墨 Ink",
-        "canonical": "#1a1917",
-        "dark": "#edeae4",
-        "note": "主文字，也是提示条的反底。"
+        "canonical": "#14130f",
+        "dark": "#f6f2e9",
+        "note": "主文字。"
       },
       "muted": {
         "role": "muted",
         "displayName": "淡墨 Muted",
-        "canonical": "#6e6c67",
-        "dark": "#9b9891",
-        "note": "次要文字、摘要、说明。"
+        "canonical": "#56524a",
+        "dark": "#b7b2a6",
+        "note": "次要文字、引用正文。"
       },
       "faint": {
         "role": "faint",
         "displayName": "极淡墨 Faint",
-        "canonical": "#a3a099",
-        "dark": "#6b6862",
-        "note": "栏目名、占位符、已完成状态点。"
+        "canonical": "#6f6a60",
+        "dark": "#9a9488",
+        "note": "栏目名、时间、占位符。"
       },
       "accent": {
         "role": "accent",
         "displayName": "朱红 Vermilion",
-        "canonical": "#b23a26",
-        "dark": "#e4715b",
+        "canonical": "#c1371c",
+        "dark": "#ff6c4c",
         "note": "全站唯一强调色，一屏只出现一次。"
       },
       "accent-quiet": {
         "role": "accent-quiet",
         "displayName": "朱红淡底 Vermilion quiet",
-        "canonical": "#f7eae6",
-        "dark": "#2e1d18",
-        "note": "留给未来的选中态，当前几乎不用。"
+        "canonical": "#fcede7",
+        "dark": "#2b1913",
+        "note": "强调色的淡底。"
       },
       "danger": {
         "role": "danger",
         "displayName": "错误 Error",
-        "canonical": "#b3352b",
-        "dark": "#e4685c",
+        "canonical": "#b3261e",
+        "dark": "#f07362",
         "note": "删除、失败。"
       },
       "warn": {
         "role": "warn",
         "displayName": "警告 Warning",
         "canonical": "#8a5a20",
-        "dark": "#d9a15b",
+        "dark": "#d8a35f",
         "note": "部分成功。"
       },
       "ok": {
         "role": "ok",
         "displayName": "成功 Success",
-        "canonical": "#2f6b47",
-        "dark": "#6fbe8e",
-        "note": "成功语义，仅文字场合。"
+        "canonical": "#1f6b45",
+        "dark": "#63b98a",
+        "note": "校验通过的勾。"
       }
     },
     "typographyMeta": {
       "display": {
-        "size": "28px",
-        "lineHeight": "36px",
+        "size": "31px",
+        "lineHeight": "40px",
         "weight": 600,
-        "letterSpacing": "-0.5px",
-        "usage": "首页问句、收藏页计数。"
+        "letterSpacing": "-0.87px",
+        "usage": "首页「想找点什么？」。"
       },
       "title": {
-        "size": "20px",
-        "lineHeight": "28px",
+        "size": "26px",
+        "lineHeight": "35px",
         "weight": 600,
-        "letterSpacing": "-0.2px",
+        "letterSpacing": "-0.57px",
         "usage": "页面标题、详情标题。"
       },
       "heading": {
-        "size": "16px",
-        "lineHeight": "24px",
+        "size": "18px",
+        "lineHeight": "26px",
         "weight": 600,
-        "letterSpacing": "-0.1px",
-        "usage": "品牌名、小节标题、结果行标题。"
+        "letterSpacing": "-0.22px",
+        "usage": "小节标题。"
+      },
+      "read": {
+        "size": "17px",
+        "lineHeight": "30px",
+        "weight": 400,
+        "letterSpacing": "-0.09px",
+        "usage": "详情正文。"
       },
       "body": {
         "size": "16px",
         "lineHeight": "25px",
         "weight": 400,
         "letterSpacing": "0",
-        "usage": "正文、输入内容、摘要首句。"
+        "usage": "界面正文、输入内容。"
       },
       "body-sm": {
-        "size": "14px",
-        "lineHeight": "22px",
+        "size": "14.5px",
+        "lineHeight": "23px",
         "weight": 400,
         "letterSpacing": "0",
-        "usage": "说明、摘要、辅助文字。"
+        "usage": "说明、副标题。"
       },
       "caption": {
-        "size": "12px",
+        "size": "12.5px",
         "lineHeight": "18px",
         "weight": 400,
-        "letterSpacing": "0",
-        "usage": "出处 · 时间、提示、脚注。"
+        "letterSpacing": "0.01em",
+        "usage": "出处、时间、辅助。"
       },
       "label": {
-        "size": "13px",
-        "lineHeight": "18px",
-        "weight": 500,
-        "letterSpacing": "+0.3px",
-        "usage": "按钮、动作、底部标签。"
+        "size": "12px",
+        "lineHeight": "16px",
+        "weight": 600,
+        "letterSpacing": "0.96px",
+        "usage": "栏目名（uppercase）。"
       },
       "mono": {
         "size": "12px",
@@ -154,7 +161,16 @@
         "usage": "代码块与数字。"
       }
     },
-    "shadows": [],
+    "shadows": [
+      {
+        "name": "search",
+        "value": "0 1px 2px rgba(20,19,15,.04)"
+      },
+      {
+        "name": "card",
+        "value": "0 1px 2px rgba(20,19,15,.03)"
+      }
+    ],
     "motion": [
       {
         "name": "toast",
@@ -174,15 +190,15 @@
       },
       {
         "name": "gutter",
-        "value": "16dp"
+        "value": "20dp"
       },
       {
         "name": "tabBar",
-        "value": "56dp + 安全区"
+        "value": "50dp + 安全区"
       },
       {
         "name": "titleRow",
-        "value": "56dp"
+        "value": "52dp"
       },
       {
         "name": "minTouch",
@@ -193,8 +209,8 @@
         "value": "390×844 单栏"
       },
       {
-        "name": "maxComposerHeight",
-        "value": "132dp"
+        "name": "rowHeight",
+        "value": "约 102dp（60×76 封面 + 上下 13dp）"
       }
     ],
     "implementation": {
@@ -208,31 +224,31 @@
     {
       "name": "Composer 输入框",
       "kind": "custom",
-      "description": "首页唯一的输入面：看得出是链接就保存，看不出就按一句话检索；框下 caption 随状态变化。",
+      "description": "首页唯一的输入面：56dp 高、15dp 圆角、surface 底 + 1px line；左放大镜、右 38dp 方块提交键；识别链接时图标是书签，否则是向上箭头。",
       "html": "<div class=\"ds-composer\"><div class=\"ds-composer-input\">描述你记得的一句话，或粘贴一个链接</div><div class=\"ds-composer-foot\"><span>按这句描述找回</span><span class=\"ds-composer-submit\">↑</span></div></div>"
     },
     {
       "name": "Button 按钮",
       "kind": "button",
-      "description": "primary 朱红（一屏一个）、secondary 描边、quiet 纯文字；48dp 高、8dp 圆角。",
+      "description": "primary 朱红（一屏一个）、secondary 描边、quiet 纯文字；50dp 高、14dp 圆角。",
       "html": "<div class=\"ds-buttons\"><span class=\"ds-btn ds-btn-primary\">打开原文</span><span class=\"ds-btn ds-btn-secondary\">测试连接</span><span class=\"ds-btn ds-btn-quiet\">加载更多</span></div>"
     },
     {
       "name": "RecentRow 列表行",
       "kind": "row",
-      "description": "标题 1 行 + 元信息 1 行 + 状态点；最小 60dp，行间 1px 发丝线。没有卡片底、没有箭头。",
+      "description": "60×76 封面（无图时六种 tile 色 + 22 号首字母）+ 16.5/24 标题两行 + 12.5 元信息 + 右侧状态；行高约 102dp。",
       "html": "<div class=\"ds-row\"><div class=\"ds-row-title\">那篇讲睡眠不足与焦虑的文章</div><div class=\"ds-row-meta\">mp.weixin.qq.com · 3 天前</div></div>"
     },
     {
       "name": "ResultRow 结果行",
       "kind": "row",
-      "description": "标题 2 行 + 元信息 + 摘要 2 行 + 真实命中的「为什么找到它」+ 斜体摘录。",
+      "description": "60×76 封面 + 17/25 标题 + 12.5 出处；之后是 sunken 引用块（左 2px 朱红、14.5/24）+ 命中原因。",
       "html": "<div class=\"ds-row\"><div class=\"ds-row-title\">睡眠不足为什么会让焦虑加重</div><div class=\"ds-row-meta\">mp.weixin.qq.com · 2 个月前</div><div class=\"ds-row-body\">文章从杏仁核与前额叶的相互抑制讲起……</div><div class=\"ds-row-reason\">标题命中「睡眠不足」「焦虑」</div></div>"
     },
     {
       "name": "StatusMark 状态点",
       "kind": "custom",
-      "description": "8dp 圆点：空心＝整理中（附文字）、实心 faint＝已完成（无文字）、实心 warn＝部分、实心 danger＝失败。",
+      "description": "6dp 圆点：空心＝整理中（附文字）、实心 faint 40%＝已完成（无文字）、实心 warn＝部分、实心 danger＝失败。",
       "html": "<div class=\"ds-status-row\"><span class=\"ds-dot ds-dot-hollow\"></span><span class=\"ds-status-label\">整理中</span><span class=\"ds-dot ds-dot-done\"></span><span class=\"ds-dot ds-dot-warn\"></span></div>"
     },
     {
@@ -244,7 +260,7 @@
     {
       "name": "TabBar 底部导航",
       "kind": "nav",
-      "description": "通栏、canvas 底、顶部 1px 发丝线；选中 ink，未选 faint；无胶囊无指示条。",
+      "description": "通栏、canvas 底、顶部 1px 发丝线；图标 23dp，选中 ink，未选 faint。",
       "html": "<div class=\"ds-tabs\"><span class=\"ds-tab ds-tab-on\">首页</span><span class=\"ds-tab\">收藏</span><span class=\"ds-tab\">我的</span></div>"
     },
     {
@@ -255,14 +271,15 @@
     }
   ],
   "narrative": {
-    "northStar": "一张纸上的一件事",
-    "overview": "这一版把上一版的集邮册世界收起来了：齿孔、销戳、盖章动画退场，只留下纸、字和一个动作。首页从两张并列的输入卡收成一个输入框——看得出是链接就保存，看不出就按一句话检索。层次靠 1px 发丝线和 16dp 留白，不靠阴影；颜色只有两档中性色加一个朱红，朱红一屏只出现一次。",
+    "northStar": "记忆切片",
+    "overview": "v3 用真白底与深墨字立住对比，全站只用系统黑体；字号整体上调，最小 11.5、正文 16、阅读 17/30。封面降为 60×76 的识别辅助；搜索结果先给「你记得的那一句」；问题在浅灰气泡里，回答在白卡片上，工具过程压成一行事实。",
     "keyCharacteristics": [
       "一个屏幕只有一个强调色位置。",
-      "层次只用发丝线和留白，没有阴影与渐变。",
-      "一个输入框承担「保存」与「找回」两件事。",
-      "状态先用形状编码，已完成的条目不写状态文字。",
-      "列表行就是内容本身：没有卡片底、没有缩略图、没有箭头。"
+      "层级由字号、字重和 1px 发丝线承担；只有搜索框与卡片有 1–2px 的轻微抬起。",
+      "首页一个输入框，问模型是一张独立入口卡。",
+      "搜索结果是「封面 + 标题 + 真实命中句 + 命中原因」。",
+      "收藏行是 60×76 封面 + 16.5 号标题；分组用 12 号字距标签 + 实线。",
+      "状态先用形状编码，已完成的条目不写状态文字。"
     ],
     "rules": [
       "The One-Accent Rule：一屏只能有一个朱红动作。",
@@ -271,14 +288,15 @@
       "The Shape-First Rule：没有形状差异就不算状态。"
     ],
     "dos": [
-      "用留白和字重做层次，用发丝线分组。",
-      "首页保持「问句 + 输入框 + 最近四条」的三段式。",
+      "用字号、字重和留白做层次，用发丝线分组。",
+      "首页保持「品牌行 + 问句 + 输入框 + 问模型入口 + 最近收藏」。",
+      "搜索结果放真实命中的那一句，只用真实证据。",
       "原生 prop 需要颜色字符串时从 usePalette() 取。"
     ],
     "donts": [
-      "不要加阴影、渐变、印章与倾斜文字。",
-      "不要在首页重新放两个输入框。",
-      "不要给列表加卡片底、缩略图、箭头。",
+      "不要引入第二个字体、渐变、印章与倾斜文字。",
+      "不要在首页放两个输入框。",
+      "不要给列表加卡片底或箭头。",
       "不要手写 StyleSheet：样式一律走 className。"
     ]
   }

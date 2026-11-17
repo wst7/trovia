@@ -5,7 +5,7 @@ const isProduction = process.env.APP_VARIANT === 'production'
 
 // The version follows the release tag: CI injects XUNJI_APP_VERSION when it tags v* (v0.3.1 → 0.3.1).
 // Local builds fall back to the default here. Android's versionCode is derived from the version, so upgrades never go backwards.
-const rawVersion: string = process.env.XUNJI_APP_VERSION?.trim() || '0.13.9'
+const rawVersion: string = process.env.XUNJI_APP_VERSION?.trim() || '0.16.0'
 
 /**
  * EAS project id. It is baked into the package for tooling (and would be needed
@@ -21,10 +21,10 @@ const [versionMajor = 0, versionMinor = 0, versionPatch = 0] = appVersion
   .map((part) => Number.parseInt(part, 10) || 0)
 const versionCode = versionMajor * 10000 + versionMinor * 100 + versionPatch
 
-// Keep in sync with surface in src/design/colorSchemes.ts so the native animation and launch screen don't flash white or black.
-// Paper (stamp-album world): light coated paper / dark deep-green album cloth.
-const LIGHT_SURFACE = '#F3EDE0'
-const DARK_SURFACE = '#1C2422'
+// Keep in sync with the canvas token in global.css so the native animation and launch screen don't flash a different white/black.
+// v3: near-white paper / near-black ink.
+const LIGHT_SURFACE = '#FAFAF7'
+const DARK_SURFACE = '#0D0C0A'
 
 const config: ExpoConfig = {
   name: 'Trovia',
@@ -72,7 +72,7 @@ const config: ExpoConfig = {
     permissions: ['REQUEST_INSTALL_PACKAGES'],
     predictiveBackGestureEnabled: false,
     adaptiveIcon: {
-      backgroundColor: '#F3EDE0',
+      backgroundColor: '#FAFAF7',
       foregroundImage: './assets/android-icon-foreground.png',
       backgroundImage: './assets/android-icon-background.png',
       monochromeImage: './assets/android-icon-monochrome.png',

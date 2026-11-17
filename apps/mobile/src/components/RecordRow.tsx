@@ -6,7 +6,7 @@ import { domainOf, formatRelativeDate } from '@trovia/shared'
 
 import { Ionicons } from '@expo/vector-icons'
 
-import { useIsDark, usePalette } from '../ui/palette'
+import { tileFor, useIsDark, usePalette } from '../ui/palette'
 import { LiveStatusMark } from './LiveStatusMark'
 import { useT } from '../i18n'
 import { useTapGuard } from '../hooks/useTapGuard'
@@ -27,7 +27,7 @@ function urlTitleAndHost(url: string): { title: string; host: string } {
   }
 }
 
-/** Placeholder when there is no thumbnail: the first letter of the site domain, which reads like an alphabetical index rather than something missing. */
+/** Placeholder when there is no thumbnail: the first letter of the site domain, in one of six quiet cover tints. */
 function initialOf(item: DocumentSummary | SearchResult): string {
   const host = domainOf(item.url) ?? ''
   const first = host.replace(/^www\./, '').slice(0, 1)
@@ -40,27 +40,69 @@ function titleOf(item: DocumentSummary | SearchResult): string {
   return title
 }
 
-function metaOf(item: DocumentSummary | SearchResult, showDate: boolean): string {
-  // When the list is grouped by day the date is already in the group header, so repeating it in the row states the same thing twice.
-  const date = showDate ? formatRelativeDate(item.saved_at) : ''
-  // When the title is itself the URL, repeating the site name states the same thing twice;
-  // but leaving only a date would make the row lose a leg, so it is uniformly labelled "link".
-  const titleIsUrl = !item.title || item.title.trim() === item.url
-  // When the title slot already holds the domain, repeating it means nothing; keep the time only.
-  if (titleIsUrl) {
-    const { title, host } = urlTitleAndHost(item.url)
-    if (!host || title === host) return date
-    return date ? `${host} · ${date}` : host
+function sourceOf(item: DocumentSummary | SearchResult): string {
+  if (!item.title || item.title.trim() === item.url) return urlTitleAndHost(item.url).host
+  return domainOf(item.url) ?? ''
+}
+
+function Cover({
+  item,
+  thumbnail,
+  broken,
+  onBroken,
+  selecting,
+  selected,
+}: {
+  item: DocumentSummary | SearchResult
+  thumbnail?: string
+  broken: boolean
+  onBroken: () => void
+  selecting: boolean
+  selected?: boolean
+}) {
+  const p = usePalette()
+  const dark = useIsDark()
+
+  if (selecting) {
+    return (
+      <View className="h-[76px] w-[60px] items-center justify-center rounded-[10px] bg-sunken">
+        <Ionicons
+          name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+          size={24}
+          color={selected ? p.accent : p.faint}
+        />
+      </View>
+    )
   }
-  // Site name and domain are often the same thing ("x.com · X (formerly Twitter)"), so only the domain is written.
-  const host = domainOf(item.url)
-  if (!host) return date
-  return date ? `${host} · ${date}` : host
+
+  if (thumbnail && !broken) {
+    return (
+      <View className="h-[76px] w-[60px] overflow-hidden rounded-[10px]">
+        <Image
+          source={{ uri: thumbnail }}
+          style={{ width: 60, height: 76, opacity: dark ? 0.72 : 1 }}
+          resizeMode="cover"
+          onError={onBroken}
+        />
+      </View>
+    )
+  }
+
+  return (
+    <View
+      className="h-[76px] w-[60px] items-center justify-center rounded-[10px]"
+      style={{ backgroundColor: tileFor(domainOf(item.url) ?? item.url, dark) }}
+    >
+      <Text className="text-[22px] font-semibold tracking-[-0.44px] text-white opacity-90">
+        {initialOf(item)}
+      </Text>
+    </View>
+  )
 }
 
 /**
- * One row of the saved-items list: title on top, source and time below, a status mark on the right.
- * No card, no thumbnail, no chevron — one row is one item.
+ * One row of the saved-items list: a 60×76 cover, a 16.5dp title, source and time below, a quiet status mark on the right.
+ * v3 keeps one row as one item — no card, no chevron.
  */
 export function RecentRow({
   item,
@@ -84,16 +126,13 @@ export function RecentRow({
   /** Single-item retry: offered only in the "could not be processed" filter; this entry point should not appear in other contexts. */
   onRetry?: () => void
 }) {
-  const p = usePalette()
-  const dark = useIsDark()
   const tap = useTapGuard()
   const t = useT()
-  // On some sites the favicon URL opens but the content is empty (0 bytes / transparent image), leaving an empty box behind.
-  // On load failure fall back to the first letter, so the left column at least still has something in it.
   const [imageBroken, setImageBroken] = useState(false)
-  // Thumbnail priority: local file > remote URL > not shown (many sites have no body image).
-  // Thumbnail priority: local file > remote URL > site initial placeholder
   const thumbnail = (item.image_files ?? []).find((file) => Boolean(file)) ?? (item.images ?? [])[0]
+  const source = sourceOf(item)
+  const date = showDate ? formatRelativeDate(item.saved_at) : ''
+
   return (
     <Pressable
       onPressIn={tap.onPressIn}
@@ -110,56 +149,39 @@ export function RecentRow({
       accessibilityLabel={
         selected ? t('row.selected', { title: item.title || item.url }) : item.title || item.url
       }
-      className="min-h-[60px] justify-center"
     >
       {({ pressed }) => (
-        // No background on the row: a row is a row in a table, and a fill turns the whole column into one white card after another.
-        // Pressing only lowers opacity — the background-fill approach does not work on a canvas-coloured surface, where sunken is only 2/255 darker than canvas.
-        <View style={{ opacity: pressed ? 0.6 : 1 }} className="flex-row items-center gap-3 py-3">
-          {/* Real icons and letter placeholders share the same 34×34 container: favicons come in square and wide shapes,
-              and without a container the left column looks "straight" but has uneven weight and jumps when scanning.
-              In multi-select mode this container turns into a check circle in place, so the left column keeps its width and the text does not shift sideways. */}
-          <View
-            className={
-              selecting
-                ? 'items-center justify-center'
-                : thumbnail && !imageBroken
-                  ? 'items-center justify-center overflow-hidden rounded-sm'
-                  : 'items-center justify-center overflow-hidden rounded-sm border border-line'
-            }
-            style={{ width: 34, height: 34 }}
-          >
-            {selecting ? (
-              <Ionicons
-                name={selected ? 'checkmark-circle' : 'ellipse-outline'}
-                size={22}
-                color={selected ? p.accent : p.faint}
-              />
-            ) : thumbnail && !imageBroken ? (
-              // Fill the tile: this is the article's lead image, not a site icon; shrinking it into a small block with padding makes it look like the image is missing.
-              // Cover images are usually light (screenshots, white-background
-              // illustrations); on a near-black canvas a full-brightness tile
-              // reads as a hole punched in the list. Knock them back a little in
-              // dark mode instead of leaving the row to look "light".
-              <Image
-                source={{ uri: thumbnail }}
-                style={{ width: 34, height: 34, opacity: dark ? 0.72 : 1 }}
-                resizeMode="cover"
-                onError={() => setImageBroken(true)}
-              />
-            ) : (
-              <Text className="text-caption font-medium text-faint">{initialOf(item)}</Text>
-            )}
-          </View>
-          <View className="flex-1">
-            <Text className="text-body font-medium text-ink" numberOfLines={1}>
+        <View style={{ opacity: pressed ? 0.6 : 1 }} className="flex-row items-start gap-3.5 py-[13px]">
+          <Cover
+            item={item}
+            thumbnail={thumbnail}
+            broken={imageBroken}
+            onBroken={() => setImageBroken(true)}
+            selecting={selecting}
+            selected={selected}
+          />
+          <View className="min-w-0 flex-1 pt-px">
+            <Text
+              className="text-[16.5px] font-semibold leading-[24px] tracking-[-0.25px] text-ink"
+              numberOfLines={2}
+            >
               {titleOf(item)}
             </Text>
-            <View className="mt-1 flex-row items-center justify-between gap-2">
-              <Text className="flex-1 text-caption text-muted" numberOfLines={1}>
-                {metaOf(item, showDate)}
-              </Text>
-              <View className="flex-row items-center gap-2">
+            <View className="mt-1.5 flex-row items-center gap-[7px]">
+              {source ? (
+                <Text className="max-w-[52%] text-[12.5px] text-muted" numberOfLines={1}>
+                  {source}
+                </Text>
+              ) : null}
+              {source && date ? (
+                <View className="h-[2px] w-[2px] rounded-full bg-line-strong" />
+              ) : null}
+              {date ? (
+                <Text className="text-[12.5px] text-faint" numberOfLines={1}>
+                  {date}
+                </Text>
+              ) : null}
+              <View className="ml-auto flex-row items-center gap-2">
                 <LiveStatusMark
                   docId={item.id}
                   status={item.parse_status}
@@ -173,8 +195,7 @@ export function RecentRow({
                     accessibilityRole="button"
                     accessibilityLabel={t('row.retryOne')}
                   >
-                    {/* Inline retry does not use the accent colour: with seven red labels on one screen the accent stops meaning anything. */}
-                    <Text className="text-caption text-ink">{t('common.retry')}</Text>
+                    <Text className="text-[12.5px] text-ink">{t('common.retry')}</Text>
                   </Pressable>
                 ) : null}
               </View>
@@ -186,10 +207,6 @@ export function RecentRow({
   )
 }
 
-/**
- * One row of search results: it carries an extra "why it was found" line.
- * The match reason is assembled only from genuine hit evidence; no icon or colour block is added — the evidence itself is light enough.
- */
 /** Mark the query terms inside the text (case-insensitive; Chinese is matched as a plain substring). */
 function highlight(text: string, terms: string[]): [...(string | { hit: string })[]] {
   if (!text || terms.length === 0) return [text]
@@ -203,6 +220,10 @@ function highlight(text: string, terms: string[]): [...(string | { hit: string }
   return text.split(re).map((part, index) => (index % 2 === 1 ? { hit: part } : part))
 }
 
+/**
+ * One search result: cover + title, then the sentence the user remembers (a real hit excerpt),
+ * then the evidence line. Nothing says “match type” in a heading — the excerpt does that work.
+ */
 export function ResultRow({
   item,
   onPress,
@@ -217,11 +238,11 @@ export function ResultRow({
   /** The terms of the current query, used to highlight where the results matched. */
   terms?: string[]
 }) {
-  const t = useT()
   const tap = useTapGuard()
-  // Match kind first, title second: this screen has to answer "is it this one",
-  // and the evidence is the sentence that matched, not whether the title looks similar.
-  const kind = item.match_kind === 'semantic' ? t('result.kind.semantic') : t('result.kind.literal')
+  const [imageBroken, setImageBroken] = useState(false)
+  const source = sourceOf(item)
+  const date = showDate ? formatRelativeDate(item.saved_at) : ''
+
   return (
     <Pressable
       onPressIn={tap.onPressIn}
@@ -236,33 +257,63 @@ export function ResultRow({
     >
       {({ pressed }) => (
         <View style={{ opacity: pressed ? 0.6 : 1 }}>
-          <View className="flex-row items-baseline justify-between gap-3">
-            <Text className="text-[11px] font-semibold tracking-[1px] text-faint">{kind}</Text>
-            {showDate ? (
-              <Text className="text-caption text-faint">{formatRelativeDate(item.saved_at)}</Text>
-            ) : null}
+          <View className="flex-row items-start gap-3.5">
+            <Cover
+              item={item}
+              broken={imageBroken}
+              onBroken={() => setImageBroken(true)}
+              selecting={false}
+            />
+            <View className="min-w-0 flex-1 pt-px">
+              <Text
+                className="text-[17px] font-semibold leading-[25px] tracking-[-0.3px] text-ink"
+                numberOfLines={2}
+              >
+                {highlight(item.title || item.url, terms).map((part, i) =>
+                  typeof part === 'string' ? (
+                    <Text key={i}>{part}</Text>
+                  ) : (
+                    <Text key={i} className="font-semibold text-accent">
+                      {part.hit}
+                    </Text>
+                  ),
+                )}
+              </Text>
+              <View className="mt-[7px] flex-row items-center gap-[7px]">
+                {source ? (
+                  <Text className="max-w-[52%] text-[12.5px] text-muted" numberOfLines={1}>
+                    {source}
+                  </Text>
+                ) : null}
+                {source && date ? (
+                  <View className="h-[2px] w-[2px] rounded-full bg-line-strong" />
+                ) : null}
+                {date ? (
+                  <Text className="text-[12.5px] text-faint" numberOfLines={1}>
+                    {date}
+                  </Text>
+                ) : null}
+                <View className="ml-auto">
+                  <LiveStatusMark
+                    docId={item.document_id}
+                    status={item.parse_status}
+                    errorCode={item.parse_error_code ?? null}
+                    onTerminal={onTerminal}
+                  />
+                </View>
+              </View>
+            </View>
           </View>
 
-          <Text className="mt-2 text-body font-medium text-ink" numberOfLines={2}>
-            {highlight(item.title || item.url, terms).map((part, i) =>
-              typeof part === 'string' ? (
-                <Text key={i}>{part}</Text>
-              ) : (
-                <Text key={i} className="font-semibold text-accent">
-                  {part.hit}
-                </Text>
-              ),
-            )}
-          </Text>
-
           {item.matched_excerpt ? (
-            <View className="mt-2 border-l-2 border-line-strong pl-3">
-              <Text className="text-body-sm text-muted" numberOfLines={2}>
+            <View className="relative mt-3 rounded-[12px] bg-sunken py-3 pl-[15px] pr-3.5">
+              <View className="absolute bottom-[13px] left-0 top-[13px] w-0.5 rounded-full bg-accent" />
+              <Text className="text-[14.5px] leading-[24px] tracking-[-0.06px] text-muted" numberOfLines={2}>
                 {highlight(item.matched_excerpt, terms).map((part, i) =>
                   typeof part === 'string' ? (
                     <Text key={i}>{part}</Text>
                   ) : (
-                    <Text key={i} className="font-medium text-accent">
+                    <Text key={i} className="font-semibold text-accent">
                       {part.hit}
                     </Text>
                   ),
@@ -271,16 +322,10 @@ export function ResultRow({
             </View>
           ) : null}
 
-          <View className="mt-2 flex-row items-center gap-2">
-            <Text className="flex-shrink text-caption text-muted" numberOfLines={1}>
+          <View className="mt-[9px] flex-row items-center gap-2">
+            <Text className="flex-shrink text-[12px] text-faint" numberOfLines={1}>
               {item.match_reason}
             </Text>
-            <LiveStatusMark
-              docId={item.document_id}
-              status={item.parse_status}
-              errorCode={item.parse_error_code ?? null}
-              onTerminal={onTerminal}
-            />
           </View>
         </View>
       )}

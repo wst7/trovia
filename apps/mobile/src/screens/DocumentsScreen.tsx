@@ -233,14 +233,6 @@ export function DocumentsScreen() {
   }
 
   const hasMore = total === null ? items.length >= 20 : items.length < total
-  const unit = loading
-    ? t('list.unitLoading')
-    : keyword || failedOnly || importedOnly
-      ? t('list.unitMatch')
-      : total === 1
-        ? t('list.unitItemOne')
-        : t('list.unitItem')
-
   return (
     <Screen>
       <FlatList
@@ -266,107 +258,136 @@ export function DocumentsScreen() {
         }
         ListHeaderComponent={
           <View>
+            <View className="flex-row items-center justify-between" style={{ height: 52 }}>
+              <Text className="text-[24px] font-semibold tracking-[-0.62px] text-ink">
+                {selecting
+                  ? t('list.selectedCount', { count: selected.size })
+                  : t('list.collection')}
+              </Text>
+              <Text className="text-[13px] text-faint">
+                {selecting ? null : t('home.total', { count: total ?? 0 })}
+              </Text>
+            </View>
+
             {selecting ? (
-              <View className="mt-4 flex-row items-center justify-between">
-                <Text className="text-heading font-semibold text-ink">
-                  {t('list.selectedCount', { count: selected.size })}
-                </Text>
+              <View className="mb-2 flex-row items-center justify-between">
+                <Text className="text-[12.5px] text-faint">{t('list.tapToSelect')}</Text>
                 <View className="flex-row items-center gap-4">
                   <TextButton
-                    label={selected.size === items.length ? t('list.clearAll') : t('list.selectAll')}
-                    onPress={() => setSelected(selected.size === items.length ? new Set() : new Set(items.map((item) => item.id)))}
+                    label={
+                      selected.size === items.length ? t('list.clearAll') : t('list.selectAll')
+                    }
+                    onPress={() =>
+                      setSelected(
+                        selected.size === items.length
+                          ? new Set()
+                          : new Set(items.map((item) => item.id)),
+                      )
+                    }
                     tone="muted"
                   />
                   <TextButton label={t('common.done')} onPress={exitSelection} />
                 </View>
               </View>
-            ) : (
-              <View className="mt-4 flex-row items-baseline gap-2">
-                <Text className="text-[24px] font-semibold leading-[30px] tracking-[-0.3px] text-ink">
-                  {loading ? '—' : (total ?? '—')}
-                </Text>
-                <Text className="flex-1 text-body-sm text-muted">{unit}</Text>
-                <View className="flex-row items-center gap-3">
-                  {(['day', 'site'] as const).map((mode) => (
-                    <Pressable
-                      key={mode}
-                      onPress={() => setGroupBy(mode)}
-                      hitSlop={8}
-                      accessibilityRole="button"
-                      accessibilityLabel={mode === 'day' ? t('list.groupByDay') : t('list.groupBySite')}
-                    >
-                      <Text
-                        className={
-                          groupBy === mode
-                            ? 'text-caption font-medium text-ink underline'
-                            : 'text-caption text-faint'
-                        }
-                      >
-                        {mode === 'day' ? t('list.day') : t('list.site')}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            )}
+            ) : null}
 
-            {/* Two filters, one row. As bare text links they read like stray
-                labels, and each took a line of its own before any content. */}
-            <View className="mt-3 flex-row items-center justify-between gap-3">
-              <View className="flex-1 flex-row flex-wrap items-center gap-2">
-                {failed > 0 ? (
-                  <Pressable
-                    onPress={() => {
-                      setFailedOnly((on) => !on)
-                      setImportedOnly(false)
-                    }}
-                    hitSlop={6}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: failedOnly }}
-                    accessibilityLabel={t('list.failedCount', { count: failed, total: libraryTotal || total || 0 })}
-                  >
-                    <View
-                      className={
-                        failedOnly
-                          ? 'rounded-full border border-ink px-3 py-1'
-                          : 'rounded-full border border-line px-3 py-1'
-                      }
-                    >
-                      <Text className={failedOnly ? 'text-caption text-ink' : 'text-caption text-muted'}>
-                        {t('list.failedChip', { count: failed })}
-                      </Text>
-                    </View>
-                  </Pressable>
-                ) : null}
+            <View className="mt-2">
+              <SearchInput
+                value={keywordInput}
+                onChangeText={setKeywordInput}
+                placeholder={t('list.filterPlaceholder', { count: libraryTotal || total || 0 })}
+                accessibilityLabel={t('list.filterA11y')}
+              />
+            </View>
+
+            <View className="mt-3.5 flex-row flex-wrap items-center gap-2">
+              {(['day', 'site'] as const).map((mode) => (
                 <Pressable
-                  onPress={() => {
-                    setImportedOnly((on) => !on)
-                    setFailedOnly(false)
-                  }}
-                  hitSlop={6}
+                  key={mode}
+                  onPress={() => setGroupBy(mode)}
                   accessibilityRole="button"
-                  accessibilityState={{ selected: importedOnly }}
-                  accessibilityLabel={t('list.importedOnly')}
+                  accessibilityState={{ selected: groupBy === mode }}
+                  accessibilityLabel={
+                    mode === 'day' ? t('list.groupByDay') : t('list.groupBySite')
+                  }
+                  className={
+                    groupBy === mode
+                      ? 'h-[33px] justify-center rounded-[10px] bg-ink px-[13px]'
+                      : 'h-[33px] justify-center rounded-[10px] bg-sunken px-[13px]'
+                  }
                 >
-                  <View
+                  <Text
                     className={
-                      importedOnly
-                        ? 'rounded-full border border-ink px-3 py-1'
-                        : 'rounded-full border border-line px-3 py-1'
+                      groupBy === mode
+                        ? 'text-[13px] text-canvas'
+                        : 'text-[13px] text-muted'
                     }
                   >
-                    <Text className={importedOnly ? 'text-caption text-ink' : 'text-caption text-muted'}>
-                      {t('list.importedOnly')}
-                    </Text>
-                  </View>
+                    {mode === 'day' ? t('list.byDay') : t('list.bySite')}
+                  </Text>
                 </Pressable>
-              </View>
+              ))}
               {failed > 0 ? (
-                <TextButton
-                  label={retrying ? t('list.requeuing') : t('list.retryAll')}
+                <Pressable
+                  onPress={() => {
+                    setFailedOnly((on) => !on)
+                    setImportedOnly(false)
+                  }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: failedOnly }}
+                  accessibilityLabel={t('list.failedCount', {
+                    count: failed,
+                    total: libraryTotal || total || 0,
+                  })}
+                  className={
+                    failedOnly
+                      ? 'h-[33px] justify-center rounded-[10px] border border-ink bg-ink px-[13px]'
+                      : 'h-[33px] justify-center rounded-[10px] border border-line px-[13px]'
+                  }
+                >
+                  <Text
+                    className={
+                      failedOnly ? 'text-[13px] text-canvas' : 'text-[13px] text-faint'
+                    }
+                  >
+                    {t('list.failedChip', { count: failed })}
+                  </Text>
+                </Pressable>
+              ) : null}
+              <Pressable
+                onPress={() => {
+                  setImportedOnly((on) => !on)
+                  setFailedOnly(false)
+                }}
+                accessibilityRole="button"
+                accessibilityState={{ selected: importedOnly }}
+                accessibilityLabel={t('list.importedOnly')}
+                className={
+                  importedOnly
+                    ? 'h-[33px] justify-center rounded-[10px] border border-ink bg-ink px-[13px]'
+                    : 'h-[33px] justify-center rounded-[10px] border border-line px-[13px]'
+                }
+              >
+                <Text
+                  className={
+                    importedOnly ? 'text-[13px] text-canvas' : 'text-[13px] text-faint'
+                  }
+                >
+                  {t('list.importedOnly')}
+                </Text>
+              </Pressable>
+              {failed > 0 ? (
+                <Pressable
                   onPress={() => void handleRetryFailed()}
-                  tone="muted"
-                />
+                  disabled={retrying}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  className="ml-auto h-[33px] justify-center"
+                >
+                  <Text className="text-[12.5px] text-muted">
+                    {retrying ? t('list.requeuing') : t('list.retryAll')}
+                  </Text>
+                </Pressable>
               ) : null}
             </View>
 
@@ -375,14 +396,6 @@ export function DocumentsScreen() {
                 {failedOnly ? t('list.failedOnlyHint') : t('list.importedHint')}
               </Text>
             ) : null}
-
-            <View className="mt-5">
-              <SearchInput
-                value={keywordInput}
-                onChangeText={setKeywordInput}
-                accessibilityLabel={t('list.filterA11y')}
-              />
-            </View>
 
             {error ? (
               <View className="mt-4 flex-row items-center justify-between">
@@ -398,69 +411,58 @@ export function DocumentsScreen() {
           const label = groupOf(item)
           const previous = index > 0 ? groupOf(displayItems[index - 1]) : null
           const firstOfGroup = !label || label !== previous
-          // How many items the group holds: when grouping by site this number is more useful than the site name itself.
           const groupSize = displayItems.filter((doc) => groupOf(doc) === label).length
           const nextLabel = index + 1 < displayItems.length ? groupOf(displayItems[index + 1]) : null
           const lastOfGroup = nextLabel !== label
-          const failed = item.parse_status === 'failed'
           return (
-            // The left rail holds the date and the vertical line is joined up by the right column's left border — time no longer repeats as a group heading,
-            // so the eye follows one single vertical line while scanning. A failed row turns that line into 2px red:
-            // “this one needs you” is written into the structure, rather than being a dot in the corner.
-            <View className="flex-row">
-              <View className={`w-14 ${firstOfGroup && index > 0 ? 'pt-5' : ''}`}>
-                {firstOfGroup ? (
-                  <Text
-                    className="text-[10px] font-semibold tracking-[0.5px] text-faint"
-                    numberOfLines={1}
-                  >
-                    {groupBy === 'site' && groupSize > 0 ? `${label} ${groupSize}` : label}
-                  </Text>
-                ) : null}
-              </View>
-              <View
-                className={`flex-1 pl-3 ${firstOfGroup && index > 0 ? 'pt-5' : ''} ${
-                  failed ? 'border-l-2 border-danger' : 'border-l border-line'
-                }`}
+            <View>
+              {firstOfGroup ? (
+                <>
+                  <View className={`${index > 0 ? 'mt-6' : 'mt-4'} flex-row items-baseline justify-between`}>
+                    <Text className="text-label uppercase text-faint">{label}</Text>
+                    <Text className="text-[12px] text-faint">
+                      {t('list.groupCount', { count: groupSize })}
+                    </Text>
+                  </View>
+                  <View className="mt-1 h-px bg-line" />
+                </>
+              ) : null}
+              <SwipeRow
+                open={swipeId === item.id}
+                onOpen={() => setSwipeId(item.id)}
+                onClose={() => setSwipeId((current) => (current === item.id ? null : current))}
+                onDelete={() => {
+                  setSwipeId(null)
+                  setPendingDelete({ id: item.id, title: item.title ?? item.url })
+                }}
+                disabled={selecting}
               >
-                <SwipeRow
-                  open={swipeId === item.id}
-                  onOpen={() => setSwipeId(item.id)}
-                  onClose={() => setSwipeId((current) => (current === item.id ? null : current))}
-                  onDelete={() => {
-                    setSwipeId(null)
-                    setPendingDelete({ id: item.id, title: item.title ?? item.url })
+                <RecentRow
+                  item={item}
+                  onPress={() => {
+                    if (selecting) toggleSelected(item.id)
+                    else router.push(`/documents/${item.id}`)
                   }}
-                  disabled={selecting}
-                >
-                  <RecentRow
-                    item={item}
-                    onPress={() => {
-                      if (selecting) toggleSelected(item.id)
-                      else router.push(`/documents/${item.id}`)
-                    }}
-                    onLongPress={() => (selecting ? toggleSelected(item.id) : enterSelection(item.id))}
-                    onTerminal={handleTerminal}
-                    // With day grouping the date lives on the left rail; with site grouping the row has to carry the date again.
-                    showDate={groupBy === 'site'}
-                    selecting={selecting}
-                    selected={selected.has(item.id)}
-                    onRetry={
-                      failedOnly && repo.isRetryableError(item.parse_error_code)
-                        ? () => {
-                            void (async () => {
-                              await repo.markForRetry(item.id)
-                              void processPendingQueue()
-                              toast(t('list.requeuedOne'), { type: 'success' })
-                              reload()
-                            })()
-                          }
-                        : undefined
-                    }
-                  />
-                </SwipeRow>
-                {lastOfGroup ? null : <View className="h-px bg-line" />}
-              </View>
+                  onLongPress={() => (selecting ? toggleSelected(item.id) : enterSelection(item.id))}
+                  onTerminal={handleTerminal}
+                  showDate={groupBy === 'site'}
+                  selecting={selecting}
+                  selected={selected.has(item.id)}
+                  onRetry={
+                    failedOnly && repo.isRetryableError(item.parse_error_code)
+                      ? () => {
+                          void (async () => {
+                            await repo.markForRetry(item.id)
+                            void processPendingQueue()
+                            toast(t('list.requeuedOne'), { type: 'success' })
+                            reload()
+                          })()
+                        }
+                      : undefined
+                  }
+                />
+              </SwipeRow>
+              {lastOfGroup ? null : <View className="h-px bg-line" />}
             </View>
           )
         }}

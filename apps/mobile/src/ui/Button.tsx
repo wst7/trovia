@@ -8,9 +8,9 @@ import { usePalette } from './palette'
 
 type IconName = ComponentProps<typeof Ionicons>['name']
 
-const BASE = 'flex-row items-center justify-center rounded-sm'
+const BASE = 'flex-row items-center justify-center rounded-[14px]'
 const SIZES = {
-  md: 'h-12 px-5',
+  md: 'h-[50px] px-5',
   sm: 'h-10 px-4',
 } as const
 const VARIANTS = {
@@ -73,7 +73,7 @@ export function Button({
       ) : (
         <View className="flex-row items-center gap-2">
           {icon ? <Ionicons name={icon} size={size === 'sm' ? 15 : 17} color={iconColor} /> : null}
-          <Text className={cx('text-label', LABEL_VARIANTS[variant])}>{label}</Text>
+          <Text className={cx('text-[15px] font-semibold tracking-[-0.15px]', LABEL_VARIANTS[variant])}>{label}</Text>
         </View>
       )}
     </Pressable>

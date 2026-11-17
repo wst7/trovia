@@ -23,8 +23,10 @@ export function StatusMark({
   withLabel?: boolean
   className?: string
 }) {
-  // Done needs no mark: a lone gray dot at the end of a row only makes the reader guess what it means.
-  if (status === 'completed' && withLabel) return null
+  // v3 brings back a quiet dot for finished items: the row should show a state, but not shout it.
+  if (status === 'completed' && withLabel) {
+    return <View className={cx('h-1.5 w-1.5 rounded-full bg-faint opacity-40', className)} />
+  }
 
   const inFlight = IN_FLIGHT.includes(status)
   const partial = status === 'partial'

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { ActivityIndicator, KeyboardAvoidingView, Pressable, ScrollView, View } from 'react-native'
 import { Text } from '../ui/text'
+import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { DocumentSummary, ParseStatus, SearchResult } from '@trovia/shared'
 import { queryTerms } from '../local/terms'
@@ -16,7 +17,6 @@ import { RecentRow, ResultRow } from '../components/RecordRow'
 import { loadLlmState } from '../local/llm'
 import { processPendingQueue } from '../local/pipeline'
 import * as repo from '../local/repo'
-import { loadAskMode, saveAskMode } from '../local/ui-prefs'
 import { useLocalRevision } from '../local/useLocalRevision'
 import { opLog } from '../local/dev-log'
 import { useToast } from '../providers/ToastProvider'
@@ -52,12 +52,7 @@ export function HomeScreen() {
   const [stats, setStats] = useState<repo.DocumentStats | null>(null)
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [writing, setWriting] = useState(false)
-  // The "ask the model" switch: off by default, left for the user to turn on explicitly (an LLM is optional).
-  const [askMode, setAskMode] = useState(false)
-  // Remembered across launches: switching to AI every time you open the app is friction.
-  useEffect(() => {
-    void loadAskMode().then((on) => setAskMode(on))
-  }, [])
+  // The model entry card is shown on home; whether it is configured decides whether tapping it opens chat or settings.
   const [llmReady, setLlmReady] = useState(false)
 
   const inResults = lastQuery.length > 0
@@ -136,11 +131,6 @@ export function HomeScreen() {
   function runSearch(text?: string) {
     const q = (text ?? query).trim()
     if (!q || searching) return
-    // With "ask the model" on: input that isn't a link goes to the model, which searches the library and then answers.
-    if (askMode) {
-      router.push(`/ask?q=${encodeURIComponent(q)}`)
-      return
-    }
     // Setting the query is enough; the effect above performs the search once.
     setResults(null)
     setLastQuery(q)
@@ -207,17 +197,6 @@ export function HomeScreen() {
       value={query}
       onChangeText={setQuery}
       onSearch={() => void runSearch()}
-      ask={askMode}
-      askAvailable={llmReady}
-      onSelectMode={(mode) => {
-        setAskMode(mode === 'ai')
-        void saveAskMode(mode === 'ai')
-      }}
-      onAskNeedsSetup={() =>
-        toast(t('ask.off'), {
-          action: { label: t('ask.openSettings'), onPress: () => router.push('/settings/llm') },
-        })
-      }
       onSave={handleSave}
       searching={searching || writing}
     />
@@ -233,14 +212,22 @@ export function HomeScreen() {
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
-          <View className="h-14 justify-center">
-            <Text className="text-body-sm font-medium text-muted">Trovia</Text>
+          <View className="flex-row items-center justify-between" style={{ height: 52 }}>
+            <Text className="text-[19px] font-semibold tracking-[-0.38px] text-ink">Trovia</Text>
+            <Text className="text-[13px] text-faint">
+              {inResults
+                ? t('home.found', { count: results?.length ?? 0 })
+                : stats
+                  ? t('home.total', { count: stats.total })
+                  : ''}
+            </Text>
           </View>
 
           {inResults ? (
             <>
-              <View className="mt-1 flex-row items-center justify-between">
-                <Text className="text-body-sm text-muted">
+              <View className="mt-3">{composer}</View>
+              <View className="mt-3 flex-row items-center justify-between">
+                <Text className="flex-1 text-[12.5px] text-faint">
                   {searching
                     ? t('home.searching')
                     : interpretation
@@ -248,7 +235,7 @@ export function HomeScreen() {
                           interpretation,
                           count: results?.length ?? 0,
                         })
-                      : t('home.found', { count: results?.length ?? 0 })}
+                      : ''}
                 </Text>
                 <TextButton label={t('common.clear')} onPress={clearSearch} tone="muted" />
               </View>
@@ -257,7 +244,6 @@ export function HomeScreen() {
                   {t('home.bodyless', { count: bodylessCount })}
                 </Text>
               ) : null}
-              <View className="mt-1">{composer}</View>
 
               {searchError ? (
                 <Text className="mt-4 text-body-sm text-danger">{searchError}</Text>
@@ -316,7 +302,15 @@ export function HomeScreen() {
                         <ResultRow
                           item={item}
                           terms={highlightTerms}
-                          onPress={() => router.push(`/documents/${item.document_id}`)}
+                          onPress={() =>
+                            router.push(
+                              `/documents/${item.document_id}${
+                                item.matched_excerpt
+                                  ? `?hit=${encodeURIComponent(item.matched_excerpt)}`
+                                  : ''
+                              }`,
+                            )
+                          }
                           onTerminal={handleTerminal}
                         />
                       </View>
@@ -334,7 +328,15 @@ export function HomeScreen() {
                             <ResultRow
                               item={item}
                               terms={highlightTerms}
-                              onPress={() => router.push(`/documents/${item.document_id}`)}
+                              onPress={() =>
+                            router.push(
+                              `/documents/${item.document_id}${
+                                item.matched_excerpt
+                                  ? `?hit=${encodeURIComponent(item.matched_excerpt)}`
+                                  : ''
+                              }`,
+                            )
+                          }
                               onTerminal={handleTerminal}
                             />
                           </View>
@@ -346,63 +348,85 @@ export function HomeScreen() {
             </>
           ) : (
             <>
-              {/* Only one sentence on home needs weight: it is this app's single piece of product copy. */}
-              <View className="mt-6">
-                <Text className="text-[30px] font-semibold leading-[38px] tracking-[-0.4px] text-ink">
+              <View className="mt-1.5">
+                <Text className="text-label uppercase text-faint">{t('home.kicker')}</Text>
+                <Text className="mt-2.5 text-display font-semibold text-ink">
                   {t('home.title')}
                 </Text>
+                <Text className="mt-2.5 text-body-sm text-muted">{t('home.subtitle')}</Text>
               </View>
 
-              <View className="mt-7">{composer}</View>
-
+              <View className="mt-5">{composer}</View>
 
               {stats && stats.total > 0 ? (
-                <View className="mt-8 flex-row items-baseline gap-2">
-                  <Text className="text-body-sm text-muted">
+                <View className="mt-4 flex-row items-center gap-2">
+                  <Text className="text-[12.5px] text-faint">
                     {t('home.stats.saved', { count: stats.total })}
                   </Text>
                   {stats.processing > 0 ? (
-                    <Text className="text-body-sm text-muted">
-                      {t('home.stats.processing', { count: stats.processing })}
-                    </Text>
+                    <>
+                      <View className="h-0.5 w-0.5 rounded-full bg-line-strong" />
+                      <Text className="text-[12.5px] text-faint">
+                        {t('home.stats.processing', { count: stats.processing }).replace(/^·\s*/, '')}
+                      </Text>
+                    </>
                   ) : null}
                   {stats.failed > 0 ? (
-                    <Text className="text-body-sm text-muted">
-                      {t('home.stats.failed', { count: stats.failed })}
-                    </Text>
+                    <>
+                      <View className="h-0.5 w-0.5 rounded-full bg-line-strong" />
+                      <Text className="text-[12.5px] text-faint">
+                        {t('home.stats.failed', { count: stats.failed }).replace(/^·\s*/, '')}
+                      </Text>
+                    </>
                   ) : null}
                 </View>
               ) : null}
 
-              {suggestions.length > 0 ? (
-                <View className="mt-8">
-                  <Text className="text-[11px] font-semibold tracking-[1px] text-faint">
-                    {t('home.suggestions')}
-                  </Text>
-                  <View className="mt-1 flex-row flex-wrap items-center">
-                    {suggestions.map((term) => (
-                      <Pressable
-                        key={term}
-                        onPress={() => {
-                          setQuery(term)
-                          void runSearch(term)
-                        }}
-                        hitSlop={8}
-                        accessibilityRole="button"
-                        accessibilityLabel={t('home.suggestionA11y', { term })}
-                        className="mr-4 py-1"
-                      >
-                        <Text className="text-body-sm text-muted underline">{term}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
+              <Pressable
+                onPress={() => {
+                  if (!llmReady) {
+                    toast(t('ask.off'), {
+                      action: {
+                        label: t('ask.openSettings'),
+                        onPress: () => router.push('/settings/llm'),
+                      },
+                    })
+                    return
+                  }
+                  router.push('/ask')
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={t('home.ask.title')}
+                className="mt-3.5 flex-row items-center gap-3 rounded-[14px] bg-sunken px-[15px] py-3.5"
+              >
+                <View className="h-[30px] w-[30px] items-center justify-center rounded-[9px] bg-surface">
+                  <Ionicons name="sparkles-outline" size={16} color={p.muted} />
                 </View>
-              ) : null}
+                <View className="flex-1">
+                  <Text className="text-[14px] font-semibold tracking-[-0.14px] text-ink">
+                    {t('home.ask.title')}
+                  </Text>
+                  <Text className="mt-0.5 text-[12px] text-faint">{t('home.ask.subtitle')}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={14} color={p.faint} />
+              </Pressable>
 
               {recent.length > 0 ? (
-                <View className="mt-10">
-                  <View className="flex-row items-center justify-between">
-                    <Text className="text-body font-semibold text-ink">{t('home.recent')}</Text>
+                <View className="mt-8">
+                  <View className="flex-row items-baseline justify-between">
+                    <Text className="text-[15px] font-semibold tracking-[-0.15px] text-ink">
+                      {t('home.recent')}
+                    </Text>
+                    <Pressable
+                      onPress={() => router.push('/documents')}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('home.all', { count: stats?.total ?? recent.length })}
+                    >
+                      <Text className="text-[13px] text-faint">
+                        {t('home.all', { count: stats?.total ?? recent.length })}
+                      </Text>
+                    </Pressable>
                   </View>
                   <View className="mt-1">
                     {recent.map((item, index) => (
@@ -413,7 +437,6 @@ export function HomeScreen() {
                           item={item}
                           onPress={() => router.push(`/documents/${item.id}`)}
                           onTerminal={handleTerminal}
-                          showDate={false}
                         />
                         {index === recent.length - 1 ? null : <View className="h-px bg-line" />}
                       </View>
@@ -421,6 +444,28 @@ export function HomeScreen() {
                   </View>
                 </View>
               ) : null}
+              {suggestions.length > 0 ? (
+                <View className="mt-7">
+                  <Text className="text-label uppercase text-faint">{t('home.suggestions')}</Text>
+                  <View className="mt-2 flex-row flex-wrap gap-2">
+                    {suggestions.map((term) => (
+                      <Pressable
+                        key={term}
+                        onPress={() => {
+                          setQuery(term)
+                          void runSearch(term)
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('home.suggestionA11y', { term })}
+                        className="h-[33px] justify-center rounded-[10px] bg-sunken px-[13px]"
+                      >
+                        <Text className="text-[13px] text-muted">{term}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              ) : null}
+
             </>
           )}
         </ScrollView>

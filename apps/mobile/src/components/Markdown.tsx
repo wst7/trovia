@@ -133,18 +133,21 @@ export function Markdown({
   source,
   onImagePress,
   resolveImage,
+  compact = false,
 }: {
   source: string
   /** Opening an image: hand over all the images in the article so they can be swiped side to side. */
   onImagePress?: (url: string, images: string[]) => void
   /** Remote URL → local file; once images are on disk the detail screen uses this to show them offline. */
   resolveImage?: (url: string) => string
+  /** Chat answers use 15.5/27 inside a card instead of the 17/30 article measure. */
+  compact?: boolean
 }) {
   // Images always get a paragraph of their own: when a paragraph holds both text and images, the original order still holds.
   const normalized = normalizeBlockSource(source)
   const images = [...new Set([...source.matchAll(/!\[[^\]]*\]\(([^)\s]+)\)/g)].map((match) => match[1]))]
   const resolved = images.map((url) => resolveImage?.(url) ?? url)
-  return <View>{renderBlocks(normalized, onImagePress, resolved, resolveImage)}</View>
+  return <View>{renderBlocks(normalized, onImagePress, resolved, resolveImage, compact)}</View>
 }
 
 const HEADING_CLASS = [
@@ -161,6 +164,7 @@ function renderBlocks(
   onImagePress?: (url: string, images: string[]) => void,
   images: string[] = [],
   resolveImage?: (url: string) => string,
+  compact = false,
 ): ReactNode[] {
   const bodyFont = undefined
   const lines = source.split(/\r?\n/)
@@ -188,7 +192,7 @@ function renderBlocks(
       <Text
         key={key}
         className="text-ink"
-        style={[{ fontSize: 17, lineHeight: 31, marginBottom: 14 }, bodyFont]}
+        style={[{ fontSize: compact ? 15.5 : 17, lineHeight: compact ? 27 : 30, marginBottom: compact ? 12 : 18 }, bodyFont]}
       >
         {renderInline(state.paragraph.join(' '), key)}
       </Text>,
@@ -204,7 +208,7 @@ function renderBlocks(
         <Text className={state.ordered ? 'w-6 text-body-sm text-muted' : 'w-3 text-body text-faint'}>
           {state.ordered ? `${i + 1}.` : '·'}
         </Text>
-        <Text className="flex-1 text-ink" style={[{ fontSize: 16.5, lineHeight: 28 }, bodyFont]}>
+        <Text className="flex-1 text-ink" style={[{ fontSize: compact ? 15 : 16.5, lineHeight: compact ? 25 : 28 }, bodyFont]}>
           {renderInline(item, `${key}-${i}`)}
         </Text>
       </View>

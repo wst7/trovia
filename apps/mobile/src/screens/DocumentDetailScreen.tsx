@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Image, Linking, Pressable, ScrollView, Share, View } from 'react-native'
 import { Text } from '../ui/text'
 import { useLocalSearchParams, useRouter } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { DocumentDetail, ParseStatus, RelatedItem } from '@trovia/shared'
 import { domainOf, formatDate } from '@trovia/shared'
@@ -55,8 +56,9 @@ function RelatedRow({ item, onPress }: { item: RelatedItem; onPress: () => void 
 export function DocumentDetailScreen() {
   const t = useT()
   const router = useRouter()
-  const params = useLocalSearchParams<{ id?: string | string[] }>()
+  const params = useLocalSearchParams<{ id?: string | string[]; hit?: string }>()
   const id = Array.isArray(params.id) ? params.id[0] : params.id
+  const hitExcerpt = typeof params.hit === 'string' && params.hit.trim() ? params.hit.trim() : null
   const { toast } = useToast()
   const insets = useSafeAreaInsets()
   const p = usePalette()
@@ -176,13 +178,6 @@ export function DocumentDetailScreen() {
       />
       {doc ? (
         <View className="flex-row items-center">
-          <IconButton
-            name="share-outline"
-            size={20}
-            tone="muted"
-            accessibilityLabel={t('detail.share')}
-            onPress={() => void shareOriginal()}
-          />
           <IconButton
             name="trash-outline"
             size={19}
@@ -307,17 +302,46 @@ export function DocumentDetailScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {doc.title && doc.title.trim() !== doc.url ? (
-          <Text className="text-caption text-faint" numberOfLines={1}>
-            {domainOf(doc.url)}
-          </Text>
+        {remoteImages.length > 0 ? (
+          <Pressable
+            onPress={() =>
+              setViewer({
+                open: true,
+                index: 0,
+                images: remoteImages.map((remote) => resolveImage(remote)),
+              })
+            }
+            accessibilityRole="imagebutton"
+            accessibilityLabel={t('detail.viewImage')}
+            className="-mx-5 mb-5 h-[300px] overflow-hidden bg-sunken"
+          >
+            <Image
+              source={{ uri: resolveImage(remoteImages[0]) }}
+              style={{ width: '100%', height: 300 }}
+              resizeMode="cover"
+              accessibilityIgnoresInvertColors
+            />
+            <View className="absolute inset-x-0 top-0 h-20 bg-black/20" />
+          </Pressable>
         ) : null}
 
-        {/* 阅读页内统一用宋体：标题与正文同字形，只有字号字号与粗细的区别。 */}
-        <Text
-          className="mt-2 text-[25px] leading-[35px] tracking-[-0.2px] text-ink"
-          
-        >
+        <View className="flex-row items-center gap-2">
+          <Text className="text-[12.5px] font-semibold text-muted" numberOfLines={1}>
+            {doc.site_name || domainOf(doc.url)}
+          </Text>
+          {doc.published_at ? (
+            <>
+              <View className="h-[2px] w-[2px] rounded-full bg-line-strong" />
+              <Text className="text-[12.5px] text-faint">{formatDate(doc.published_at)}</Text>
+            </>
+          ) : null}
+          <View className="h-[2px] w-[2px] rounded-full bg-line-strong" />
+          <Text className="text-[12.5px] text-faint">
+            {t('detail.savedAt', { when: relativeTime(doc.saved_at) })}
+          </Text>
+        </View>
+
+        <Text className="mt-2 text-[26px] font-semibold leading-[35px] tracking-[-0.57px] text-ink">
           {doc.title || doc.url}
         </Text>
 
@@ -328,16 +352,19 @@ export function DocumentDetailScreen() {
           </Text>
         ) : null}
 
-        <Text className="mt-2 text-caption text-muted">
-          {[
-            doc.author,
-            doc.published_at ? t('detail.published', { date: formatDate(doc.published_at) }) : null,
-            t('detail.savedAt', { when: relativeTime(doc.saved_at) }),
-          ]
-            .filter(Boolean)
-            .join(' · ')}
-        </Text>
-
+        {hitExcerpt ? (
+          <View className="mt-5 rounded-[14px] bg-sunken px-[15px] py-3.5">
+            <View className="mb-2 flex-row items-center gap-[7px]">
+              <Ionicons name="time-outline" size={13} color={p.accent} />
+              <Text className="text-[12px] font-semibold tracking-[0.72px] text-faint">
+                {t('detail.memory')}
+              </Text>
+            </View>
+            <Text className="text-[15px] leading-[26px] tracking-[-0.06px] text-ink" numberOfLines={3}>
+              {hitExcerpt}
+            </Text>
+          </View>
+        ) : null}
 
         {status !== 'completed' ? (
           <View className="mt-3 flex-row items-center gap-3">
@@ -367,33 +394,16 @@ export function DocumentDetailScreen() {
           </View>
         ) : null}
 
-        {/* 已整理好的条目也给一个「重新整理」：抽取规则会改进，旧条目不该只能靠重装。
-            做成淡墨小字，不抢「打开原文」的位置。 */}
-        {status === 'completed' && !blockedBySite ? (
-          <Pressable
-            onPress={() => void handleReprocess()}
-            disabled={reprocessing}
-            hitSlop={10}
-            accessibilityRole="button"
-            accessibilityLabel={t('detail.reprocessLong')}
-            className={`mt-3 ${reprocessing ? 'opacity-40' : ''}`}
-          >
-            <Text className="text-caption text-faint underline">
-              {reprocessing ? t('detail.reprocessingLong') : t('detail.reprocessLong')}
-            </Text>
-          </Pressable>
-        ) : null}
-
         {hasSummaryText && !summaryRepeatsBody ? (
-          <View className="mt-6 rounded-md bg-sunken px-4 py-4">
-            <Text className="text-[11px] font-semibold tracking-[1px] text-faint">
-              {t('detail.summary')}
-            </Text>
+          <View className="mt-5">
+            <Text className="text-label uppercase text-faint">{t('detail.summary')}</Text>
             {showShort ? (
-              <Text className="mt-2 text-body text-ink">{summaryShortText}</Text>
+              <Text className="mt-2 text-[16px] leading-[29px] tracking-[-0.06px] text-ink">
+                {summaryShortText}
+              </Text>
             ) : null}
             {showLong ? (
-              <Text className={showShort ? 'mt-2 text-body-sm text-muted' : 'mt-2 text-body text-ink'}>
+              <Text className={showShort ? 'mt-2 text-body-sm text-muted' : 'mt-2 text-[16px] leading-[29px] tracking-[-0.06px] text-ink'}>
                 {summaryLongText}
               </Text>
             ) : null}
@@ -401,9 +411,13 @@ export function DocumentDetailScreen() {
         ) : null}
 
         {doc.keywords.length > 0 ? (
-          <Text className="mt-4 text-caption text-muted">
-            {doc.keywords.join(' · ')}
-          </Text>
+          <View className="mt-5 flex-row flex-wrap gap-2">
+            {doc.keywords.map((keyword) => (
+              <View key={keyword} className="h-8 justify-center rounded-[9px] bg-sunken px-3">
+                <Text className="text-[13px] text-muted">{keyword}</Text>
+              </View>
+            ))}
+          </View>
         ) : null}
 
         <View className="mt-8">
@@ -519,6 +533,22 @@ export function DocumentDetailScreen() {
             </View>
           </View>
         ) : null}
+        {/* A quiet maintenance action at the end: it should not sit between the title and the article. */}
+        {status === 'completed' && !blockedBySite ? (
+          <Pressable
+            onPress={() => void handleReprocess()}
+            disabled={reprocessing}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t('detail.reprocessLong')}
+            className={`mb-8 mt-10 self-start ${reprocessing ? 'opacity-40' : ''}`}
+          >
+            <Text className="text-caption text-faint">
+              {reprocessing ? t('detail.reprocessingLong') : t('detail.reprocessLong')}
+            </Text>
+          </Pressable>
+        ) : null}
+
       </ScrollView>
 
       <ImageViewer
@@ -531,17 +561,27 @@ export function DocumentDetailScreen() {
 
       {/* 这一屏只有一个动作，所以它值得朱红。 */}
       <View
-        className="absolute inset-x-0 bottom-0 border-t border-line bg-canvas px-4 pt-3"
+        className="absolute inset-x-0 bottom-0 bg-canvas px-5 pt-3"
         style={{ paddingBottom: insets.bottom + 12 }}
         onLayout={(event) => setBarHeight(event.nativeEvent.layout.height)}
       >
-        <Button
-          label={t('detail.openOriginal')}
-          icon="open-outline"
-          variant="primary"
-          onPress={() => void openOriginal()}
-          className="w-full"
-        />
+        <View className="flex-row gap-2.5">
+          <Button
+            label={t('detail.openOriginal')}
+            icon="open-outline"
+            variant="primary"
+            onPress={() => void openOriginal()}
+            className="flex-1"
+          />
+          <Pressable
+            onPress={() => void shareOriginal()}
+            accessibilityRole="button"
+            accessibilityLabel={t('detail.share')}
+            className="h-[50px] w-[50px] items-center justify-center rounded-[14px] border border-line bg-surface"
+          >
+            <Ionicons name="share-outline" size={17} color={p.ink} />
+          </Pressable>
+        </View>
       </View>
 
       <ConfirmDialog

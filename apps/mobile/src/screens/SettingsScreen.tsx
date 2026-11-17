@@ -64,14 +64,10 @@ function statsLine(stats: DocumentStats | null, t: (key: string, vars?: Record<s
 function Group({ children }: { children: ReactNode }) {
   const items = Array.isArray(children) ? children.filter(Boolean) : [children]
   return (
-    <View className="overflow-hidden rounded-md border border-line bg-surface">
+    <View className="overflow-hidden rounded-[16px] border border-line bg-surface">
       {items.map((child, index) => (
         <View key={index}>
-          {index > 0 ? (
-            <View className="pl-12">
-              <Divider />
-            </View>
-          ) : null}
+          {index > 0 ? <Divider /> : null}
           {child}
         </View>
       ))}
@@ -116,19 +112,19 @@ function Row({
 }) {
   const p = usePalette()
   const body = (
-    <View className="min-h-[52px] flex-row items-center gap-3 px-4">
-      {/* Rows without a glyph keep the same left edge: the icon slot is a fixed
-          18px column, and the gap after it is part of the layout too. */}
+    <View className="min-h-[56px] flex-row items-center gap-[13px] px-[15px]">
       {icon ? (
-        <Ionicons name={icon} size={18} color={danger ? p.danger : p.muted} />
+        <View className="h-8 w-8 items-center justify-center rounded-[9px] bg-sunken">
+          <Ionicons name={icon} size={16} color={danger ? p.danger : p.muted} />
+        </View>
       ) : (
-        <View style={{ width: 18 }} />
+        <View style={{ width: 32 }} />
       )}
       <View className="flex-1">
-        <Text className={danger ? 'text-body-sm text-danger' : 'text-body-sm text-ink'}>
+        <Text className={danger ? 'text-[15px] leading-[21px] font-semibold tracking-[-0.15px] text-danger' : 'text-[15px] leading-[21px] font-semibold tracking-[-0.15px] text-ink'}>
           {title}
         </Text>
-        {subtitle ? <Text className="mt-0.5 text-caption text-muted">{subtitle}</Text> : null}
+        {subtitle ? <Text className="mt-0.5 text-[12.5px] leading-[17px] text-faint">{subtitle}</Text> : null}
       </View>
       {busy ? <ActivityIndicator size="small" color={p.muted} /> : null}
       {!busy && valueIcon ? <Ionicons name={valueIcon} size={13} color={p.muted} /> : null}
@@ -164,7 +160,7 @@ function Row({
 
 function SectionLabel({ children }: { children: string }) {
   return (
-    <Text className="mb-2 ml-1 text-[11px] font-semibold tracking-[1px] text-faint">{children}</Text>
+    <Text className="mb-2 ml-1 text-label uppercase text-faint">{children}</Text>
   )
 }
 
@@ -382,15 +378,35 @@ export function SettingsScreen() {
   return (
     <Screen>
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: bottomPad }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: bottomPad }}
         showsVerticalScrollIndicator={false}
       >
-        <View className="h-14 justify-center">
-          <Text className="text-heading font-semibold text-ink">{t('settings.title')}</Text>
+        <View className="flex-row items-center justify-between" style={{ height: 52 }}>
+          <Text className="text-[24px] font-semibold tracking-[-0.62px] text-ink">
+            {t('settings.title')}
+          </Text>
+          <Text className="text-[13px] text-faint">{t('settings.subtitle')}</Text>
         </View>
-        <Text className="mb-6 text-caption text-faint">{t('settings.subtitle')}</Text>
 
-        <View className="mb-6">
+        <View className="mt-2 flex-row rounded-[16px] border border-line bg-surface py-[18px]">
+          {[
+            { n: stats?.total, l: t('settings.stat.total') },
+            { n: stats?.searchable, l: t('settings.stat.searchable') },
+            { n: stats?.processing, l: t('settings.stat.processing') },
+          ].map((item, index) => (
+            <View
+              key={item.l}
+              className={index === 0 ? 'flex-1 items-center' : 'flex-1 items-center border-l border-line'}
+            >
+              <Text className="text-[26px] font-semibold leading-[32px] tracking-[-0.78px] text-ink">
+                {stats ? (item.n ?? 0) : '—'}
+              </Text>
+              <Text className="mt-1 text-[11.5px] text-faint">{item.l}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View className="mt-7 mb-6">
           <SectionLabel>{t('settings.section.sync')}</SectionLabel>
           <Group>
             <Row
