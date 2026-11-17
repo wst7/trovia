@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Ionicons } from '@expo/vector-icons'
 import { ActivityIndicator, Pressable, TextInput, View } from 'react-native'
 import { Text } from '../ui/text'
-import { extractHttpUrl, isValidHttpUrl } from '@trovia/shared'
+import { detectIntent, extractHttpUrl, isValidHttpUrl } from '@trovia/shared'
 
 import { useT } from '../i18n'
 import { titleHintFrom } from '../local/util'
@@ -23,6 +23,8 @@ interface ComposerProps {
   onSave: (url: string, titleHint: string | null) => Promise<SaveResult | null>
   searching?: boolean
   onFocus?: () => void
+  /** Whether the model is configured; only changes the hint, never whether submit works. */
+  askAvailable?: boolean
 }
 
 /** Add https:// when only a domain was typed (no scheme), so the user is not stopped by “no link”. */
@@ -34,8 +36,12 @@ function withScheme(text: string): string | null {
 }
 
 /**
- * v3: one 56dp search field, one vermilion arrow. No mode switch living in the
- * footer — asking the model is a separate entry card on the home screen.
+ * v3: one 56dp field, one vermilion arrow, no mode switch.
+ *
+ * The same box saves a link, searches by words, or hands the sentence to the
+ * model — decided from what was typed, not from a switch the user has to set
+ * first. The line under the field only speaks when the input will be treated
+ * as a question, since that is the case people do not expect.
  */
 export function Composer({
   value,
@@ -44,6 +50,7 @@ export function Composer({
   onSave,
   searching = false,
   onFocus,
+  askAvailable = false,
 }: ComposerProps) {
   const p = usePalette()
   const t = useT()
@@ -56,6 +63,11 @@ export function Composer({
   const trimmed = value.trim()
   const busy = searching || saving
   const ready = trimmed.length > 0 && !busy
+  const intent = detectIntent(value, saveMode)
+  const hint =
+    intent === 'ask' && !saveMode && !error
+      ? t(askAvailable ? 'composer.hint.ask' : 'composer.hint.askUnavailable')
+      : ''
 
   async function submit() {
     if (!ready) return
@@ -150,7 +162,11 @@ export function Composer({
           )}
         </Pressable>
       </View>
-      {error ? <Text className="mt-2 text-caption text-danger">{error}</Text> : null}
+      {error ? (
+        <Text className="mt-2 text-[12.5px] text-danger">{error}</Text>
+      ) : hint ? (
+        <Text className="mt-2 text-[12.5px] text-faint">{hint}</Text>
+      ) : null}
     </View>
   )
 }

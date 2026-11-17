@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { ActivityIndicator, KeyboardAvoidingView, Pressable, ScrollView, View } from 'react-native'
 import { Text } from '../ui/text'
-import { Ionicons } from '@expo/vector-icons'
+import { detectIntent } from '@trovia/shared'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { DocumentSummary, ParseStatus, SearchResult } from '@trovia/shared'
 import { queryTerms } from '../local/terms'
@@ -128,9 +128,15 @@ export function HomeScreen() {
     setLastQuery(seeded)
   }, [routeParams.q])
 
-  function runSearch(text?: string) {
+  function runSearch(text?: string, fromComposer = false) {
     const q = (text ?? query).trim()
     if (!q || searching) return
+    // Submitted from the field: a question goes to the model, anything else searches.
+    // Example chips and suggestions never take this path — they are always keywords.
+    if (fromComposer && llmReady && detectIntent(q, false) === 'ask') {
+      router.push(`/ask?q=${encodeURIComponent(q)}`)
+      return
+    }
     // Setting the query is enough; the effect above performs the search once.
     setResults(null)
     setLastQuery(q)
@@ -196,7 +202,8 @@ export function HomeScreen() {
     <Composer
       value={query}
       onChangeText={setQuery}
-      onSearch={() => void runSearch()}
+      onSearch={() => void runSearch(undefined, true)}
+      askAvailable={llmReady}
       onSave={handleSave}
       searching={searching || writing}
     />
@@ -237,7 +244,17 @@ export function HomeScreen() {
                         })
                       : ''}
                 </Text>
-                <TextButton label={t('common.clear')} onPress={clearSearch} tone="muted" />
+                <View className="flex-row items-center gap-4">
+                  {llmReady && !searching ? (
+                    // A wrong guess costs one tap: the same sentence can still go to the model.
+                    <TextButton
+                      label={t('home.askModel')}
+                      onPress={() => router.push(`/ask?q=${encodeURIComponent(lastQuery)}`)}
+                      tone="muted"
+                    />
+                  ) : null}
+                  <TextButton label={t('common.clear')} onPress={clearSearch} tone="muted" />
+                </View>
               </View>
               {!searching && (results?.length ?? 0) > 0 && bodylessCount > 0 ? (
                 <Text className="mt-1 text-caption text-faint">
@@ -381,35 +398,6 @@ export function HomeScreen() {
                   ) : null}
                 </View>
               ) : null}
-
-              <Pressable
-                onPress={() => {
-                  if (!llmReady) {
-                    toast(t('ask.off'), {
-                      action: {
-                        label: t('ask.openSettings'),
-                        onPress: () => router.push('/settings/llm'),
-                      },
-                    })
-                    return
-                  }
-                  router.push('/ask')
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={t('home.ask.title')}
-                className="mt-3.5 flex-row items-center gap-3 rounded-[14px] bg-sunken px-[15px] py-3.5"
-              >
-                <View className="h-[30px] w-[30px] items-center justify-center rounded-[9px] bg-surface">
-                  <Ionicons name="sparkles-outline" size={16} color={p.muted} />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-[14px] font-semibold tracking-[-0.14px] text-ink">
-                    {t('home.ask.title')}
-                  </Text>
-                  <Text className="mt-0.5 text-[12px] text-faint">{t('home.ask.subtitle')}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={14} color={p.faint} />
-              </Pressable>
 
               {recent.length > 0 ? (
                 <View className="mt-8">

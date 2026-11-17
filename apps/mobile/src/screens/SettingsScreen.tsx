@@ -446,13 +446,8 @@ export function SettingsScreen() {
               icon="sparkles-outline"
               title={t('settings.llm.title')}
               subtitle={t('settings.llm.subtitle')}
-              value={
-                llm === null
-                  ? ''
-                  : llm.enabled
-                    ? t('settings.llm.on', { model: llm.model || t('settings.llm.unnamed') })
-                    : t('llm.state.off')
-              }
+              // On or off only: the model name is a detail, and the row is about whether it runs.
+              value={llm === null ? '' : llm.enabled ? t('settings.llm.on') : t('llm.state.off')}
               onPress={() => router.push('/settings/llm')}
               accessibilityLabel={t('settings.llm.a11y')}
             />

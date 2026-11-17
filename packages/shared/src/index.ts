@@ -151,3 +151,4 @@ export interface SearchResponse {
 export * from './format'
 export * from './errors'
 export * from './list-line'
+export * from './intent'

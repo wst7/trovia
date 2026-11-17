@@ -5,7 +5,7 @@ const isProduction = process.env.APP_VARIANT === 'production'
 
 // The version follows the release tag: CI injects XUNJI_APP_VERSION when it tags v* (v0.3.1 → 0.3.1).
 // Local builds fall back to the default here. Android's versionCode is derived from the version, so upgrades never go backwards.
-const rawVersion: string = process.env.XUNJI_APP_VERSION?.trim() || '0.16.1'
+const rawVersion: string = process.env.XUNJI_APP_VERSION?.trim() || '0.16.2'
 
 /**
  * EAS project id. It is baked into the package for tooling (and would be needed
