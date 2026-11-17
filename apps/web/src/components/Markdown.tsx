@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 
+import { parseListLine } from '@trovia/shared'
+
 /**
  * Restricted Markdown renderer: it only turns headings, paragraphs, lists, quotes, code blocks, bold, italics, inline code
  * and http(s) links into React elements. Text is always escaped by React and no raw HTML is parsed
@@ -95,7 +97,8 @@ function renderBlocks(source: string): ReactNode[] {
     }
     const trimmed = line.trim()
     if (trimmed === '') {
-      flushAll()
+      // Blank lines between list items are normal; closing the list here would restart numbering.
+      flushParagraph()
       continue
     }
     const heading = /^(#{1,6})\s+(.*)$/.exec(trimmed)
@@ -112,20 +115,12 @@ function renderBlocks(source: string): ReactNode[] {
       blocks.push(<blockquote key={`q-${blocks.length}`}>{renderInline(quote[1], `q${blocks.length}`)}</blockquote>)
       continue
     }
-    const unorderedItem = /^[-*]\s+(.*)$/.exec(trimmed)
-    if (unorderedItem) {
+    const listItem = parseListLine(line)
+    if (listItem) {
       flushParagraph()
-      if (ordered) flushList()
-      ordered = false
-      listItems.push(unorderedItem[1])
-      continue
-    }
-    const orderedItem = /^\d+\.\s+(.*)$/.exec(trimmed)
-    if (orderedItem) {
-      flushParagraph()
-      if (!ordered) flushList()
-      ordered = true
-      listItems.push(orderedItem[1])
+      if (listItem.ordered !== ordered) flushList()
+      ordered = listItem.ordered
+      listItems.push(listItem.text)
       continue
     }
     flushList()

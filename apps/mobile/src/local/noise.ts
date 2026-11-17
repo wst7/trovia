@@ -81,7 +81,8 @@ export function scrubAppPrompts(markdown: string): string {
   )
   return unwrapped.replace(UI_LABEL, ' ')
     .replace(APP_PROMPT, ' ')
-    .replace(/[ \t]{2,}/g, ' ')
+    // Collapse runs of spaces inside a line, but leave leading indent alone: list depth lives there.
+    .replace(/(?<=\S)[ \t]{2,}/g, ' ')
     .replace(/\n{3,}/g, '\n\n')
     .trim()
 }

@@ -41,7 +41,9 @@ export function TextField({ label, hint, ...input }: TextFieldProps) {
           className="h-10 text-body-sm text-ink"
         />
       </View>
-      {hint ? <Text className="mt-1 text-caption text-muted">{hint}</Text> : null}
+      {hint ? (
+        <Text className="mt-1.5 text-[12.5px] leading-[19px] text-muted">{hint}</Text>
+      ) : null}
     </View>
   )
 }

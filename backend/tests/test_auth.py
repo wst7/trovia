@@ -27,7 +27,7 @@ def test_register_login_me_logout(client):
 
 def test_register_is_case_insensitive_on_email(client):
     first = client.post(
-        "/api/v1/auth/register", json={"email": "Bob@Xunji.test", "password": "password123"}
+        "/api/v1/auth/register", json={"email": "Bob@trovia.test", "password": "password123"}
     )
     assert first.status_code == 201
     dup = client.post(

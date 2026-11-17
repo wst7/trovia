@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { Image, Linking, Pressable, View } from 'react-native'
 import { Text } from '../ui/text'
+import { parseListLine } from '@trovia/shared'
 import { t } from '../i18n'
 import { normalizeBlockSource, parseInline } from '../local/markdown-inline'
 
@@ -134,6 +135,7 @@ export function Markdown({
   onImagePress,
   resolveImage,
   compact = false,
+  selectable = true,
 }: {
   source: string
   /** Opening an image: hand over all the images in the article so they can be swiped side to side. */
@@ -142,12 +144,14 @@ export function Markdown({
   resolveImage?: (url: string) => string
   /** Chat answers use 15.5/27 inside a card instead of the 17/30 article measure. */
   compact?: boolean
+  /** Long-press selects text and opens the system menu (copy / select all). On by default for body copy. */
+  selectable?: boolean
 }) {
   // Images always get a paragraph of their own: when a paragraph holds both text and images, the original order still holds.
   const normalized = normalizeBlockSource(source)
   const images = [...new Set([...source.matchAll(/!\[[^\]]*\]\(([^)\s]+)\)/g)].map((match) => match[1]))]
   const resolved = images.map((url) => resolveImage?.(url) ?? url)
-  return <View>{renderBlocks(normalized, onImagePress, resolved, resolveImage, compact)}</View>
+  return <View>{renderBlocks(normalized, onImagePress, resolved, resolveImage, compact, selectable)}</View>
 }
 
 const HEADING_CLASS = [
@@ -165,13 +169,14 @@ function renderBlocks(
   images: string[] = [],
   resolveImage?: (url: string) => string,
   compact = false,
+  selectable = true,
 ): ReactNode[] {
   const bodyFont = undefined
   const lines = source.split(/\r?\n/)
   const blocks: ReactNode[] = []
   const state = {
     paragraph: [] as string[],
-    listItems: [] as string[],
+    listItems: [] as { text: string; marker: string; depth: number }[],
     ordered: false,
     inFence: false,
     fenceBuffer: [] as string[],
@@ -192,6 +197,7 @@ function renderBlocks(
       <Text
         key={key}
         className="text-ink"
+        selectable={selectable}
         style={[{ fontSize: compact ? 15.5 : 17, lineHeight: compact ? 27 : 30, marginBottom: compact ? 12 : 18 }, bodyFont]}
       >
         {renderInline(state.paragraph.join(' '), key)}
@@ -204,12 +210,20 @@ function renderBlocks(
     if (state.listItems.length === 0) return
     const key = nextKey('list')
     const items = state.listItems.map((item, i) => (
-      <View key={`${key}-${i}`} className="mb-1.5 flex-row gap-2">
+      <View
+        key={`${key}-${i}`}
+        className="mb-1.5 flex-row gap-2"
+        style={item.depth > 0 ? { paddingLeft: item.depth * 16 } : undefined}
+      >
         <Text className={state.ordered ? 'w-6 text-body-sm text-muted' : 'w-3 text-body text-faint'}>
-          {state.ordered ? `${i + 1}.` : '·'}
+          {state.ordered ? item.marker : '·'}
         </Text>
-        <Text className="flex-1 text-ink" style={[{ fontSize: compact ? 15 : 16.5, lineHeight: compact ? 25 : 28 }, bodyFont]}>
-          {renderInline(item, `${key}-${i}`)}
+        <Text
+          className="flex-1 text-ink"
+          selectable={selectable}
+          style={[{ fontSize: compact ? 15 : 16.5, lineHeight: compact ? 25 : 28 }, bodyFont]}
+        >
+          {renderInline(item.text, `${key}-${i}`)}
         </Text>
       </View>
     ))
@@ -271,7 +285,8 @@ function renderBlocks(
       continue
     }
     if (trimmed === '') {
-      flushAll()
+      // A blank line between list items is normal; closing the list here would restart numbering.
+      flushParagraph()
       continue
     }
 
@@ -281,7 +296,7 @@ function renderBlocks(
       const level = heading[1].length
       const key = nextKey('h')
       blocks.push(
-        <Text key={key} className={HEADING_CLASS[level - 1]}>
+        <Text key={key} className={HEADING_CLASS[level - 1]} selectable={selectable}>
           {renderInline(heading[2], key)}
         </Text>,
       )
@@ -294,7 +309,7 @@ function renderBlocks(
       const key = nextKey('q')
       blocks.push(
         <View key={key} className="mb-4 border-l-2 border-line-strong pl-3">
-          <Text className="text-muted" style={[{ fontSize: 16, lineHeight: 28 }, bodyFont]}>
+          <Text className="text-muted" selectable={selectable} style={[{ fontSize: 16, lineHeight: 28 }, bodyFont]}>
             {renderInline(quote[1], key)}
           </Text>
         </View>,
@@ -302,21 +317,12 @@ function renderBlocks(
       continue
     }
 
-    const unorderedItem = /^[-*]\s+(.*)$/.exec(trimmed)
-    if (unorderedItem) {
+    const listItem = parseListLine(line)
+    if (listItem) {
       flushParagraph()
-      if (state.ordered) flushList()
-      state.ordered = false
-      state.listItems.push(unorderedItem[1])
-      continue
-    }
-
-    const orderedItem = /^\d+\.\s+(.*)$/.exec(trimmed)
-    if (orderedItem) {
-      flushParagraph()
-      if (!state.ordered) flushList()
-      state.ordered = true
-      state.listItems.push(orderedItem[1])
+      if (listItem.ordered !== state.ordered) flushList()
+      state.ordered = listItem.ordered
+      state.listItems.push({ text: listItem.text, marker: listItem.marker, depth: listItem.depth })
       continue
     }
 

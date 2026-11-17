@@ -218,7 +218,7 @@ export function LlmSettingsScreen() {
         >
           <View ref={contentRef} collapsable={false}>
           <Text className="text-title font-semibold text-ink">{t('llm.title')}</Text>
-          <Text className="mt-2 text-body-sm text-muted">{t('llm.intro')}</Text>
+          <Text className="mt-2 text-body-sm leading-[23px] text-muted">{t('llm.intro')}</Text>
 
           <View className="mt-6 flex-row items-center gap-3">
             <View className="flex-1">
@@ -238,7 +238,9 @@ export function LlmSettingsScreen() {
           <View className="mt-4 flex-row items-center gap-3">
             <View className="flex-1">
               <Text className="text-body-sm text-ink">{t('llm.switch.intent')}</Text>
-              <Text className="mt-1 text-caption text-muted">{t('llm.switch.intentHint')}</Text>
+              <Text className="mt-1.5 text-[12.5px] leading-[19px] text-muted">
+                {t('llm.switch.intentHint')}
+              </Text>
             </View>
             <Switch
               value={intent}
@@ -254,7 +256,9 @@ export function LlmSettingsScreen() {
           <View className="mt-4 flex-row items-center gap-3">
             <View className="flex-1">
               <Text className="text-body-sm text-ink">{t('llm.switch.semantic')}</Text>
-              <Text className="mt-1 text-caption text-muted">{t('llm.switch.semanticHint')}</Text>
+              <Text className="mt-1.5 text-[12.5px] leading-[19px] text-muted">
+                {t('llm.switch.semanticHint')}
+              </Text>
             </View>
             <Switch
               value={semantic}

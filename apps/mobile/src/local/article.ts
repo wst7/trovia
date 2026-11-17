@@ -416,6 +416,34 @@ function hasBlockChild(node: Element): boolean {
   return node.children.some((child) => isTag(child) && BLOCK_TAGS.has(child.name.toLowerCase()))
 }
 
+/** Lists: numbers for <ol>, dashes for <ul>, two spaces of indent per level. */
+function renderList(node: Element, ordered: boolean, depth = 0): string {
+  const lines: string[] = []
+  let index = 0
+  for (const child of node.children) {
+    if (!isTag(child) || child.name.toLowerCase() !== 'li') continue
+    index += 1
+    const nested = child.children.filter(
+      (item): item is Element => isTag(item) && /^(?:ul|ol)$/i.test(item.name),
+    )
+    const inline = inlineText(
+      child.children.filter((item) => !(isTag(item) && /^(?:ul|ol)$/i.test(item.name))),
+    )
+    if (inline) {
+      const marker = ordered ? `${index}.` : '-'
+      lines.push(`${'  '.repeat(depth)}${marker} ${inline}`)
+    }
+    for (const sub of nested) {
+      const block = renderList(sub, sub.name.toLowerCase() === 'ol', depth + 1).replace(
+        /^\n+|\n+$/g,
+        '',
+      )
+      if (block) lines.push(block)
+    }
+  }
+  return lines.length > 0 ? `\n\n${lines.join('\n')}\n\n` : ''
+}
+
 function renderTable(table: Element): string {
   const rows: string[] = []
   for (const tr of table.children) {
@@ -454,6 +482,10 @@ function renderBlock(node: AnyNode): string {
     }
     case 'br':
       return '\n'
+    case 'ul':
+      return renderList(node, false)
+    case 'ol':
+      return renderList(node, true)
     case 'li': {
       const text = inlineText(node.children)
       return text ? `\n- ${text}` : ''
@@ -512,13 +544,17 @@ function tidyMarkdown(markdown: string, wechat: boolean): string {
       lines.push(raw.replace(/\s+$/, ''))
       continue
     }
-    const line = raw.replace(/[ \t ]+/g, ' ').trim()
+    const collapsed = raw.replace(/[ \t ]+/g, ' ')
+    const isListLine = /^\s*(?:[-*·•]|\d{1,3}[.、)）]|（\d{1,3}）)\s/.test(collapsed)
+    // Keep the indent of list lines: it encodes nesting, and collapsing it flattens the list.
+    const indent = isListLine ? Math.min(6, raw.length - raw.trimStart().length) : 0
+    const line = collapsed.trim()
     if (!line) {
       lines.push('')
       continue
     }
     if (wechat && (WECHAT_NOISE_LINE.test(line) || PUNCT_ONLY_LINE.test(line))) continue
-    lines.push(line)
+    lines.push(indent > 0 ? `${' '.repeat(indent)}${line}` : line)
   }
   return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
 }

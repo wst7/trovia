@@ -8,7 +8,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { ActivityIndicator, Pressable, ScrollView, TextInput, View } from 'react-native'
-import * as Clipboard from 'expo-clipboard'
 import { Text } from '../ui/text'
 import { Ionicons } from '@expo/vector-icons'
 
@@ -110,7 +109,6 @@ export function AskScreen() {
   const [streamed, setStreamed] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
-  const [copied, setCopied] = useState<number | null>(null)
   // What is being asked right now: the first question, or a follow-up typed below.
   const [asking, setAsking] = useState('')
   const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null)
@@ -196,12 +194,6 @@ export function AskScreen() {
     void ask(text, turns)
   }
 
-  async function copyAnswer(text: string, index: number) {
-    await Clipboard.setStringAsync(text)
-    setCopied(index)
-    setTimeout(() => setCopied((current) => (current === index ? null : current)), 1600)
-  }
-
   const renderCitations = (citations: Citation[]) => {
     if (citations.length === 0) return null
     return (
@@ -284,17 +276,6 @@ export function AskScreen() {
                     </View>
                     <Text className="text-[13px] font-semibold text-ink">{t('ask.answer')}</Text>
                   </View>
-                  {turn.answer ? (
-                    <Pressable
-                      onPress={() => void copyAnswer(turn.answer, index)}
-                      hitSlop={10}
-                      accessibilityRole="button"
-                    >
-                      <Text className="text-[12.5px] text-faint">
-                        {copied === index ? t('ask.copied') : t('ask.copy')}
-                      </Text>
-                    </Pressable>
-                  ) : null}
                 </View>
                 {turn.answer ? (
                   <Markdown source={turn.answer} compact />

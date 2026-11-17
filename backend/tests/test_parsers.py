@@ -118,6 +118,57 @@ def test_wechat_garbage_html_returns_failed_without_raising():
     assert result.error_code == "CONTENT_NOT_FOUND"
 
 
+def test_wechat_share_page_reads_inline_payload():
+    """Shared pages have no #js_content: the body sits in the inline cgiDataNew object."""
+    url = "https://mp.weixin.qq.com/s/SharePage"
+    result = WechatParser().parse(make_fetch("wechat_share_payload.html", url))
+    assert result.parse_status == "completed"
+    assert result.metadata["extraction"] == "js_payload"
+    assert result.title == "分享几条我最常用的 Prompt。"
+    assert result.metadata["account"] == "示例公众号"
+    assert result.author == "示例作者"
+    # Beijing 18:05 becomes 10:05 UTC.
+    assert result.published_at is not None
+    assert result.published_at.isoformat() == "2026-11-16T10:05:00+00:00"
+    assert result.plain_text is not None
+    # \x27 and \u escapes are decoded.
+    assert "1. 第一条，带'引号'的句子。" in result.plain_text
+    assert "2. 第二条，中文中转义。" in result.plain_text
+    # Blank lines survive as paragraph breaks.
+    assert "\n\n" in result.plain_text
+    assert result.plain_text.rstrip().endswith("以上，希望对你有用～")
+
+
+def test_wechat_rendered_page_still_uses_dom():
+    result = WechatParser().parse(make_fetch("wechat_article.html", "https://mp.weixin.qq.com/s/AbCdEf"))
+    assert result.metadata["extraction"] == "dom"
+
+
+def test_wechat_payload_without_content_is_partial():
+    html = ("<html><head><meta property='og:title' content='只有标题的分享页' /></head><body>"
+            "<script>window.cgiDataNew = { title: '只有标题的分享页', nick_name: '示例号' };</script>"
+            "</body></html>")
+    result = WechatParser().parse(make_html_fetch(html, "https://mp.weixin.qq.com/s/NoBody"))
+    assert result.parse_status == "partial"
+    assert result.error_code == "CONTENT_NOT_FOUND"
+    assert result.title == "只有标题的分享页"
+
+
+def test_wechat_keeps_headings_and_lists():
+    """Structure must survive: flattening lists into paragraphs is what makes the page read as mush."""
+    html = ("<html><body><div id='js_content'>"
+            "<h2>三步走</h2>"
+            "<ol><li>先对齐需求<ol><li>问清楚场景</li></ol></li><li>再出方案</li></ol>"
+            "<ul><li>无序项</li></ul>"
+            "</div></body></html>")
+    result = WechatParser().parse(make_html_fetch(html, "https://mp.weixin.qq.com/s/Lists"))
+    assert result.parse_status == "completed"
+    assert "## 三步走" in result.content_markdown
+    assert "1. 先对齐需求" in result.content_markdown
+    assert "  1. 问清楚场景" in result.content_markdown
+    assert "- 无序项" in result.content_markdown
+
+
 def test_wechat_ct_epoch_fallback():
     html = ("<html><head><title>时间戳文章 - 微信公众平台</title></head>"
             "<body><h1 id='activity-name'>时间戳文章</h1>"

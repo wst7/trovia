@@ -120,16 +120,21 @@ function Row({
       ) : (
         <View style={{ width: 32 }} />
       )}
-      <View className="flex-1">
+      <View className="min-w-0 flex-1 pr-1">
         <Text className={danger ? 'text-[15px] leading-[21px] font-semibold tracking-[-0.15px] text-danger' : 'text-[15px] leading-[21px] font-semibold tracking-[-0.15px] text-ink'}>
           {title}
         </Text>
-        {subtitle ? <Text className="mt-0.5 text-[12.5px] leading-[17px] text-faint">{subtitle}</Text> : null}
+        {subtitle ? (
+          // Two lines at most: a long subtitle used to wrap into a narrow column and read as a block.
+          <Text className="mt-1 text-[12.5px] leading-[18px] text-faint" numberOfLines={2}>
+            {subtitle}
+          </Text>
+        ) : null}
       </View>
       {busy ? <ActivityIndicator size="small" color={p.muted} /> : null}
       {!busy && valueIcon ? <Ionicons name={valueIcon} size={13} color={p.muted} /> : null}
       {value ? (
-        <Text className="max-w-[52%] text-caption text-muted" numberOfLines={1}>
+        <Text className="max-w-[38%] shrink text-caption text-muted" numberOfLines={1}>
           {value}
         </Text>
       ) : null}
